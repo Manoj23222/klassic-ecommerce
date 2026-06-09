@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
 import db from "@/lib/db";
