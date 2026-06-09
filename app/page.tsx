@@ -1,3 +1,4 @@
+import DailySpinWheel from "@/components/DailySpinWheel";
 import MysteryDiscountBox from "@/components/MysteryDiscountBox";
 export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
@@ -55,6 +56,7 @@ export default async function Home() {
         </div>
       </section>
  <MysteryDiscountBox />
+ <DailySpinWheel />
       <section id="products" className="max-w-7xl mx-auto px-6 py-10">
         <ProductSearch products={products} />
        
