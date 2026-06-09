@@ -54,10 +54,10 @@ export default async function Home() {
           </a>
         </div>
       </section>
-
+ <MysteryDiscountBox />
       <section id="products" className="max-w-7xl mx-auto px-6 py-10">
         <ProductSearch products={products} />
-        <MysteryDiscountBox />
+       
       </section>
     </main>
   );
