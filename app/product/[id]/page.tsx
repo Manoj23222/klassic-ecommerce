@@ -25,13 +25,16 @@ sizes?: string;
 
 async function getProduct(id: string): Promise<Product | null> {
   try {
-    const res = await fetch(`http://localhost:3000/api/products/${id}`, {
-      cache: "no-store",
-    });
+    const [rows]: any = await db.query(
+      "SELECT * FROM products WHERE id = ?",
+      [id]
+    );
 
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
+    if (rows.length === 0) return null;
+
+    return rows[0];
+  } catch (error) {
+    console.error("Product detail error:", error);
     return null;
   }
 }
