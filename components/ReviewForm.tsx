@@ -3,30 +3,30 @@
 import { useState } from "react";
 
 export default function ReviewForm({ productId }: { productId: number }) {
-  const [customerName, setCustomerName] = useState("");
+  const [name, setName] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     const res = await fetch("/api/reviews", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        product_id: productId,
-        customer_name: customerName,
-        rating,
-        comment,
-      }),
+      body: JSON.stringify({ productId, name, rating, comment }),
     });
 
-    const data = await res.json();
+    setLoading(false);
 
-    if (data.success) {
-      alert("Review submitted successfully");
+    if (res.ok) {
+      alert("Review added successfully");
+      setName("");
+      setRating(5);
+      setComment("");
       window.location.reload();
     } else {
       alert("Review failed");
@@ -34,19 +34,19 @@ export default function ReviewForm({ productId }: { productId: number }) {
   };
 
   return (
-    <form onSubmit={submitReview} className="bg-white rounded-2xl shadow p-6 mt-6">
+    <form onSubmit={submitReview} className="mt-8 bg-white p-6 rounded-xl shadow">
       <h2 className="text-2xl font-bold mb-4">Write a Review</h2>
 
       <input
-        className="w-full border p-3 rounded-lg mb-3"
-        placeholder="Your Name"
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
+        className="w-full border p-3 rounded mb-3"
+        placeholder="Your name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         required
       />
 
       <select
-        className="w-full border p-3 rounded-lg mb-3"
+        className="w-full border p-3 rounded mb-3"
         value={rating}
         onChange={(e) => setRating(Number(e.target.value))}
       >
@@ -58,16 +58,18 @@ export default function ReviewForm({ productId }: { productId: number }) {
       </select>
 
       <textarea
-        className="w-full border p-3 rounded-lg mb-3"
-        placeholder="Write your review..."
-        rows={4}
+        className="w-full border p-3 rounded mb-3"
+        placeholder="Write your review"
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         required
       />
 
-      <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold">
-        Submit Review
+      <button
+        disabled={loading}
+        className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800"
+      >
+        {loading ? "Submitting..." : "Submit Review"}
       </button>
     </form>
   );

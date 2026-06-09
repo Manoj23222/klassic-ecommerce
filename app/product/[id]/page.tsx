@@ -1,12 +1,9 @@
 import ProductPurchaseBox from "@/components/ProductPurchaseBox";
-import ProductVariantSelector from "@/components/ProductVariantSelector";
 import ProductGallery from "@/components/ProductGallery";
-import ProductCouponBox from "@/components/ProductCouponBox";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import WishlistButton from "@/components/WishlistButton";
 import ReviewForm from "@/components/ReviewForm";
 import Header from "@/components/Header";
-import AddToCartButton from "@/components/AddToCartButton";
 import Link from "next/link";
 import db from "@/lib/db";
 
@@ -20,7 +17,7 @@ type Product = {
   category?: string;
   gallery_images?: string;
   colors?: string;
-sizes?: string;
+  sizes?: string;
 };
 
 async function getProduct(id: string): Promise<Product | null> {
@@ -31,7 +28,6 @@ async function getProduct(id: string): Promise<Product | null> {
     );
 
     if (rows.length === 0) return null;
-
     return rows[0];
   } catch (error) {
     console.error("Product detail error:", error);
@@ -52,8 +48,7 @@ export default async function ProductPage({
   }
 
   const [reviews]: any = await db.query(
-    "SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC",
-    [id]
+"SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC",    [id]
   );
 
   const [relatedProducts]: any = await db.query(
@@ -73,7 +68,7 @@ export default async function ProductPage({
             0
           ) / reviews.length
         ).toFixed(1)
-      : "4.2";
+      : "0.0";
 
   const rating5 = reviews.filter((r: any) => Number(r.rating) === 5).length;
   const rating4 = reviews.filter((r: any) => Number(r.rating) === 4).length;
@@ -93,33 +88,31 @@ export default async function ProductPage({
         <div className="mt-5 bg-white rounded-xl shadow grid lg:grid-cols-2 gap-8 p-6">
           <div>
             <ProductGallery
-  mainImage={product.image}
-  galleryImages={
-    product.gallery_images
-      ? product.gallery_images.split(",")
-      : []
-  }
-/>
+              mainImage={product.image}
+              galleryImages={
+                product.gallery_images ? product.gallery_images.split(",") : []
+              }
+            />
 
             {product.stock > 0 ? (
-  <ProductPurchaseBox
-    product={{
-      id: product.id,
-      name: product.name,
-      price: Number(product.price),
-      image: product.image,
-      colors: product.colors,
-      sizes: product.sizes,
-    }}
-  />
-) : (
-  <button
-    disabled
-    className="mt-5 w-full bg-gray-400 text-white py-3 rounded-lg font-bold"
-  >
-    Out of Stock
-  </button>
-)}
+              <ProductPurchaseBox
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  price: Number(product.price),
+                  image: product.image,
+                  colors: product.colors,
+                  sizes: product.sizes,
+                }}
+              />
+            ) : (
+              <button
+                disabled
+                className="mt-5 w-full bg-gray-400 text-white py-3 rounded-lg font-bold"
+              >
+                Out of Stock
+              </button>
+            )}
 
             <div className="mt-4">
               <WishlistButton
@@ -151,7 +144,9 @@ export default async function ProductPage({
             </div>
 
             <span className="text-yellow-500 text-lg">
-              {"⭐".repeat(Math.round(Number(avgRating)))}
+              {reviews.length > 0
+                ? "⭐".repeat(Math.round(Number(avgRating)))
+                : "No ratings yet"}
             </span>
 
             <div className="mt-5 flex items-end gap-3">
@@ -266,6 +261,10 @@ export default async function ProductPage({
                   </p>
 
                   <p className="text-gray-600 mt-1">{review.comment}</p>
+
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               ))}
             </div>

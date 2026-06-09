@@ -18,7 +18,7 @@ export default function UserStatus() {
       method: "POST",
     });
 
-    localStorage.removeItem("user");
+    localStorage.removeItem("user");  
 
     window.location.href = "/";
   };
@@ -33,24 +33,8 @@ export default function UserStatus() {
   }
 
   return (
-    <div className="flex gap-4 items-center">
-      <span>👤 {user.name}</span>
-
-      {user.role === "admin" && (
-        <a
-          href="/admin"
-          className="bg-yellow-500 text-black px-3 py-1 rounded"
-        >
-          Admin
-        </a>
-      )}
-
-      <button
-        onClick={logout}
-        className="bg-red-600 text-white px-3 py-1 rounded"
-      >
-        Logout
-      </button>
-    </div>
-  );
+  <div className="flex items-center">
+    <span>👤 {user.name}</span>
+  </div>
+);
 }

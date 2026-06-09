@@ -6,15 +6,6 @@ export default async function ReportsPage() {
   const [products]: any = await db.query("SELECT COUNT(*) as total FROM products");
   const [customers]: any = await db.query("SELECT COUNT(*) as total FROM users");
   const [revenue]: any = await db.query("SELECT SUM(total_amount) as total FROM orders");
-  const [last7DaysRevenue]: any = await db.query(`
-  SELECT
-    DATE(created_at) as day,
-    SUM(total_amount) as revenue
-  FROM orders
-  WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-  GROUP BY DATE(created_at)
-  ORDER BY day ASC
-`); 
 
   return (
     <main className="min-h-screen bg-gray-100 p-10">
@@ -70,33 +61,7 @@ export default async function ReportsPage() {
   Export Products CSV
 </a>
 </div>
-<div className="bg-white p-6 rounded-xl shadow mt-8">
-  <h3 className="text-xl font-bold mb-4">
-    Last 7 Days Revenue
-  </h3>
 
-  <table className="w-full border">
-    <thead>
-      <tr className="bg-gray-200">
-        <th className="border p-2">Date</th>
-        <th className="border p-2">Revenue</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {last7DaysRevenue.map((item: any) => (
-        <tr key={item.day}>
-          <td className="border p-2">
-            {String(item.day).split("T")[0]}
-          </td>
-          <td className="border p-2 font-bold text-green-600">
-            ₹{item.revenue}
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
     </main>
   );
 }
