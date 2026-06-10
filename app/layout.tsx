@@ -3,7 +3,6 @@ import AIShoppingAssistant from "@/components/AIShoppingAssistant";import Floati
 import MobileBottomNav from "@/components/MobileBottomNav";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Footer from "@/components/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,7 +36,7 @@ export default function RootLayout({
           <AIShoppingAssistant />
         </main>
 
-        <Footer />
+       
         <MobileBottomNav />
         <FloatingCartButton />
       </body>

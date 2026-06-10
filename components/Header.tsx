@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import HeaderSearch from "@/components/HeaderSearch";
-import LogoutButton from "@/components/LogoutButton";
 import Link from "next/link";
 
 export default function Header() {
@@ -12,17 +11,13 @@ export default function Header() {
     <header className="sticky top-0 z-50 shadow">
       <div className="bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => setOpen(!open)}
-            className="md:hidden text-3xl"
-          >
+          <button onClick={() => setOpen(!open)} className="md:hidden text-3xl">
             ☰
           </button>
 
           <Link href="/" className="text-3xl md:text-4xl font-extrabold">
             Klassic
           </Link>
-         
 
           <div className="hidden md:block flex-1">
             <HeaderSearch />
@@ -43,14 +38,24 @@ export default function Header() {
               </div>
 
               <div className="p-2">
-                <Link href="/account" className="block px-4 py-3 rounded-xl hover:bg-blue-50">👤 My Account</Link>
-                <Link href="/my-orders" className="block px-4 py-3 rounded-xl hover:bg-green-50">📦 My Orders</Link>
-                <Link href="/wishlist" className="block px-4 py-3 rounded-xl hover:bg-pink-50">❤️ Wishlist</Link>
-                <Link href="/admin" className="block px-4 py-3 rounded-xl hover:bg-yellow-50">⚙️ Admin Panel</Link>
+                <Link href="/account" className="block px-4 py-3 rounded-xl hover:bg-blue-50">
+                  👤 My Account
+                </Link>
+                <Link href="/my-orders" className="block px-4 py-3 rounded-xl hover:bg-green-50">
+                  📦 My Orders
+                </Link>
+                <Link href="/wishlist" className="block px-4 py-3 rounded-xl hover:bg-pink-50">
+                  ❤️ Wishlist
+                </Link>
+
                 <div className="my-2 border-t" />
-                <Link href="/login" className="block px-4 py-3 rounded-xl hover:bg-gray-100">🔐 Login</Link>
-                <Link href="/register" className="block px-4 py-3 rounded-xl hover:bg-gray-100">📝 Register</Link>
-                <LogoutButton />
+
+                <Link href="/login" className="block px-4 py-3 rounded-xl hover:bg-gray-100">
+                  🔐 Login
+                </Link>
+                <Link href="/register" className="block px-4 py-3 rounded-xl hover:bg-gray-100">
+                  📝 Register
+                </Link>
               </div>
             </div>
           </div>
@@ -71,13 +76,21 @@ export default function Header() {
 
         {open && (
           <div className="md:hidden bg-white text-black px-4 py-4 space-y-2">
-            <Link href="/account" className="block py-2">👤 My Account</Link>
-            <Link href="/my-orders" className="block py-2">📦 My Orders</Link>
-            <Link href="/wishlist" className="block py-2">❤️ Wishlist</Link>
-            <Link href="/admin" className="block py-2">⚙️ Admin Panel</Link>
-            <Link href="/login" className="block py-2">🔐 Login</Link>
-            <Link href="/register" className="block py-2">📝 Register</Link>
-            <LogoutButton />
+            <Link href="/account" className="block py-2">
+              👤 My Account
+            </Link>
+            <Link href="/my-orders" className="block py-2">
+              📦 My Orders
+            </Link>
+            <Link href="/wishlist" className="block py-2">
+              ❤️ Wishlist
+            </Link>
+            <Link href="/login" className="block py-2">
+              🔐 Login
+            </Link>
+            <Link href="/register" className="block py-2">
+              📝 Register
+            </Link>
           </div>
         )}
       </div>
@@ -86,15 +99,15 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-6 overflow-x-auto whitespace-nowrap text-sm font-semibold">
           <Link href="/#products" className="hover:text-yellow-300">☰ All</Link>
           <Link href="/grocery" className="hover:text-yellow-300">Grocery</Link>
-          <Link href="/grocery" className="hover:text-yellow-300">Fresh Grocery</Link>          
-          <Link href="/admin/product" className="hover:text-yellow-300">Sell</Link>
+          <Link href="/grocery" className="hover:text-yellow-300">Fresh Grocery</Link>
+          <Link href="/become-seller" className="hover:text-yellow-300">Become a Seller</Link>
           <Link href="/#products" className="hover:text-yellow-300">Bestsellers</Link>
           <Link href="/#products" className="hover:text-yellow-300">Today's Deals</Link>
           <Link href="/category/Electronics" className="hover:text-yellow-300">Electronics</Link>
           <Link href="/category/Fashion" className="hover:text-yellow-300">Fashion</Link>
           <Link href="/category/Home%20%26%20Kitchen" className="hover:text-yellow-300">Home & Kitchen</Link>
           <Link href="/category/Sports" className="hover:text-yellow-300">Sports</Link>
-          <Link href="/#products" className="hover:text-yellow-300">Customer Service</Link>
+          <Link href="/help-center" className="hover:text-yellow-300">Customer Service</Link>
         </div>
       </div>
     </header>
