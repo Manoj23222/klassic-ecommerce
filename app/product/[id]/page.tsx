@@ -1,3 +1,4 @@
+import FrequentlyBoughtTogether from "@/components/FrequentlyBoughtTogether";
 import ProductPurchaseBox from "@/components/ProductPurchaseBox";
 import ProductGallery from "@/components/ProductGallery";
 import RecentlyViewed from "@/components/RecentlyViewed";
@@ -265,6 +266,20 @@ export default async function ProductPage({
             image: product.image,
           }}
         />
+        <FrequentlyBoughtTogether
+  mainProduct={{
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+  }}
+  products={relatedProducts.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    price: Number(item.price),
+    image: item.image,
+  }))}
+/>
 
         <div className="mt-6 bg-white rounded-2xl shadow p-4 md:p-6">
           <h2 className="text-xl md:text-2xl font-bold mb-4">

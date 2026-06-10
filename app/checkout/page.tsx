@@ -26,6 +26,40 @@ function CheckoutContent() {
   const [cart, setCart] = useState<any[]>([]);
 
   useEffect(() => {
+  const loadSavedAddress = async () => {
+    try {
+      const res = await fetch("/api/account/address", {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      const saved = data.address || data.user;
+
+      if (data.success && saved) {
+        setName(saved.name || "");
+        setPhone(saved.phone || "");
+
+        const fullAddress = [
+          saved.address,
+          saved.city,
+          saved.state,
+          saved.pincode,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        setAddress(fullAddress);
+      }
+    } catch (error) {
+      console.error("Address auto-fill error:", error);
+    }
+  };
+
+  loadSavedAddress();
+}, []);
+
+  useEffect(() => {
     const loadCheckout = async () => {
       if (productId) {
         const res = await fetch(`/api/products/${productId}`);
@@ -64,7 +98,8 @@ function CheckoutContent() {
   useEffect(() => {
     if (couponFromUrl && subtotal > 0) {
       if (couponFromUrl === "WELCOME50") setDiscount(50);
-      else if (couponFromUrl === "SAVE10") setDiscount(Math.round(subtotal * 0.1));
+      else if (couponFromUrl === "SAVE10")
+        setDiscount(Math.round(subtotal * 0.1));
       else if (couponFromUrl === "FLAT100") setDiscount(100);
     }
   }, [couponFromUrl, subtotal]);
@@ -138,7 +173,6 @@ function CheckoutContent() {
     });
 
     const paytmData = await paytmRes.json();
-    console.log("PAYTM DATA:", paytmData);
 
     if (!paytmData.success) {
       alert("Paytm initiate failed");
@@ -202,20 +236,22 @@ function CheckoutContent() {
       } else {
         alert("Order save failed");
       }
-
-      return;
     }
   };
 
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-8">
-      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-2xl shadow">
-          <h1 className="text-4xl font-bold mb-6">Checkout</h1>
+    <main className="min-h-screen bg-gray-100 px-3 md:px-6 py-6 md:py-8">
+      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-6 md:gap-8">
+        <div className="bg-white p-5 md:p-8 rounded-2xl shadow">
+          <h1 className="text-3xl md:text-4xl font-bold mb-6">Checkout</h1>
+
+          <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl mb-4 text-sm">
+            ✅ Saved address auto-fill enabled. You can edit it before placing order.
+          </div>
 
           <form onSubmit={placeOrder} className="space-y-4">
             <input
-              className="w-full border p-3 rounded-lg"
+              className="w-full border p-3 rounded-xl"
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -223,7 +259,7 @@ function CheckoutContent() {
             />
 
             <input
-              className="w-full border p-3 rounded-lg"
+              className="w-full border p-3 rounded-xl"
               placeholder="Phone Number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -231,7 +267,7 @@ function CheckoutContent() {
             />
 
             <textarea
-              className="w-full border p-3 rounded-lg"
+              className="w-full border p-3 rounded-xl"
               placeholder="Full Address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -239,7 +275,7 @@ function CheckoutContent() {
               required
             />
 
-            <div className="border p-4 rounded-lg bg-gray-50">
+            <div className="border p-4 rounded-xl bg-gray-50">
               <h3 className="font-bold mb-3">Payment Method</h3>
 
               <label className="flex items-center gap-3">
@@ -270,7 +306,7 @@ function CheckoutContent() {
               </label>
             </div>
 
-            <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-xl font-bold">
+            <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-lg md:text-xl font-bold">
               {paymentMethod === "COD"
                 ? "Place COD Order"
                 : paymentMethod === "Paytm"
@@ -280,12 +316,12 @@ function CheckoutContent() {
           </form>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow h-fit">
+        <div className="bg-white p-5 md:p-8 rounded-2xl shadow h-fit">
           <h2 className="text-2xl font-bold mb-5">Order Summary</h2>
 
           <div className="space-y-4">
-            {cart.map((item) => (
-              <div key={item.id} className="flex gap-4 border-b pb-4">
+            {cart.map((item, index) => (
+              <div key={`${item.id}-${index}`} className="flex gap-4 border-b pb-4">
                 <img
                   src={item.image}
                   alt={item.name}
@@ -316,7 +352,7 @@ function CheckoutContent() {
 
           <div className="flex gap-2 mt-6">
             <input
-              className="flex-1 border p-3 rounded-lg"
+              className="flex-1 border p-3 rounded-xl"
               placeholder="Coupon code"
               value={coupon}
               onChange={(e) => setCoupon(e.target.value)}
@@ -325,7 +361,7 @@ function CheckoutContent() {
             <button
               type="button"
               onClick={applyCoupon}
-              className="bg-blue-600 text-white px-5 rounded-lg"
+              className="bg-blue-600 text-white px-5 rounded-xl"
             >
               Apply
             </button>
@@ -348,7 +384,7 @@ function CheckoutContent() {
             </div>
           </div>
 
-          <div className="mt-5 bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-sm">
+          <div className="mt-5 bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-sm">
             Coupons: <b>WELCOME50</b>, <b>SAVE10</b>, <b>FLAT100</b>
           </div>
         </div>
