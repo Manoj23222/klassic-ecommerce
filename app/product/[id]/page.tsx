@@ -22,15 +22,13 @@ type Product = {
 
 async function getProduct(id: string): Promise<Product | null> {
   try {
-    const [rows]: any = await db.query(
-      "SELECT * FROM products WHERE id = ?",
-      [id]
-    );
+    const [rows]: any = await db.query("SELECT * FROM products WHERE id = ?", [
+      id,
+    ]);
 
     if (rows.length === 0) return null;
     return rows[0];
-  } catch (error) {
-    console.error("Product detail error:", error);
+  } catch {
     return null;
   }
 }
@@ -43,12 +41,11 @@ export default async function ProductPage({
   const { id } = await params;
   const product = await getProduct(id);
 
-  if (!product) {
-    return <h1 className="p-10 text-3xl">Product not found</h1>;
-  }
+  if (!product) return <h1 className="p-10 text-3xl">Product not found</h1>;
 
   const [reviews]: any = await db.query(
-"SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC",    [id]
+    "SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC",
+    [id]
   );
 
   const [relatedProducts]: any = await db.query(
@@ -70,22 +67,16 @@ export default async function ProductPage({
         ).toFixed(1)
       : "0.0";
 
-  const rating5 = reviews.filter((r: any) => Number(r.rating) === 5).length;
-  const rating4 = reviews.filter((r: any) => Number(r.rating) === 4).length;
-  const rating3 = reviews.filter((r: any) => Number(r.rating) === 3).length;
-  const rating2 = reviews.filter((r: any) => Number(r.rating) === 2).length;
-  const rating1 = reviews.filter((r: any) => Number(r.rating) === 1).length;
-
   return (
     <main className="min-h-screen bg-gray-100">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <Link href="/" className="text-blue-600 font-semibold">
+      <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6">
+        <Link href="/" className="text-blue-600 font-semibold text-sm">
           Home / {product.category || "General"} / {product.name}
         </Link>
 
-        <div className="mt-5 bg-white rounded-xl shadow grid lg:grid-cols-2 gap-8 p-6">
+        <div className="mt-4 bg-white rounded-2xl shadow grid lg:grid-cols-2 gap-5 md:gap-8 p-3 md:p-6">
           <div>
             <ProductGallery
               mainImage={product.image}
@@ -108,7 +99,7 @@ export default async function ProductPage({
             ) : (
               <button
                 disabled
-                className="mt-5 w-full bg-gray-400 text-white py-3 rounded-lg font-bold"
+                className="mt-4 w-full bg-gray-400 text-white py-3 rounded-xl font-bold"
               >
                 Out of Stock
               </button>
@@ -131,9 +122,11 @@ export default async function ProductPage({
               {product.category || "General"}
             </p>
 
-            <h1 className="text-3xl font-bold mt-2">{product.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mt-2">
+              {product.name}
+            </h1>
 
-            <div className="flex items-center gap-3 mt-3">
+            <div className="flex flex-wrap items-center gap-2 mt-3">
               <span className="bg-green-600 text-white px-2 py-1 rounded text-sm font-bold">
                 {avgRating} ★
               </span>
@@ -143,18 +136,18 @@ export default async function ProductPage({
               </span>
             </div>
 
-            <span className="text-yellow-500 text-lg">
+            <div className="text-yellow-500 text-base md:text-lg mt-1">
               {reviews.length > 0
                 ? "⭐".repeat(Math.round(Number(avgRating)))
                 : "No ratings yet"}
-            </span>
+            </div>
 
-            <div className="mt-5 flex items-end gap-3">
-              <p className="text-4xl text-green-700 font-bold">
+            <div className="mt-4 flex flex-wrap items-end gap-2">
+              <p className="text-3xl md:text-4xl text-green-700 font-bold">
                 ₹{offerPrice.toFixed(2)}
               </p>
 
-              <p className="line-through text-gray-400 text-lg">
+              <p className="line-through text-gray-400 text-base md:text-lg">
                 ₹{mrp.toFixed(2)}
               </p>
 
@@ -168,61 +161,59 @@ export default async function ProductPage({
                   : "mt-3 text-red-600 font-bold"
               }
             >
-              {product.stock > 0
-                ? `In Stock: ${product.stock}`
-                : "Out of Stock"}
+              {product.stock > 0 ? `In Stock: ${product.stock}` : "Out of Stock"}
             </p>
 
-            <div className="mt-5 border rounded-xl p-4">
+            <div className="mt-5 border rounded-2xl p-4">
               <h3 className="font-bold mb-3">Delivery details</h3>
 
-              <div className="bg-blue-50 p-3 rounded-lg text-sm">
+              <div className="bg-blue-50 p-3 rounded-xl text-sm">
                 🚚 Delivery by 3-5 working days
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mt-4 text-center text-sm">
-                <div className="bg-gray-100 p-3 rounded-lg">
+              <div className="grid grid-cols-3 gap-2 mt-3 text-center text-xs md:text-sm">
+                <div className="bg-gray-100 p-2 md:p-3 rounded-xl">
                   🔁
                   <br />7 Days Return
                 </div>
 
-                <div className="bg-gray-100 p-3 rounded-lg">
+                <div className="bg-gray-100 p-2 md:p-3 rounded-xl">
                   💵
                   <br />
-                  Cash on Delivery
+                  COD
                 </div>
 
-                <div className="bg-gray-100 p-3 rounded-lg">
+                <div className="bg-gray-100 p-2 md:p-3 rounded-xl">
                   ✅
                   <br />
-                  Klassic Assured
+                  Assured
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 border rounded-xl p-4">
+            <div className="mt-5 border rounded-2xl p-4">
               <h3 className="font-bold mb-3">Product highlights</h3>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-gray-50 p-3 rounded">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="bg-gray-50 p-3 rounded-xl">
                   Category
                   <br />
                   <b>{product.category || "General"}</b>
                 </div>
 
-                <div className="bg-gray-50 p-3 rounded">
+                <div className="bg-gray-50 p-3 rounded-xl">
                   Payment
                   <br />
                   <b>COD Available</b>
                 </div>
 
-                <div className="bg-gray-50 p-3 rounded">
+                <div className="bg-gray-50 p-3 rounded-xl">
                   Offer
                   <br />
                   <b>{discount}% Off</b>
                 </div>
 
-                <div className="bg-gray-50 p-3 rounded">
+                <div className="bg-gray-50 p-3 rounded-xl">
                   Stock
                   <br />
                   <b>{product.stock}</b>
@@ -230,23 +221,19 @@ export default async function ProductPage({
               </div>
             </div>
 
-            <div className="mt-5 border rounded-xl p-4">
+            <div className="mt-5 border rounded-2xl p-4">
               <h3 className="font-bold mb-2">All details</h3>
-              <p className="text-gray-600 leading-7">{product.description}</p>
+              <p className="text-gray-600 leading-7 text-sm md:text-base">
+                {product.description}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">Customer Reviews</h2>
-
-          <div className="mb-6 space-y-2">
-            <p>⭐⭐⭐⭐⭐ {rating5}</p>
-            <p>⭐⭐⭐⭐ {rating4}</p>
-            <p>⭐⭐⭐ {rating3}</p>
-            <p>⭐⭐ {rating2}</p>
-            <p>⭐ {rating1}</p>
-          </div>
+        <div className="mt-6 bg-white rounded-2xl shadow p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">
+            Customer Reviews
+          </h2>
 
           {reviews.length === 0 ? (
             <p className="text-gray-500">No reviews yet.</p>
@@ -255,13 +242,10 @@ export default async function ProductPage({
               {reviews.map((review: any) => (
                 <div key={review.id} className="border-b pb-4">
                   <p className="font-bold">{review.customer_name}</p>
-
                   <p className="text-yellow-500">
                     {"⭐".repeat(Number(review.rating))}
                   </p>
-
                   <p className="text-gray-600 mt-1">{review.comment}</p>
-
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(review.created_at).toLocaleDateString()}
                   </p>
@@ -282,23 +266,28 @@ export default async function ProductPage({
           }}
         />
 
-        <div className="mt-8 bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">Related Products</h2>
+        <div className="mt-6 bg-white rounded-2xl shadow p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">
+            Related Products
+          </h2>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {relatedProducts.map((item: any) => (
               <Link
                 key={item.id}
                 href={`/product/${item.id}`}
-                className="border rounded-xl p-4 hover:shadow"
+                className="border rounded-xl p-3 md:p-4 hover:shadow"
               >
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="h-40 w-full object-contain"
+                  className="h-28 md:h-40 w-full object-contain"
                 />
 
-                <h3 className="font-bold mt-3">{item.name}</h3>
+                <h3 className="font-bold mt-3 text-sm md:text-base line-clamp-2">
+                  {item.name}
+                </h3>
+
                 <p className="text-green-700 font-bold">₹{item.price}</p>
               </Link>
             ))}

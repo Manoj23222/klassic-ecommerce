@@ -11,28 +11,39 @@ export default function ProductGallery({
 }) {
   const [selectedImage, setSelectedImage] = useState(mainImage);
 
-  const allImages = [mainImage, ...galleryImages];
+  const allImages = [
+    mainImage,
+    ...galleryImages.filter((img) => img !== mainImage),
+  ];
 
   return (
-    <div>
-      <div className="border rounded-xl p-6 bg-white flex items-center justify-center">
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex md:flex-col gap-3 overflow-auto">
+        {allImages.map((img, index) => (
+          <button
+            key={index}
+            onClick={() => setSelectedImage(img)}
+            className={`border-2 rounded-xl overflow-hidden bg-white ${
+              selectedImage === img
+                ? "border-blue-600"
+                : "border-gray-200"
+            }`}
+          >
+            <img
+              src={img}
+              alt=""
+              className="w-20 h-20 object-contain"
+            />
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 border rounded-2xl bg-white p-6 flex items-center justify-center">
         <img
           src={selectedImage}
           alt="Product"
-          className="w-full h-[480px] object-contain"
+          className="max-h-[500px] w-full object-contain"
         />
-      </div>
-
-      <div className="flex gap-3 mt-4 flex-wrap">
-        {allImages.map((img, index) => (
-          <img
-            key={index}
-            src={img}
-            alt={`Thumb ${index}`}
-            onClick={() => setSelectedImage(img)}
-            className="w-20 h-20 object-cover border rounded-lg cursor-pointer hover:border-blue-600"
-          />
-        ))}
       </div>
     </div>
   );
