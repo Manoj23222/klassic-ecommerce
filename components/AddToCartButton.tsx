@@ -1,5 +1,7 @@
 "use client";
 
+import toast from "react-hot-toast";
+
 type Props = {
   product: {
     id: number;
@@ -22,13 +24,15 @@ export default function AddToCartButton({ product }: Props) {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    alert(`${product.name} added to cart`);
+    window.dispatchEvent(new Event("storage"));
+
+    toast.success(`${product.name} added to cart`);
   };
 
   return (
     <button
       onClick={handleAddToCart}
-      className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg text-xl"
+      className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xl font-bold transition"
     >
       Add To Cart
     </button>

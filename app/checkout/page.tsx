@@ -1,5 +1,5 @@
 "use client";
-
+import toast from "react-hot-toast";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -106,7 +106,7 @@ function CheckoutContent() {
 
   const applyCoupon = async () => {
     if (!coupon.trim()) {
-      alert("Enter coupon code");
+     toast.error("Enter coupon code");
       return;
     }
 
@@ -122,10 +122,10 @@ function CheckoutContent() {
 
     if (data.success) {
       setDiscount(data.discount);
-      alert(`Coupon applied: ₹${data.discount} OFF`);
+     toast.success(`Coupon applied: ₹${data.discount} OFF`);
     } else {
       setDiscount(0);
-      alert(data.message || "Invalid coupon");
+     toast.error(data.message || "Invalid coupon");
     }
   };
 
@@ -154,7 +154,7 @@ function CheckoutContent() {
     const orderData = await saveOrder("Paytm");
 
     if (!orderData.success) {
-      alert("Order save failed");
+     toast.error("Order save failed");
       return;
     }
 
@@ -175,14 +175,14 @@ function CheckoutContent() {
     const paytmData = await paytmRes.json();
 
     if (!paytmData.success) {
-      alert("Paytm initiate failed");
+      toast.error("Paytm initiate failed");
       return;
     }
 
     const txnToken = paytmData.data?.body?.txnToken;
 
     if (!txnToken) {
-      alert("TxnToken not received");
+      toast.error("TxnToken not received");
       return;
     }
 
@@ -204,7 +204,7 @@ function CheckoutContent() {
     e.preventDefault();
 
     if (cart.length === 0) {
-      alert("Cart is empty");
+     toast.error("Cart is empty");
       return;
     }
 
@@ -220,7 +220,7 @@ function CheckoutContent() {
         if (!productId) localStorage.removeItem("cart");
         window.location.href = `/order-success?orderId=${data.orderId}`;
       } else {
-        alert("Order failed");
+        toast.error("Order failed");
       }
 
       return;
@@ -231,10 +231,10 @@ function CheckoutContent() {
 
       if (data.success) {
         if (!productId) localStorage.removeItem("cart");
-        alert("Test online payment successful!");
+        toast.success("Test online payment successful!");
         window.location.href = `/order-success?orderId=${data.orderId}`;
       } else {
-        alert("Order save failed");
+        toast.error("Order save failed");
       }
     }
   };

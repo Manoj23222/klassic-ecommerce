@@ -1,5 +1,6 @@
 
-import AIShoppingAssistant from "@/components/AIShoppingAssistant";import FloatingCartButton from "@/components/FloatingCartButton";
+import ToastProvider from "@/components/ToastProvider";
+import AIShoppingAssistant from "@/components/AIShoppingAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -38,7 +39,7 @@ export default function RootLayout({
 
        
         <MobileBottomNav />
-        <FloatingCartButton />
+    <ToastProvider />
       </body>
     </html>
   );

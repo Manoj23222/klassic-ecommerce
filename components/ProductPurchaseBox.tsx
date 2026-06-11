@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 type Product = {
   id: number;
@@ -26,12 +27,12 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
 
   const addToCart = () => {
     if (colorList.length > 0 && !selectedColor) {
-      alert("Please select color");
+      toast.error("Please select color");
       return;
     }
 
     if (sizeList.length > 0 && !selectedSize) {
-      alert("Please select size");
+      toast.error("Please select size");
       return;
     }
 
@@ -48,7 +49,9 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
     });
 
     localStorage.setItem("cart", JSON.stringify(cart));
-    alert(`${product.name} added to cart`);
+    window.dispatchEvent(new Event("storage"));
+
+    toast.success(`${product.name} added to cart`);
   };
 
   const buyNowLink = `/checkout?productId=${product.id}&color=${selectedColor}&size=${selectedSize}`;
@@ -58,13 +61,14 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
       {colorList.length > 0 && (
         <div className="mt-5">
           <h3 className="font-bold mb-2">Select Color</h3>
+
           <div className="flex gap-3 flex-wrap">
             {colorList.map((color) => (
               <button
                 key={color}
                 type="button"
                 onClick={() => setSelectedColor(color)}
-                className={`border px-4 py-2 rounded-lg ${
+                className={`border px-4 py-2 rounded-lg transition ${
                   selectedColor === color
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white hover:border-blue-600"
@@ -80,13 +84,14 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
       {sizeList.length > 0 && (
         <div className="mt-5">
           <h3 className="font-bold mb-2">Select Size</h3>
+
           <div className="flex gap-3 flex-wrap">
             {sizeList.map((size) => (
               <button
                 key={size}
                 type="button"
                 onClick={() => setSelectedSize(size)}
-                className={`border px-4 py-2 rounded-lg ${
+                className={`border px-4 py-2 rounded-lg transition ${
                   selectedSize === size
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white hover:border-blue-600"
@@ -101,15 +106,16 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
 
       <div className="grid grid-cols-2 gap-4 mt-5">
         <button
+          type="button"
           onClick={addToCart}
-          className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white h-[64px] rounded-lg font-bold text-lg"
+          className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white h-[64px] rounded-lg font-bold text-lg transition"
         >
           Add To Cart
         </button>
 
         <Link
           href={buyNowLink}
-          className="w-full flex items-center justify-center bg-green-600 hover:bg-green-700 text-white h-[64px] rounded-lg font-bold text-lg"
+          className="w-full flex items-center justify-center bg-green-600 hover:bg-green-700 text-white h-[64px] rounded-lg font-bold text-lg transition"
         >
           Buy Now
         </Link>

@@ -1,6 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
+
+const categories = [
+  "General",
+  "Grocery",
+  "Fruits & Vegetables",
+  "Atta Rice & Dal",
+  "Masala & Spices",
+  "Papad & Pickles",
+  "Oil & Ghee",
+  "Snacks & Namkeen",
+  "Biscuits & Cookies",
+  "Tea & Coffee",
+  "Milk & Dairy",
+  "Bread & Bakery",
+  "Cleaning & Household",
+  "Personal Care",
+  "Baby Care",
+  "Pet Food",
+  "Frozen Food",
+  "Home & Kitchen",
+  "Fashion",
+  "Electronics",
+  "Books",
+  "Sports",
+];
 
 export default function EditProductForm({ product }: { product: any }) {
   const [name, setName] = useState(product.name || "");
@@ -12,127 +38,172 @@ export default function EditProductForm({ product }: { product: any }) {
     product.featured === 1 || product.featured === true
   );
   const [image, setImage] = useState(product.image || "");
-  const [galleryImages, setGalleryImages] = useState(
-  product.gallery_images || ""
-);
-const [colors, setColors] = useState(product.colors || "");
-const [sizes, setSizes] = useState(product.sizes || "");
+  const [galleryImages, setGalleryImages] = useState(product.gallery_images || "");
+  const [colors, setColors] = useState(product.colors || "");
+  const [sizes, setSizes] = useState(product.sizes || "");
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const uploadImage = async (file: File) => {
-    setUploading(true);
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("image", file);
+    try {
+      setUploading(true);
 
-    const res = await fetch("/api/admin/upload-image", {
-      method: "POST",
-      body: formData,
-    });
+      const formData = new FormData();
+      formData.append("image", file);
 
-    const data = await res.json();
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (data.success) setImage(data.imageUrl);
-    else alert("Image upload failed");
+      const data = await res.json();
 
-    setUploading(false);
+      if (data.success) {
+        setImage(data.imageUrl);
+        toast.success("Product image uploaded");
+      } else {
+        toast.error(data.message || "Image upload failed");
+      }
+    } catch {
+      toast.error("Image upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const updateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/admin/update-product", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: product.id,
-        name,
-        description,
-        price,
-        stock,
-        category,
-        image,
-        featured,
-        gallery_images: galleryImages,
-        colors,
-sizes,
-      }),
-    });
+    if (name.trim().length < 2) return toast.error("Enter product name");
+    if (description.trim().length < 5) return toast.error("Enter product description");
+    if (!price || Number(price) <= 0) return toast.error("Enter valid product price");
+    if (!stock || Number(stock) < 0) return toast.error("Enter valid stock");
+    if (!image.trim()) return toast.error("Please upload or enter main image");
 
-    const data = await res.json();
+    try {
+      setSaving(true);
 
-    if (data.success) {
-      alert("Product updated successfully");
-      window.location.href = "/admin/product";
-    } else {
-      alert("Update failed");
+      const res = await fetch("/api/admin/update-product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: product.id,
+          name,
+          description,
+          price,
+          stock,
+          category,
+          image,
+          featured,
+          gallery_images: galleryImages,
+          colors,
+          sizes,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Product updated successfully");
+
+        setTimeout(() => {
+          window.location.href = "/admin/product";
+        }, 1200);
+      } else {
+        toast.error(data.message || "Update failed");
+      }
+    } catch {
+      toast.error("Server error. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
+  const galleryList = galleryImages
+    .split(",")
+    .map((img: string) => img.trim())
+    .filter(Boolean);
+
   return (
     <form onSubmit={updateProduct} className="grid gap-5">
+      <div className="rounded-2xl border bg-gradient-to-r from-indigo-50 to-blue-50 p-5">
+        <h2 className="text-xl font-extrabold text-gray-900">
+          Edit Product
+        </h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Update product details, inventory, variants and gallery images.
+        </p>
+      </div>
+
       <input
-        className="border p-3 rounded-lg"
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Product Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
       />
 
-      <input
-        className="border p-3 rounded-lg"
+      <textarea
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Description"
+        rows={4}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         required
       />
 
-      <input
-        className="border p-3 rounded-lg"
-        placeholder="Price"
-        type="number"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        required
-      />
+      <div className="grid md:grid-cols-3 gap-4">
+        <input
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Price"
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          required
+        />
 
-      <input
-        className="border p-3 rounded-lg"
-        placeholder="Stock"
-        type="number"
-        value={stock}
-        onChange={(e) => setStock(e.target.value)}
-        required
-      />
+        <input
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Stock"
+          type="number"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          required
+        />
 
-      <select
-        className="border p-3 rounded-lg"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        required
-      >
-        <option value="General">General</option>
-        <option value="Home & Kitchen">Home & Kitchen</option>
-        <option value="Fashion">Fashion</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Books">Books</option>
-        <option value="Sports">Sports</option>
-      </select>
+        <select
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          required
+        >
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 p-4 rounded-lg cursor-pointer">
+      <label className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 p-4 rounded-xl cursor-pointer">
         <input
           type="checkbox"
           checked={featured}
           onChange={(e) => setFeatured(e.target.checked)}
           className="w-5 h-5"
         />
-        <span className="font-semibold">⭐ Featured Product</span>
+        <span className="font-bold">⭐ Featured Product</span>
       </label>
 
       <div
-        className="border-2 border-dashed p-8 rounded-lg text-center cursor-pointer bg-gray-50 hover:bg-gray-100"
+        className="border-2 border-dashed border-blue-300 p-8 rounded-2xl text-center cursor-pointer bg-blue-50 hover:bg-blue-100 transition"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -140,8 +211,12 @@ sizes,
           if (file) uploadImage(file);
         }}
       >
-        <p className="font-semibold">Drag & Drop Product Image Here</p>
-        <p className="text-sm text-gray-500 mb-3">or choose file below</p>
+        <p className="font-extrabold text-lg text-gray-900">
+          Drag & Drop Product Image Here
+        </p>
+        <p className="text-sm text-gray-500 mb-3">
+          Or choose file below
+        </p>
 
         <input
           type="file"
@@ -154,11 +229,13 @@ sizes,
       </div>
 
       {uploading && (
-        <p className="text-blue-600 font-semibold">Uploading image...</p>
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-xl font-bold text-sm">
+          Uploading image...
+        </div>
       )}
 
       <input
-        className="border p-3 rounded-lg"
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Image URL"
         value={image}
         onChange={(e) => setImage(e.target.value)}
@@ -166,50 +243,65 @@ sizes,
       />
 
       {image && (
-        <img
-          src={image}
-          alt="Preview"
-          className="w-40 h-40 object-contain border rounded-lg bg-white p-2"
-        />
+        <div className="rounded-2xl border bg-white p-4 w-fit">
+          <p className="text-xs font-bold text-gray-500 mb-2">
+            Main Preview
+          </p>
+          <img
+            src={image}
+            alt="Preview"
+            className="w-40 h-40 object-contain rounded-xl bg-gray-50"
+          />
+        </div>
       )}
-<textarea
-  className="border p-3 rounded-lg"
-  placeholder="Gallery Images URLs comma separated"
-  rows={4}
-  value={galleryImages}
-  onChange={(e) => setGalleryImages(e.target.value)}
-/>
-<input
-  className="border p-3 rounded-lg"
-  placeholder="Colors comma separated e.g. Black, Brown, Blue"
-  value={colors}
-  onChange={(e) => setColors(e.target.value)}
-/>
 
-<input
-  className="border p-3 rounded-lg"
-  placeholder="Sizes comma separated e.g. S, M, L, XL"
-  value={sizes}
-  onChange={(e) => setSizes(e.target.value)}
-/>
-
-{galleryImages && (
-  <div className="flex gap-3 flex-wrap">
-    {galleryImages.split(",").map((img: string, index: number) => (
-      <img
-        key={index}
-        src={img.trim()}
-        alt={`Gallery ${index}`}
-        className="w-24 h-24 object-contain border rounded-lg bg-white p-2"
+      <textarea
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="Gallery Images URLs comma separated"
+        rows={4}
+        value={galleryImages}
+        onChange={(e) => setGalleryImages(e.target.value)}
       />
-    ))}
-  </div>
-)}
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <input
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Colors comma separated e.g. Black, Brown, Blue"
+          value={colors}
+          onChange={(e) => setColors(e.target.value)}
+        />
+
+        <input
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Sizes comma separated e.g. S, M, L, XL"
+          value={sizes}
+          onChange={(e) => setSizes(e.target.value)}
+        />
+      </div>
+
+      {galleryList.length > 0 && (
+        <div className="rounded-2xl border bg-gray-50 p-4">
+          <h3 className="font-extrabold mb-3">Gallery Preview</h3>
+
+          <div className="flex gap-3 flex-wrap">
+            {galleryList.map((img: string, index: number) => (
+              <img
+                key={index}
+                src={img}
+                alt={`Gallery ${index}`}
+                className="w-24 h-24 object-contain border rounded-xl bg-white p-2"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg"
+        disabled={saving || uploading}
+        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white p-4 rounded-xl font-extrabold transition disabled:from-gray-400 disabled:to-gray-400"
       >
-        Update Product
+        {saving ? "Updating Product..." : "Update Product"}
       </button>
     </form>
   );

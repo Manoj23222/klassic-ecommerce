@@ -1,141 +1,107 @@
-import Header from "@/components/Header";
-import db from "@/lib/db";
-import { cookies } from "next/headers";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
-export default async function SellerProductsPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("user_id")?.value;
+type Product = {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  image: string;
+  sku: string;
+  status: string;
+};
 
-  if (!userId) {
-    return (
-      <main className="min-h-screen bg-gray-100">
-        <Header />
-        <div className="p-10 text-center">
-          <h1 className="text-2xl font-bold mb-4">Please login first</h1>
-          <Link href="/login" className="bg-blue-600 text-white px-6 py-3 rounded-xl">
-            Login
-          </Link>
-        </div>
-      </main>
-    );
-  }
+export default function SellerProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [users]: any = await db.query(
-    "SELECT id, role FROM users WHERE id = ?",
-    [userId]
-  );
+  useEffect(() => {
+    const seller = JSON.parse(localStorage.getItem("seller") || "{}");
 
-  if (!users[0] || users[0].role !== "seller") {
-    return (
-      <main className="min-h-screen bg-gray-100">
-        <Header />
-        <div className="p-10 text-center">
-          <h1 className="text-2xl font-bold mb-4">Seller access required</h1>
-          <Link href="/become-seller" className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold">
-            Become a Seller
-          </Link>
-        </div>
-      </main>
-    );
-  }
+    if (!seller?.id) {
+      toast.error("Please login as seller first");
+      window.location.href = "/seller/login";
+      return;
+    }
 
-  const [products]: any = await db.query(
-    "SELECT * FROM products WHERE seller_id = ? ORDER BY id DESC",
-    [userId]
-  );
+    fetch(`/api/seller/products?seller_id=${seller.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setProducts(data.products);
+        } else {
+          toast.error(data.message || "Products fetch failed");
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <Header />
-
-      <section className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">My Products</h1>
-            <p className="text-gray-500 text-sm">
-              Manage your listed products.
-            </p>
-          </div>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">My Products</h1>
 
           <Link
-            href="/seller/add-product"
-            className="bg-green-600 text-white px-5 py-3 rounded-xl font-bold text-center"
+            href="/seller/products/add"
+            className="bg-black text-white px-5 py-3 rounded-xl"
           >
-            ➕ Add Product
+            + Add Product
           </Link>
         </div>
 
-        <div className="bg-white rounded-2xl shadow overflow-x-auto">
-          <table className="w-full border text-sm">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border p-2">Image</th>
-                <th className="border p-2">Product</th>
-                <th className="border p-2">Category</th>
-                <th className="border p-2">Price</th>
-                <th className="border p-2">Stock</th>
-                <th className="border p-2">Preview</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {products.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          {loading ? (
+            <p className="p-6">Loading...</p>
+          ) : products.length === 0 ? (
+            <p className="p-6">No products added yet.</p>
+          ) : (
+            <table className="w-full text-left">
+              <thead className="bg-gray-200">
                 <tr>
-                  <td colSpan={6} className="border p-5 text-center text-gray-500">
-                    No products added yet
-                  </td>
+                  <th className="p-4">Image</th>
+                  <th className="p-4">Name</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">SKU</th>
+                  <th className="p-4">Price</th>
+                  <th className="p-4">Stock</th>
+                  <th className="p-4">Status</th>
                 </tr>
-              ) : (
-                products.map((product: any) => (
-                  <tr key={product.id}>
-                    <td className="border p-2">
+              </thead>
+
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-t">
+                    <td className="p-4">
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-16 h-16 object-contain bg-gray-100 rounded"
+                        className="w-16 h-16 object-cover rounded"
                       />
                     </td>
 
-                    <td className="border p-2 font-bold">
-                      {product.name}
-                    </td>
+                    <td className="p-4 font-semibold">{product.name}</td>
+                    <td className="p-4">{product.category}</td>
+                    <td className="p-4">{product.sku}</td>
+                    <td className="p-4">₹{product.price}</td>
+                    <td className="p-4">{product.stock}</td>
 
-                    <td className="border p-2">
-                      {product.category || "General"}
-                    </td>
-
-                    <td className="border p-2 font-bold text-green-600">
-                      ₹{Number(product.price).toFixed(2)}
-                    </td>
-
-                    <td className="border p-2">
-                      <span
-                        className={
-                          product.stock <= 5
-                            ? "text-red-600 font-bold"
-                            : "text-green-600 font-bold"
-                        }
-                      >
-                        {product.stock}
+                    <td className="p-4">
+                      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
+                        {product.status || "Pending Approval"}
                       </span>
                     </td>
-
-                    <td className="border p-2">
-                      <Link
-                        href={`/product/${product.id}`}
-                        className="bg-blue-600 text-white px-3 py-1 rounded"
-                      >
-                        View
-                      </Link>
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

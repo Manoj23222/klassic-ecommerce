@@ -7,17 +7,20 @@ export async function POST(req: Request) {
 
     const {
       seller_id,
+      seller_store_name,
       name,
+      category,
       description,
       price,
       stock,
       image,
-      category,
+      gallery_images,
       colors,
       sizes,
+      sku,
     } = body;
 
-    if (!seller_id || !name || !description || !price || !stock || !image) {
+    if (!seller_id || !name || !price || !stock || !image || !sku) {
       return NextResponse.json(
         { success: false, message: "Required fields missing" },
         { status: 400 }
@@ -25,25 +28,63 @@ export async function POST(req: Request) {
     }
 
     await db.query(
-      `INSERT INTO products
-      (seller_id, name, description, price, stock, image, category, colors, sizes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products 
+      (seller_id, seller_store_name, name, category, description, price, stock, image, gallery_images, colors, sizes, sku, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         seller_id,
+        seller_store_name,
         name,
+        category,
         description,
-        Number(price),
-        Number(stock),
+        price,
+        stock,
         image,
-        category || "General",
+        JSON.stringify(gallery_images || []),
         colors || "",
         sizes || "",
+        sku,
+        "Pending Approval",
       ]
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Product submitted for approval",
+    });
   } catch (error) {
     console.error("Seller product add error:", error);
+
+    return NextResponse.json(
+      { success: false, message: "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const sellerId = searchParams.get("seller_id");
+
+    if (!sellerId) {
+      return NextResponse.json(
+        { success: false, message: "Seller ID required" },
+        { status: 400 }
+      );
+    }
+
+    const [products] = await db.query(
+      `SELECT * FROM products WHERE seller_id = ? ORDER BY id DESC`,
+      [sellerId]
+    );
+
+    return NextResponse.json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.error("Seller products fetch error:", error);
 
     return NextResponse.json(
       { success: false, message: "Server error" },

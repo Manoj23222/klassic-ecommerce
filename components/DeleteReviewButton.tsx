@@ -1,30 +1,54 @@
 "use client";
 
-export default function DeleteReviewButton({ id }: { id: number }) {
+import { useState } from "react";
+import toast from "react-hot-toast";
+
+export default function DeleteReviewButton({
+  id,
+}: {
+  id: number;
+}) {
+  const [loading, setLoading] = useState(false);
+
   const deleteReview = async () => {
-    const confirmDelete = confirm("Delete this review?");
-    if (!confirmDelete) return;
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this review?"
+    );
 
-    const res = await fetch(`/api/admin/reviews/${id}`, {
-      method: "DELETE",
-    });
+    if (!confirmed) return;
 
-    const data = await res.json();
+    try {
+      setLoading(true);
 
-    if (data.success) {
-      alert("Review deleted");
-      window.location.reload();
-    } else {
-      alert("Delete failed");
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Review deleted successfully");
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        toast.error(data.message || "Delete failed");
+      }
+    } catch {
+      toast.error("Server error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <button
       onClick={deleteReview}
-      className="bg-red-600 text-white px-3 py-2 rounded"
+      disabled={loading}
+      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold transition disabled:bg-gray-400"
     >
-      Delete
+      {loading ? "Deleting..." : "Delete"}
     </button>
   );
 }

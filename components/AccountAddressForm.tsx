@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 export default function AccountAddressForm() {
   const [phone, setPhone] = useState("");
@@ -36,6 +37,7 @@ export default function AccountAddressForm() {
         }
       } catch (error) {
         console.log("Address load error", error);
+        toast.error("Address load failed");
       }
     };
 
@@ -44,30 +46,37 @@ export default function AccountAddressForm() {
 
   const saveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
-    const res = await fetch("/api/account/address", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone,
-        address,
-        city,
-        pincode,
-        address_type: addressType,
-      }),
-    });
+    try {
+      setLoading(true);
 
-    setLoading(false);
+      const res = await fetch("/api/account/address", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone,
+          address,
+          city,
+          pincode,
+          address_type: addressType,
+        }),
+      });
 
-    if (res.ok) {
-      alert("Address saved successfully");
-      setHasAddress(true);
-      setEditMode(false);
-    } else {
-      alert("Address save failed");
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Address saved successfully");
+        setHasAddress(true);
+        setEditMode(false);
+      } else {
+        toast.error(data.message || "Address save failed");
+      }
+    } catch {
+      toast.error("Server error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,8 +87,9 @@ export default function AccountAddressForm() {
           <h2 className="text-2xl font-bold">🏠 Saved Delivery Address</h2>
 
           <button
+            type="button"
             onClick={() => setEditMode(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold"
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition"
           >
             Edit
           </button>
@@ -124,7 +134,8 @@ export default function AccountAddressForm() {
           className="border p-3 rounded-xl"
           placeholder="Phone Number"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          maxLength={10}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
           required
         />
 
@@ -140,7 +151,8 @@ export default function AccountAddressForm() {
           className="border p-3 rounded-xl"
           placeholder="Pincode"
           value={pincode}
-          onChange={(e) => setPincode(e.target.value)}
+          maxLength={6}
+          onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
           required
         />
 
@@ -156,7 +168,7 @@ export default function AccountAddressForm() {
       <div className="flex gap-3 mt-5">
         <button
           disabled={loading}
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:bg-gray-400"
         >
           {loading ? "Saving..." : "Save Address"}
         </button>
@@ -165,7 +177,7 @@ export default function AccountAddressForm() {
           <button
             type="button"
             onClick={() => setEditMode(false)}
-            className="bg-gray-200 px-6 py-3 rounded-xl font-bold"
+            className="bg-gray-200 px-6 py-3 rounded-xl font-bold hover:bg-gray-300 transition"
           >
             Cancel
           </button>
