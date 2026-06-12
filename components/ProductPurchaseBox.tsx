@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -13,6 +13,17 @@ type Product = {
   sizes?: string;
 };
 
+function getSizeMultiplier(size: string) {
+  const clean = size.toLowerCase().replace(/\s/g, "");
+
+  if (clean === "500g") return 0.5;
+  if (clean === "1kg") return 1;
+  if (clean === "5kg") return 5;
+  if (clean === "10kg") return 10;
+
+  return 1;
+}
+
 export default function ProductPurchaseBox({ product }: { product: Product }) {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
@@ -24,6 +35,11 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
   const sizeList = product.sizes
     ? product.sizes.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
+
+  const finalPrice = useMemo(() => {
+    if (!selectedSize) return Number(product.price);
+    return Number(product.price) * getSizeMultiplier(selectedSize);
+  }, [product.price, selectedSize]);
 
   const addToCart = () => {
     if (colorList.length > 0 && !selectedColor) {
@@ -41,7 +57,8 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
     cart.push({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: finalPrice,
+      basePrice: product.price,
       image: product.image,
       color: selectedColor,
       size: selectedSize,
@@ -54,10 +71,24 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
     toast.success(`${product.name} added to cart`);
   };
 
-  const buyNowLink = `/checkout?productId=${product.id}&color=${selectedColor}&size=${selectedSize}`;
+  const buyNowLink = `/checkout?productId=${product.id}&color=${encodeURIComponent(
+    selectedColor
+  )}&size=${encodeURIComponent(selectedSize)}&price=${finalPrice}`;
 
   return (
     <div>
+      <div className="mt-5 bg-green-50 border border-green-200 rounded-xl p-4">
+        <p className="text-sm text-gray-500">Selected Price</p>
+        <h2 className="text-3xl font-extrabold text-green-700">
+          ₹{finalPrice.toFixed(2)}
+        </h2>
+        {selectedSize && (
+          <p className="text-sm text-gray-600 mt-1">
+            Size: <b>{selectedSize}</b>
+          </p>
+        )}
+      </div>
+
       {colorList.length > 0 && (
         <div className="mt-5">
           <h3 className="font-bold mb-2">Select Color</h3>
@@ -86,20 +117,25 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
           <h3 className="font-bold mb-2">Select Size</h3>
 
           <div className="flex gap-3 flex-wrap">
-            {sizeList.map((size) => (
-              <button
-                key={size}
-                type="button"
-                onClick={() => setSelectedSize(size)}
-                className={`border px-4 py-2 rounded-lg transition ${
-                  selectedSize === size
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white hover:border-blue-600"
-                }`}
-              >
-                {size}
-              </button>
-            ))}
+            {sizeList.map((size) => {
+              const sizePrice = Number(product.price) * getSizeMultiplier(size);
+
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setSelectedSize(size)}
+                  className={`border px-4 py-2 rounded-lg transition ${
+                    selectedSize === size
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white hover:border-blue-600"
+                  }`}
+                >
+                  <div className="font-bold">{size}</div>
+                  <div className="text-xs">₹{sizePrice.toFixed(2)}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

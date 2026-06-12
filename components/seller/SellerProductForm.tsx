@@ -4,10 +4,71 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+const categories = [
+  "Fashion",
+  "Men's Clothing",
+  "Women's Clothing",
+  "Kids Clothing",
+  "Shoes",
+  "Bags",
+  "Watches",
+  "Jewelry",
+  "Electronics",
+  "Mobile Phones",
+  "Laptops",
+  "Tablets",
+  "Headphones",
+  "Smart Watches",
+  "Accessories",
+  "Home & Kitchen",
+  "Furniture",
+  "Home Decor",
+  "Kitchen Tools",
+  "Storage & Organization",
+  "Lighting",
+  "Beauty & Personal Care",
+  "Skincare",
+  "Hair Care",
+  "Makeup",
+  "Perfumes",
+  "Grooming",
+  "Grocery",
+  "Fruits & Vegetables",
+  "Snacks",
+  "Beverages",
+  "Dairy Products",
+  "Organic Foods",
+  "Sports & Fitness",
+  "Gym Equipment",
+  "Yoga Accessories",
+  "Outdoor Sports",
+  "Cycling",
+  "Toys & Games",
+  "Action Figures",
+  "Educational Toys",
+  "Board Games",
+  "Remote Control Toys",
+  "Books & Stationery",
+  "Books",
+  "Notebooks",
+  "Pens & Pencils",
+  "Office Supplies",
+  "Automotive",
+  "Car Accessories",
+  "Bike Accessories",
+  "Tyres",
+  "Car Care",
+  "Pet Supplies",
+  "Dog Food",
+  "Cat Food",
+  "Pet Toys",
+  "Pet Accessories",
+];
+
 export default function SellerProductForm({
   sellerId,
 }: {
-  sellerId: number;
+  sellerId: string;
 }) {
   const router = useRouter();
 
@@ -17,7 +78,7 @@ export default function SellerProductForm({
     price: "",
     stock: "",
     image: "",
-    category: "General",
+    category: "Fashion",
     colors: "",
     sizes: "",
   });
@@ -32,9 +93,12 @@ export default function SellerProductForm({
     e.preventDefault();
 
     if (form.name.trim().length < 2) return toast.error("Enter product name");
-    if (form.description.trim().length < 5) return toast.error("Enter product description");
-    if (!form.price || Number(form.price) <= 0) return toast.error("Enter valid price");
-    if (!form.stock || Number(form.stock) < 0) return toast.error("Enter valid stock");
+    if (form.description.trim().length < 5)
+      return toast.error("Enter product description");
+    if (!form.price || Number(form.price) <= 0)
+      return toast.error("Enter valid price");
+    if (!form.stock || Number(form.stock) < 0)
+      return toast.error("Enter valid stock");
     if (!form.image.trim()) return toast.error("Enter product image URL");
 
     try {
@@ -91,6 +155,28 @@ export default function SellerProductForm({
         required
       />
 
+      <select
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-white"
+        value={form.category}
+        onChange={(e) => updateField("category", e.target.value)}
+        required
+      >
+        {categories.map((category) => (
+          <option key={category} value={category}>
+            {category}
+          </option>
+        ))}
+      </select>
+
+      <textarea
+        className="border p-3 rounded-xl md:col-span-2 outline-none focus:ring-2 focus:ring-green-500"
+        placeholder="Product Description *"
+        rows={5}
+        value={form.description}
+        onChange={(e) => updateField("description", e.target.value)}
+        required
+      />
+
       <input
         className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
         placeholder="Price *"
@@ -108,19 +194,6 @@ export default function SellerProductForm({
         onChange={(e) => updateField("stock", e.target.value)}
         required
       />
-
-      <select
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
-        value={form.category}
-        onChange={(e) => updateField("category", e.target.value)}
-      >
-        <option value="General">General</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Fashion">Fashion</option>
-        <option value="Home & Kitchen">Home & Kitchen</option>
-        <option value="Grocery">Grocery</option>
-        <option value="Sports">Sports</option>
-      </select>
 
       <input
         className="border p-3 rounded-xl md:col-span-2 outline-none focus:ring-2 focus:ring-green-500"
@@ -153,15 +226,6 @@ export default function SellerProductForm({
         placeholder="Sizes comma separated e.g. S, M, L"
         value={form.sizes}
         onChange={(e) => updateField("sizes", e.target.value)}
-      />
-
-      <textarea
-        className="border p-3 rounded-xl md:col-span-2 outline-none focus:ring-2 focus:ring-green-500"
-        placeholder="Product Description *"
-        rows={5}
-        value={form.description}
-        onChange={(e) => updateField("description", e.target.value)}
-        required
       />
 
       <button
