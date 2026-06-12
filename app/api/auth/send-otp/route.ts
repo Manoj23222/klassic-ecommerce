@@ -33,6 +33,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const smtpUser = process.env.SMTP_EMAIL || process.env.EMAIL_USER;
+    const smtpPass = process.env.SMTP_APP_PASSWORD || process.env.EMAIL_PASS;
+
+    if (!smtpUser || !smtpPass) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email SMTP environment variables missing",
+        },
+        { status: 500 }
+      );
+    }
+
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -52,13 +65,13 @@ export async function POST(req: Request) {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.SMTP_EMAIL || process.env.EMAIL_USER,
-        pass: process.env.SMTP_APP_PASSWORD || process.env.EMAIL_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
 
     await transporter.sendMail({
-      from: `"Klassic" <${process.env.SMTP_EMAIL || process.env.EMAIL_USER}>`,
+      from: `"Klassic" <${smtpUser}>`,
       to: cleanEmail,
       subject: "Your Klassic OTP Code",
       html: `
@@ -75,11 +88,14 @@ export async function POST(req: Request) {
       success: true,
       message: "OTP sent successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Send OTP Error:", error);
 
     return NextResponse.json(
-      { success: false, message: "OTP send failed" },
+      {
+        success: false,
+        message: error.message || "OTP send failed",
+      },
       { status: 500 }
     );
   }
