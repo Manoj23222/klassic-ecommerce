@@ -1,10 +1,25 @@
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
 import AdminOrdersTable from "@/components/admin/AdminOrdersTable";
 
 export default async function AdminOrdersPage() {
-  const [orders]: any = await db.query(
-    "SELECT * FROM orders ORDER BY id DESC"
-  );
+  await connectDB();
+
+  const orders = await Order.find()
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const cleanOrders = orders.map((order: any) => ({
+    id: order._id.toString(),
+    customer_name: order.customer_name,
+    phone: order.phone,
+    total_amount: Number(order.total_amount || 0),
+    status: order.status,
+    payment_method: order.payment_method,
+    created_at: order.createdAt
+      ? String(order.createdAt)
+      : "",
+  }));
 
   return (
     <>
@@ -12,7 +27,7 @@ export default async function AdminOrdersPage() {
         Admin Orders
       </h1>
 
-      <AdminOrdersTable orders={orders} />
+      <AdminOrdersTable orders={cleanOrders} />
     </>
   );
 }

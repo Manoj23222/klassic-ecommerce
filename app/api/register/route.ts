@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
 function isGmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
@@ -19,6 +20,8 @@ function isStrongPassword(password: string) {
 
 export async function POST(request: Request) {
   try {
+    await connectDB();
+
     const { name, email, phone, password } = await request.json();
 
     const cleanName = String(name || "").trim();
@@ -64,29 +67,11 @@ export async function POST(request: Request) {
       );
     }
 
-   const [verifiedOtp]: any = await db.query(
-  `SELECT id FROM otp_verifications
-   WHERE identifier = ?
-   AND purpose = ?
-   AND verified = 1
-   ORDER BY id DESC
-   LIMIT 1`,
-  [cleanEmail, "register"]
-);
+    const existing = await User.findOne({
+      $or: [{ email: cleanEmail }, { phone: cleanPhone }],
+    });
 
-    if (verifiedOtp.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "Please verify Gmail OTP first" },
-        { status: 400 }
-      );
-    }
-
-    const [existing]: any = await db.query(
-      "SELECT id FROM users WHERE email = ? OR phone = ?",
-      [cleanEmail, cleanPhone]
-    );
-
-    if (existing.length > 0) {
+    if (existing) {
       return NextResponse.json(
         { success: false, message: "Email or mobile number already registered" },
         { status: 409 }
@@ -95,17 +80,14 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await db.query(
-  "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)",
-  [cleanName, cleanEmail, cleanPhone, hashedPassword, "customer"]
-);
+    await User.create({
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      password: hashedPassword,
+      role: "customer",
+    });
 
-await db.query(
-  `DELETE FROM otp_verifications
-   WHERE identifier = ?
-   AND purpose = ?`,
-  [cleanEmail, "register"]
-);
     try {
       const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -123,33 +105,14 @@ await db.query(
           <div style="font-family:Arial;background:#f5f7fb;padding:20px">
             <div style="max-width:600px;margin:auto;background:white;border-radius:14px;padding:24px">
               <h1 style="color:#0f172a">Welcome to Klassic, ${cleanName}! 🎉</h1>
-
               <p>Your Klassic account has been created successfully.</p>
-
               <div style="background:#eff6ff;padding:16px;border-radius:12px;margin:18px 0">
                 <h3>Your Account Details</h3>
                 <p><b>Name:</b> ${cleanName}</p>
                 <p><b>Email:</b> ${cleanEmail}</p>
                 <p><b>Mobile:</b> ${cleanPhone}</p>
               </div>
-
-              <h3>What you can do now?</h3>
-              <ul>
-                <li>Shop products easily</li>
-                <li>Save delivery address</li>
-                <li>Track your orders</li>
-                <li>Add products to wishlist</li>
-                <li>Apply coupons and offers</li>
-                <li>Become a seller on Klassic</li>
-              </ul>
-
-              <p style="margin-top:20px">
-                Thank you for joining Klassic Ecommerce.
-              </p>
-
-              <p style="font-size:12px;color:#64748b">
-                If this account was not created by you, please contact Klassic support.
-              </p>
+              <p>Thank you for joining Klassic Ecommerce.</p>
             </div>
           </div>
         `,
@@ -162,13 +125,13 @@ await db.query(
       success: true,
       message: "Registration successful",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Register Error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "Registration failed",
+        message: error.message || "Registration failed",
       },
       { status: 500 }
     );

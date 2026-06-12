@@ -1,7 +1,11 @@
 import Header from "@/components/Header";
-import db from "@/lib/db";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
+
+export const dynamic = "force-dynamic";
 
 export default async function CustomerInvoicePage({
   params,
@@ -27,31 +31,33 @@ export default async function CustomerInvoicePage({
     );
   }
 
-  const [orders]: any = await db.query(
-    "SELECT * FROM orders WHERE id = ? AND user_id = ?",
-    [id, userId]
-  );
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return <h1 className="p-10 text-2xl font-bold">Invalid invoice ID</h1>;
+  }
 
-  if (orders.length === 0) {
+  await connectDB();
+
+  const order: any = await Order.findOne({
+    _id: id,
+    user_id: userId,
+  }).lean();
+
+  if (!order) {
     return <h1 className="p-10 text-2xl font-bold">Invoice not found</h1>;
   }
 
-  const order = orders[0];
-
-  const [items]: any = await db.query(
-    "SELECT * FROM order_items WHERE order_id = ?",
-    [id]
-  );
+  const items = order.items || [];
 
   const subtotal = items.reduce(
     (sum: number, item: any) =>
-      sum + Number(item.price) * Number(item.quantity),
+      sum + Number(item.price || 0) * Number(item.quantity || 1),
     0
   );
 
   const discount = Number(order.discount || 0);
   const deliveryCharge = subtotal > 499 ? 0 : 40;
   const total = Number(order.total_amount || subtotal - discount + deliveryCharge);
+  const orderId = String(order._id);
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -64,6 +70,7 @@ export default async function CustomerInvoicePage({
           </Link>
 
           <button
+            type="button"
             onClick={() => window.print()}
             className="bg-green-600 text-white px-4 py-2 rounded font-semibold"
           >
@@ -79,11 +86,11 @@ export default async function CustomerInvoicePage({
             </div>
 
             <div className="text-right text-sm">
-              <p><b>Invoice No:</b> INV-{order.id}</p>
+              <p><b>Invoice No:</b> INV-{orderId.slice(-8).toUpperCase()}</p>
               <p>
                 <b>Date:</b>{" "}
-                {order.created_at
-                  ? new Date(order.created_at).toLocaleDateString("en-IN")
+                {order.createdAt
+                  ? new Date(order.createdAt).toLocaleDateString("en-IN")
                   : "N/A"}
               </p>
               <p><b>Status:</b> {order.status}</p>
@@ -116,8 +123,8 @@ export default async function CustomerInvoicePage({
             </thead>
 
             <tbody>
-              {items.map((item: any) => (
-                <tr key={item.id}>
+              {items.map((item: any, index: number) => (
+                <tr key={`${item.product_id}-${index}`}>
                   <td className="border p-2">
                     {item.product_name}
                     {(item.color || item.size) && (
@@ -129,10 +136,10 @@ export default async function CustomerInvoicePage({
                   </td>
                   <td className="border p-2 text-center">{item.quantity}</td>
                   <td className="border p-2 text-center">
-                    ₹{Number(item.price).toFixed(2)}
+                    ₹{Number(item.price || 0).toFixed(2)}
                   </td>
                   <td className="border p-2 text-center">
-                    ₹{(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                    ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}
                   </td>
                 </tr>
               ))}

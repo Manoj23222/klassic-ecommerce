@@ -1,28 +1,37 @@
 import DailySpinWheel from "@/components/DailySpinWheel";
 import MysteryDiscountBox from "@/components/MysteryDiscountBox";
 export const dynamic = "force-dynamic";
+
 import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
-type Product = {
-  id: number;
+type ProductType = {
+  _id: string;
+  id?: string;
   name: string;
   description: string;
   price: number;
   stock: number;
   image: string;
   category?: string;
-  featured?: number | boolean;
+  featured?: boolean;
 };
 
-async function getProducts(): Promise<Product[]> {
+async function getProducts(): Promise<ProductType[]> {
   try {
-    const [products]: any = await db.query(
-      "SELECT * FROM products ORDER BY id DESC"
-    );
+    await connectDB();
 
-    return products;
+    const products = await Product.find({ status: "Approved" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return products.map((product: any) => ({
+      ...product,
+      _id: product._id.toString(),
+      id: product._id.toString(),
+    }));
   } catch (error) {
     console.error("Products fetch error:", error);
     return [];

@@ -1,8 +1,10 @@
 import CancelOrderButton from "@/components/CancelOrderButton";
 import Header from "@/components/Header";
 import ReviewForm from "@/components/ReviewForm";
-import db from "@/lib/db";
 import Link from "next/link";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
 
 const steps = ["Pending", "Processing", "Shipped", "Delivered"];
 
@@ -19,20 +21,20 @@ export default async function MyOrderDetailsPage({
 }) {
   const { id } = await params;
 
-  const [orders]: any = await db.query("SELECT * FROM orders WHERE id = ?", [
-    id,
-  ]);
+  await connectDB();
 
-  const [items]: any = await db.query(
-    "SELECT * FROM order_items WHERE order_id = ?",
-    [id]
-  );
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return <h1 className="p-10 text-2xl font-bold">Invalid order ID</h1>;
+  }
 
-  if (orders.length === 0) {
+  const order: any = await Order.findById(id).lean();
+
+  if (!order) {
     return <h1 className="p-10 text-2xl font-bold">Order not found</h1>;
   }
 
-  const order = orders[0];
+  const items = order.items || [];
+  const orderId = order._id.toString();
   const currentStep = getStatusIndex(order.status || "Pending");
 
   const subtotal = items.reduce(
@@ -43,9 +45,7 @@ export default async function MyOrderDetailsPage({
 
   const discount = Number(order.discount || 0);
   const deliveryCharge = subtotal > 499 ? 0 : 40;
-  const finalTotal = Number(
-    order.total_amount || subtotal - discount + deliveryCharge
-  );
+  const finalTotal = Number(order.total_amount || subtotal - discount + deliveryCharge);
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -53,14 +53,12 @@ export default async function MyOrderDetailsPage({
 
       <section className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6">
         <div className="text-sm text-gray-500 mb-4">
-          <Link href="/" className="hover:text-blue-600">
-            Home
-          </Link>{" "}
+          <Link href="/" className="hover:text-blue-600">Home</Link>{" "}
           ›{" "}
           <Link href="/my-orders" className="hover:text-blue-600">
             My Orders
           </Link>{" "}
-          › Order #{order.id}
+          › Order #{orderId.slice(-6).toUpperCase()}
         </div>
 
         <div className="grid lg:grid-cols-[1fr_330px] gap-4">
@@ -69,13 +67,13 @@ export default async function MyOrderDetailsPage({
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <h1 className="text-lg md:text-xl font-bold">
-                    Order #{order.id}
+                    Order #{orderId.slice(-6).toUpperCase()}
                   </h1>
 
                   <p className="text-xs md:text-sm text-gray-500 mt-1">
                     Placed on{" "}
-                    {order.created_at
-                      ? new Date(order.created_at).toLocaleDateString()
+                    {order.createdAt
+                      ? new Date(order.createdAt).toLocaleDateString("en-IN")
                       : "N/A"}
                   </p>
                 </div>
@@ -133,14 +131,10 @@ export default async function MyOrderDetailsPage({
                         </h3>
 
                         <p className="text-xs md:text-sm text-gray-500 mt-1">
-                          {step === "Pending" &&
-                            "Your order has been placed."}
-                          {step === "Processing" &&
-                            "Seller is preparing your item."}
-                          {step === "Shipped" &&
-                            "Your item is on the way."}
-                          {step === "Delivered" &&
-                            "Your item has been delivered."}
+                          {step === "Pending" && "Your order has been placed."}
+                          {step === "Processing" && "Seller is preparing your item."}
+                          {step === "Shipped" && "Your item is on the way."}
+                          {step === "Delivered" && "Your item has been delivered."}
                         </p>
                       </div>
                     );
@@ -155,16 +149,20 @@ export default async function MyOrderDetailsPage({
               </h2>
 
               <div className="space-y-3">
-                {items.map((item: any) => {
-                  const itemTotal =
-                    Number(item.price) * Number(item.quantity);
+                {items.map((item: any, index: number) => {
+                  const itemTotal = Number(item.price) * Number(item.quantity);
 
                   return (
-                    <div
-                      key={item.id}
-                      className="border rounded p-3 md:p-4"
-                    >
-                      <div className="grid md:grid-cols-[1fr_120px] gap-3">
+                    <div key={`${item.product_id}-${index}`} className="border rounded p-3 md:p-4">
+                      <div className="grid md:grid-cols-[90px_1fr_120px] gap-3">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.product_name}
+                            className="w-20 h-20 object-contain bg-gray-100 rounded"
+                          />
+                        )}
+
                         <div>
                           <h3 className="text-sm md:text-base font-semibold line-clamp-2">
                             {item.product_name}
@@ -189,8 +187,8 @@ export default async function MyOrderDetailsPage({
 
                       {order.status === "Delivered" && item.product_id && (
                         <ReviewForm
-                          productId={Number(item.product_id)}
-                          orderId={Number(order.id)}
+                          productId={item.product_id as any}
+                          orderId={orderId as any}
                           defaultName={order.customer_name || ""}
                         />
                       )}
@@ -237,17 +235,13 @@ export default async function MyOrderDetailsPage({
 
                 <div className="flex justify-between">
                   <span>Discount</span>
-                  <span className="text-green-600">
-                    -₹{discount.toFixed(2)}
-                  </span>
+                  <span className="text-green-600">-₹{discount.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>Delivery Charges</span>
                   <span className={deliveryCharge === 0 ? "text-green-600" : ""}>
-                    {deliveryCharge === 0
-                      ? "FREE"
-                      : `₹${deliveryCharge.toFixed(2)}`}
+                    {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge.toFixed(2)}`}
                   </span>
                 </div>
 
@@ -268,16 +262,16 @@ export default async function MyOrderDetailsPage({
                 <h2 className="text-base font-bold mb-3 text-red-600">
                   Order Actions
                 </h2>
-                <CancelOrderButton orderId={order.id} />
+                <CancelOrderButton orderId={orderId as any} />
               </div>
             )}
 
-           <Link
-  href={`/my-orders/${order.id}/invoice`}
-  className="block text-center bg-green-600 text-white px-4 py-3 rounded font-semibold text-sm hover:bg-green-700"
->
-  Download Invoice
-</Link>
+            <Link
+              href={`/my-orders/${orderId}/invoice`}
+              className="block text-center bg-green-600 text-white px-4 py-3 rounded font-semibold text-sm hover:bg-green-700"
+            >
+              Download Invoice
+            </Link>
           </aside>
         </div>
       </section>

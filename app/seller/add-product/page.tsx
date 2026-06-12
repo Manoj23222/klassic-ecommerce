@@ -1,45 +1,61 @@
 import Header from "@/components/Header";
 import SellerProductForm from "@/components/seller/SellerProductForm";
-import db from "@/lib/db";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
+
+export const dynamic = "force-dynamic";
 
 export default async function SellerAddProductPage() {
   const cookieStore = await cookies();
-  const userId = cookieStore.get("user_id")?.value;
 
-  if (!userId) {
+  const sellerId =
+    cookieStore.get("seller_id")?.value ||
+    cookieStore.get("user_id")?.value ||
+    "";
+
+  if (!sellerId) {
     return (
       <main className="min-h-screen bg-gray-100">
         <Header />
         <div className="p-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Please login first</h1>
-          <Link href="/login" className="bg-blue-600 text-white px-6 py-3 rounded-xl">
-            Login
+          <Link
+            href="/seller/login"
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl"
+          >
+            Seller Login
           </Link>
         </div>
       </main>
     );
   }
 
-  const [users]: any = await db.query(
-    "SELECT id, role FROM users WHERE id = ?",
-    [userId]
-  );
+  await connectDB();
 
-  if (!users[0] || users[0].role !== "seller") {
+  const seller: any = await Seller.findById(sellerId)
+    .select("_id status")
+    .lean();
+
+  if (!seller || seller.status !== "Approved") {
     return (
       <main className="min-h-screen bg-gray-100">
         <Header />
         <div className="p-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Seller access required</h1>
-          <Link href="/become-seller" className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold">
+          <Link
+            href="/become-seller"
+            className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold"
+          >
             Become a Seller
           </Link>
         </div>
       </main>
     );
   }
+
+  const finalSellerId = String(seller._id);
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -56,7 +72,7 @@ export default async function SellerAddProductPage() {
             Add genuine product details for Klassic customers.
           </p>
 
-          <SellerProductForm sellerId={Number(userId)} />
+          <SellerProductForm sellerId={finalSellerId as any} />
         </div>
       </section>
     </main>

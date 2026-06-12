@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Otp from "@/models/Otp";
 
 function isGmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
@@ -7,6 +8,8 @@ function isGmail(email: string) {
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { email, otp, purpose } = await req.json();
 
     const cleanEmail = String(email || "").trim().toLowerCase();
@@ -27,34 +30,29 @@ export async function POST(req: Request) {
       );
     }
 
-    const [rows]: any = await db.query(
-      `SELECT id, otp FROM otp_verifications
-       WHERE identifier = ?
-       AND purpose = ?
-       AND verified = 0
-       AND expires_at > NOW()
-       ORDER BY id DESC
-       LIMIT 1`,
-      [cleanEmail, cleanPurpose]
-    );
+    const otpRecord: any = await Otp.findOne({
+      identifier: cleanEmail,
+      purpose: cleanPurpose,
+      verified: false,
+      expires_at: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
 
-    if (rows.length === 0) {
+    if (!otpRecord) {
       return NextResponse.json(
         { success: false, message: "OTP expired. Please resend OTP." },
         { status: 400 }
       );
     }
 
-    if (String(rows[0].otp) !== cleanOtp) {
+    if (String(otpRecord.otp) !== cleanOtp) {
       return NextResponse.json(
         { success: false, message: "Invalid OTP. Please try again." },
         { status: 400 }
       );
     }
 
-    await db.query("UPDATE otp_verifications SET verified = 1 WHERE id = ?", [
-      rows[0].id,
-    ]);
+    otpRecord.verified = true;
+    await otpRecord.save();
 
     return NextResponse.json({
       success: true,

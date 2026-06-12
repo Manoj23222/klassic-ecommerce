@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;
@@ -22,7 +22,7 @@ export default function FrequentlyBoughtTogether({
     [mainProduct, products]
   );
 
-  const [selectedIds, setSelectedIds] = useState<number[]>(
+  const [selectedIds, setSelectedIds] = useState<string[]>(
     allProducts.map((p) => p.id)
   );
 
@@ -36,7 +36,7 @@ export default function FrequentlyBoughtTogether({
     0
   );
 
-  const toggleProduct = (id: number) => {
+  const toggleProduct = (id: string) => {
     if (id === mainProduct.id) return;
 
     setSelectedIds((prev) =>

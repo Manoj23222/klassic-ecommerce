@@ -28,17 +28,25 @@ const categories = [
   "Sports",
 ];
 
+function normalizeGallery(value: unknown) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "string") return value;
+  return "";
+}
+
 export default function EditProductForm({ product }: { product: any }) {
+  const productId = String(product._id || product.id || "");
+
   const [name, setName] = useState(product.name || "");
   const [description, setDescription] = useState(product.description || "");
-  const [price, setPrice] = useState(product.price || "");
-  const [stock, setStock] = useState(product.stock || "");
+  const [price, setPrice] = useState(String(product.price || ""));
+  const [stock, setStock] = useState(String(product.stock ?? 0));
   const [category, setCategory] = useState(product.category || "General");
-  const [featured, setFeatured] = useState(
-    product.featured === 1 || product.featured === true
-  );
+  const [featured, setFeatured] = useState(Boolean(product.featured));
   const [image, setImage] = useState(product.image || "");
-  const [galleryImages, setGalleryImages] = useState(product.gallery_images || "");
+  const [galleryImages, setGalleryImages] = useState(
+    normalizeGallery(product.gallery_images)
+  );
   const [colors, setColors] = useState(product.colors || "");
   const [sizes, setSizes] = useState(product.sizes || "");
   const [uploading, setUploading] = useState(false);
@@ -63,12 +71,13 @@ export default function EditProductForm({ product }: { product: any }) {
 
       const data = await res.json();
 
-      if (data.success) {
-        setImage(data.imageUrl);
-        toast.success("Product image uploaded");
-      } else {
+      if (!res.ok || !data.success) {
         toast.error(data.message || "Image upload failed");
+        return;
       }
+
+      setImage(data.imageUrl);
+      toast.success("Product image uploaded");
     } catch {
       toast.error("Image upload failed");
     } finally {
@@ -79,30 +88,42 @@ export default function EditProductForm({ product }: { product: any }) {
   const updateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (name.trim().length < 2) return toast.error("Enter product name");
-    if (description.trim().length < 5) return toast.error("Enter product description");
-    if (!price || Number(price) <= 0) return toast.error("Enter valid product price");
-    if (!stock || Number(stock) < 0) return toast.error("Enter valid stock");
-    if (!image.trim()) return toast.error("Please upload or enter main image");
+    const cleanName = name.trim();
+    const cleanDescription = description.trim();
+    const cleanImage = image.trim();
+    const cleanPrice = Number(price);
+    const cleanStock = Number(stock);
+
+    if (!productId) return toast.error("Invalid product ID");
+    if (cleanName.length < 2) return toast.error("Enter product name");
+    if (cleanDescription.length < 5) return toast.error("Enter product description");
+    if (!cleanPrice || cleanPrice <= 0) return toast.error("Enter valid product price");
+    if (Number.isNaN(cleanStock) || cleanStock < 0) return toast.error("Enter valid stock");
+    if (!cleanImage) return toast.error("Please upload or enter main image");
+
+    const galleryArray = galleryImages
+      .split(",")
+      .map((img) => img.trim())
+      .filter(Boolean);
 
     try {
       setSaving(true);
 
       const res = await fetch("/api/admin/update-product", {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: product.id,
-          name,
-          description,
-          price,
-          stock,
+          id: productId,
+          name: cleanName,
+          description: cleanDescription,
+          price: cleanPrice,
+          stock: cleanStock,
           category,
-          image,
+          image: cleanImage,
           featured,
-          gallery_images: galleryImages,
+          gallery_images: galleryArray,
           colors,
           sizes,
         }),
@@ -110,15 +131,16 @@ export default function EditProductForm({ product }: { product: any }) {
 
       const data = await res.json();
 
-      if (data.success) {
-        toast.success("Product updated successfully");
-
-        setTimeout(() => {
-          window.location.href = "/admin/product";
-        }, 1200);
-      } else {
+      if (!res.ok || !data.success) {
         toast.error(data.message || "Update failed");
+        return;
       }
+
+      toast.success("Product updated successfully");
+
+      setTimeout(() => {
+        window.location.href = "/admin/product";
+      }, 800);
     } catch {
       toast.error("Server error. Please try again.");
     } finally {
@@ -286,9 +308,9 @@ export default function EditProductForm({ product }: { product: any }) {
           <div className="flex gap-3 flex-wrap">
             {galleryList.map((img: string, index: number) => (
               <img
-                key={index}
+                key={`${img}-${index}`}
                 src={img}
-                alt={`Gallery ${index}`}
+                alt={`Gallery ${index + 1}`}
                 className="w-24 h-24 object-contain border rounded-xl bg-white p-2"
               />
             ))}

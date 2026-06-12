@@ -1,10 +1,15 @@
-import db from "@/lib/db";
 import Link from "next/link";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminSellersPage() {
-  const [sellers]: any = await db.query(
-    "SELECT * FROM seller_requests ORDER BY id DESC"
-  );
+  await connectDB();
+
+  const sellers = await Seller.find({})
+    .sort({ createdAt: -1 })
+    .lean();
 
   return (
     <div>
@@ -29,26 +34,53 @@ export default async function AdminSellersPage() {
           <tbody>
             {sellers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="border p-5 text-center text-gray-500">
+                <td
+                  colSpan={7}
+                  className="border p-5 text-center text-gray-500"
+                >
                   No seller requests yet
                 </td>
               </tr>
             ) : (
               sellers.map((seller: any) => (
-                <tr key={seller.id}>
-                  <td className="border p-2">{seller.id}</td>
-                  <td className="border p-2 font-bold">{seller.store_name}</td>
-                  <td className="border p-2">{seller.name}</td>
-                  <td className="border p-2">{seller.phone}</td>
-                  <td className="border p-2">{seller.category}</td>
+                <tr key={String(seller._id)}>
                   <td className="border p-2">
-                    <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold text-xs">
+                    {String(seller._id).slice(-6)}
+                  </td>
+
+                  <td className="border p-2 font-bold">
+                    {seller.store_name}
+                  </td>
+
+                  <td className="border p-2">
+                    {seller.name}
+                  </td>
+
+                  <td className="border p-2">
+                    {seller.phone}
+                  </td>
+
+                  <td className="border p-2">
+                    {seller.category || "-"}
+                  </td>
+
+                  <td className="border p-2">
+                    <span
+                      className={`px-3 py-1 rounded-full font-bold text-xs ${
+                        seller.status === "Approved"
+                          ? "bg-green-100 text-green-700"
+                          : seller.status === "Rejected"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
                       {seller.status}
                     </span>
                   </td>
+
                   <td className="border p-2">
                     <Link
-                      href={`/admin/sellers/${seller.id}`}
+                      href={`/admin/sellers/${seller._id}`}
                       className="bg-blue-600 text-white px-3 py-1 rounded"
                     >
                       View

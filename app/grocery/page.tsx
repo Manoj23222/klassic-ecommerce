@@ -1,42 +1,55 @@
 import GroceryProductSection from "@/components/GroceryProductSection";
 import Header from "@/components/Header";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
-type Product = {
-  id: number;
+export const dynamic = "force-dynamic";
+
+type ProductType = {
+  _id?: string;
+  id?: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  stock: number;
-  image: string;
+  stock?: number;
+  image?: string;
   category?: string;
 };
 
-async function getGroceryProducts(): Promise<Product[]> {
-  const [products]: any = await db.query(
-    `SELECT * FROM products 
-     WHERE category IN (
-      'Grocery',
-      'Fruits & Vegetables',
-      'Atta Rice & Dal',
-      'Masala & Spices',
-      'Papad & Pickles',
-      'Oil & Ghee',
-      'Snacks & Namkeen',
-      'Biscuits & Cookies',
-      'Tea & Coffee',
-      'Milk & Dairy',
-      'Bread & Bakery',
-      'Cleaning & Household',
-      'Personal Care',
-      'Baby Care',
-      'Pet Food',
-      'Frozen Food'
-     )
-     ORDER BY id DESC`
-  );
+const groceryCategories = [
+  "Grocery",
+  "Fruits & Vegetables",
+  "Atta Rice & Dal",
+  "Masala & Spices",
+  "Papad & Pickles",
+  "Oil & Ghee",
+  "Snacks & Namkeen",
+  "Biscuits & Cookies",
+  "Tea & Coffee",
+  "Milk & Dairy",
+  "Bread & Bakery",
+  "Cleaning & Household",
+  "Personal Care",
+  "Baby Care",
+  "Pet Food",
+  "Frozen Food",
+];
 
-  return products;
+async function getGroceryProducts(): Promise<ProductType[]> {
+  await connectDB();
+
+  const products = await Product.find({
+    category: { $in: groceryCategories },
+    status: "Approved",
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return products.map((product: any) => ({
+    ...product,
+    id: String(product._id),
+    _id: String(product._id),
+  }));
 }
 
 export default async function GroceryPage() {

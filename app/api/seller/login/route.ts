@@ -1,87 +1,75 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import db from "@/lib/db";
+import { cookies } from "next/headers";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Email and password required",
-        },
+        { success: false, message: "Email and password required" },
         { status: 400 }
       );
     }
 
-    const [rows]: any = await db.query(
-      `
-      SELECT *
-      FROM seller_requests
-      WHERE email = ?
-      LIMIT 1
-      `,
-      [email.toLowerCase()]
-    );
+    const seller = await Seller.findOne({ email });
 
-    if (rows.length === 0) {
+    if (!seller) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Seller not found",
-        },
+        { success: false, message: "Seller not found" },
         { status: 404 }
       );
     }
 
-    const seller = rows[0];
+    const isMatch = await bcrypt.compare(password, seller.password);
+
+    if (!isMatch) {
+      return NextResponse.json(
+        { success: false, message: "Invalid password" },
+        { status: 401 }
+      );
+    }
 
     if (seller.status !== "Approved") {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Your seller account is not approved yet",
+          message: "Your seller account is pending admin approval",
         },
         { status: 403 }
       );
     }
 
-    const passwordMatch = await bcrypt.compare(
-      password,
-      seller.password
-    );
+    const cookieStore = await cookies();
 
-    if (!passwordMatch) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid password",
-        },
-        { status: 401 }
-      );
-    }
+    cookieStore.set("sellerId", seller._id.toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
 
     return NextResponse.json({
       success: true,
+      message: "Seller login successful",
       seller: {
-        id: seller.id,
+        id: seller._id,
         name: seller.name,
         email: seller.email,
-        store_name: seller.store_name,
         status: seller.status,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Seller Login Error:", error);
 
     return NextResponse.json(
-      {
-        success: false,
-        message: "Login failed",
-      },
+      { success: false, message: "Server error" },
       { status: 500 }
     );
   }

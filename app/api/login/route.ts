@@ -1,10 +1,13 @@
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
 export async function POST(request: Request) {
   try {
+    await connectDB();
+
     const { identifier, password } = await request.json();
 
     if (!identifier || !password) {
@@ -16,19 +19,16 @@ export async function POST(request: Request) {
 
     const cleanIdentifier = String(identifier).trim().toLowerCase();
 
-    const [users]: any = await db.query(
-      "SELECT id, name, email, phone, password, role FROM users WHERE email = ? OR phone = ?",
-      [cleanIdentifier, cleanIdentifier]
-    );
+    const user = await User.findOne({
+      $or: [{ email: cleanIdentifier }, { phone: cleanIdentifier }],
+    });
 
-    if (users.length === 0) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Account not found" },
         { status: 404 }
       );
     }
-
-    const user = users[0];
 
     const passwordMatch = await bcrypt.compare(password, user.password);
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     const cookieStore = await cookies();
 
-    cookieStore.set("user_id", String(user.id), {
+    cookieStore.set("user_id", user._id.toString(), {
       httpOnly: true,
       path: "/",
       sameSite: "lax",
@@ -52,18 +52,18 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login Error:", error);
 
     return NextResponse.json(
-      { success: false, message: "Login failed" },
+      { success: false, message: error.message || "Login failed" },
       { status: 500 }
     );
   }

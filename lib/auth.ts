@@ -1,18 +1,31 @@
 import { cookies } from "next/headers";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
 export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("user_id")?.value;
+  try {
+    await connectDB();
 
-  if (!userId) return null;
+    const cookieStore = await cookies();
+    const userId = cookieStore.get("user_id")?.value;
 
-  const [rows]: any = await db.query(
-    "SELECT id, name, email, role FROM users WHERE id = ?",
-    [userId]
-  );
+    if (!userId) return null;
 
-  return rows[0] || null;
+    const user = await User.findById(userId).select("-password").lean();
+
+    if (!user) return null;
+
+    return {
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    };
+  } catch (error) {
+    console.error("Get current user error:", error);
+    return null;
+  }
 }
 
 export async function requireAdmin() {

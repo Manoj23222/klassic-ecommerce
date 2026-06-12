@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { email } = await req.json();
 
     if (!email) {
@@ -14,12 +17,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const [users]: any = await db.query(
-      "SELECT id, email FROM users WHERE email = ?",
-      [email]
-    );
+    const cleanEmail = String(email).toLowerCase().trim();
 
-    if (users.length === 0) {
+    const user = await User.findOne({ email: cleanEmail }).select("_id email");
+
+    if (!user) {
       return NextResponse.json({
         success: true,
         message: "If email exists, reset link sent",
@@ -29,12 +31,13 @@ export async function POST(req: Request) {
     const token = crypto.randomBytes(32).toString("hex");
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
-    await db.query(
-      "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
-      [token, expiry, email]
-    );
+    user.reset_token = token;
+    user.reset_token_expiry = expiry;
+    await user.save();
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
     const resetLink = `${siteUrl}/reset-password?token=${token}`;
 
     const transporter = nodemailer.createTransport({
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
 
     await transporter.sendMail({
       from: `"Klassic Store" <${process.env.EMAIL_USER}>`,
-      to: email,
+      to: cleanEmail,
       subject: "Reset Your Klassic Password",
       html: `
         <h2>Password Reset Request</h2>
@@ -65,6 +68,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("FORGOT PASSWORD ERROR:", error);
+
     return NextResponse.json(
       { success: false, message: "Email sending failed" },
       { status: 500 }

@@ -1,36 +1,47 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Coupon from "@/models/Coupon";
 
 export async function POST(request: Request) {
   try {
+    await connectDB();
+
     const { code, subtotal } = await request.json();
 
-    const [rows]: any = await db.query(
-      "SELECT * FROM coupons WHERE code = ? AND status = 1 LIMIT 1",
-      [code.toUpperCase()]
-    );
+    if (!code || !subtotal) {
+      return NextResponse.json({
+        success: false,
+        message: "Coupon code and subtotal required",
+      });
+    }
 
-    if (rows.length === 0) {
+    const cleanCode = String(code).trim().toUpperCase();
+    const cleanSubtotal = Number(subtotal);
+
+    const coupon = await Coupon.findOne({
+      code: cleanCode,
+      status: true,
+    }).lean();
+
+    if (!coupon) {
       return NextResponse.json({
         success: false,
         message: "Invalid coupon",
       });
     }
 
-    const coupon = rows[0];
-
     let discount = 0;
 
     if (coupon.type === "fixed") {
-      discount = Number(coupon.value);
+      discount = Number(coupon.value || 0);
     }
 
     if (coupon.type === "percent") {
-      discount = Math.round((Number(subtotal) * Number(coupon.value)) / 100);
+      discount = Math.round((cleanSubtotal * Number(coupon.value || 0)) / 100);
     }
 
-    if (discount > subtotal) {
-      discount = subtotal;
+    if (discount > cleanSubtotal) {
+      discount = cleanSubtotal;
     }
 
     return NextResponse.json({
@@ -39,7 +50,7 @@ export async function POST(request: Request) {
       coupon,
     });
   } catch (error) {
-    console.error("Coupon Error:", error);
+    console.error("Coupon error:", error);
 
     return NextResponse.json(
       { success: false, message: "Coupon failed" },

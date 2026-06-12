@@ -4,32 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function AdminOrdersTable({
-  orders,
-}: {
-  orders: any[];
-}) {
+type Order = {
+  id: string;
+  customer_name?: string;
+  phone?: string;
+  status?: string;
+  total_amount?: number;
+  payment_method?: string;
+  created_at?: string;
+};
+
+export default function AdminOrdersTable({ orders }: { orders: Order[] }) {
   const router = useRouter();
-  async function updateStatus(orderId: number, newStatus: string) {
-  await fetch("/api/admin/update-order-status", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      orderId,
-      status: newStatus,
-    }),
-  });
-
-  setMessage("Status updated successfully ✅");
-
-  setTimeout(() => {
-    setMessage("");
-  }, 3000);
-
-  router.refresh();
-}
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
@@ -38,6 +24,30 @@ export default function AdminOrdersTable({
   const [message, setMessage] = useState("");
 
   const ordersPerPage = 10;
+
+  async function updateStatus(orderId: string, newStatus: string) {
+    const res = await fetch("/api/admin/update-order-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderId,
+        status: newStatus,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      setMessage("Status updated successfully ✅");
+      setTimeout(() => setMessage(""), 3000);
+      router.refresh();
+    } else {
+      setMessage(data.message || "Status update failed");
+      setTimeout(() => setMessage(""), 3000);
+    }
+  }
 
   useEffect(() => {
     setCurrentPage(1);
@@ -52,9 +62,12 @@ export default function AdminOrdersTable({
     return "bg-gray-100 text-gray-700";
   }
 
-  let filteredOrders = orders.filter((order: any) => {
+  let filteredOrders = orders.filter((order) => {
+    const shortId = order.id.slice(-6).toUpperCase();
+
     const text = `
       ${order.id}
+      ${shortId}
       ${order.customer_name || ""}
       ${order.phone || ""}
       ${order.status || ""}
@@ -67,15 +80,29 @@ export default function AdminOrdersTable({
     return matchesSearch && matchesStatus;
   });
 
-  filteredOrders = [...filteredOrders].sort((a: any, b: any) => {
-    if (sortBy === "newest") return b.id - a.id;
-    if (sortBy === "oldest") return a.id - b.id;
+  filteredOrders = [...filteredOrders].sort((a, b) => {
+    if (sortBy === "newest") {
+      return (
+        new Date(b.created_at || "").getTime() -
+        new Date(a.created_at || "").getTime()
+      );
+    }
+
+    if (sortBy === "oldest") {
+      return (
+        new Date(a.created_at || "").getTime() -
+        new Date(b.created_at || "").getTime()
+      );
+    }
+
     if (sortBy === "high") {
-      return Number(b.total_amount) - Number(a.total_amount);
+      return Number(b.total_amount || 0) - Number(a.total_amount || 0);
     }
+
     if (sortBy === "low") {
-      return Number(a.total_amount) - Number(b.total_amount);
+      return Number(a.total_amount || 0) - Number(b.total_amount || 0);
     }
+
     return 0;
   });
 
@@ -88,13 +115,14 @@ export default function AdminOrdersTable({
 
   return (
     <>
-    {message && (
-  <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-bounce">
-    <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold">
-      {message}
-    </div>
-  </div>
-)}
+      {message && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold">
+            {message}
+          </div>
+        </div>
+      )}
+
       <input
         type="text"
         placeholder="Search by order id, name, phone, status..."
@@ -175,65 +203,69 @@ export default function AdminOrdersTable({
               </tr>
             )}
 
-            {currentOrders.map((order: any) => (
-              <tr
-                key={order.id}
-                onClick={() => router.push(`/admin/orders/${order.id}`)}
-                className="border-b hover:bg-gray-50 transition cursor-pointer"
-              >
-                <td className="p-4">
-                  <Link
-                    href={`/admin/orders/${order.id}`}
-                    className="text-blue-600 font-bold"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    #{order.id}
-                  </Link>
-                </td>
+            {currentOrders.map((order) => {
+              const shortId = order.id.slice(-6).toUpperCase();
 
-                <td className="p-4">{order.customer_name || "Guest"}</td>
+              return (
+                <tr
+                  key={order.id}
+                  onClick={() => router.push(`/admin/orders/${order.id}`)}
+                  className="border-b hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <td className="p-4">
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="text-blue-600 font-bold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      #{shortId}
+                    </Link>
+                  </td>
 
-                <td className="p-4">{order.phone || "-"}</td>
+                  <td className="p-4">{order.customer_name || "Guest"}</td>
 
-                <td className="p-4 font-bold text-green-700">
-                  ₹{Number(order.total_amount || 0).toFixed(2)}
-                </td>
+                  <td className="p-4">{order.phone || "-"}</td>
 
-                <td className="p-4" onClick={(e) => e.stopPropagation()}>
-  <select
-    value={order.status || "Pending"}
-    onChange={(e) => updateStatus(order.id, e.target.value)}
-    className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusClass(
-      order.status || "Pending"
-    )}`}
-  >
-    <option value="Pending">Pending</option>
-    <option value="Processing">Processing</option>
-    <option value="Shipped">Shipped</option>
-    <option value="Delivered">Delivered</option>
-    <option value="Cancelled">Cancelled</option>
-  </select>
-</td>
+                  <td className="p-4 font-bold text-green-700">
+                    ₹{Number(order.total_amount || 0).toFixed(2)}
+                  </td>
 
-                <td className="p-4">
-                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                    {order.payment_method || "COD"}
-                  </span>
-                </td>
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={order.status || "Pending"}
+                      onChange={(e) => updateStatus(order.id, e.target.value)}
+                      className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusClass(
+                        order.status || "Pending"
+                      )}`}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </td>
 
-                <td className="p-4">
-                  {order.created_at
-                    ? new Date(order.created_at).toLocaleString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "-"}
-                </td>
-              </tr>
-            ))}
+                  <td className="p-4">
+                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                      {order.payment_method || "COD"}
+                    </span>
+                  </td>
+
+                  <td className="p-4">
+                    {order.created_at
+                      ? new Date(order.created_at).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "-"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -251,9 +283,7 @@ export default function AdminOrdersTable({
           </span>
 
           <button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(p + 1, totalPages))
-            }
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             disabled={currentPage === totalPages || totalPages === 0}
             className="bg-gray-700 text-white px-4 py-2 rounded disabled:opacity-50"
           >

@@ -8,8 +8,8 @@ export default function ReviewForm({
   orderId,
   defaultName = "",
 }: {
-  productId: number;
-  orderId?: number;
+  productId: string;
+  orderId?: string;
   defaultName?: string;
 }) {
   const [name, setName] = useState(defaultName);
@@ -39,23 +39,14 @@ export default function ReviewForm({
         body: JSON.stringify({ productId, orderId, name, rating, comment }),
       });
 
-      let data: any = {};
+      const data = await res.json();
 
-      try {
-        data = await res.json();
-      } catch {
-        data = {};
-      }
-
-      if (res.ok) {
+      if (res.ok && data.success) {
         toast.success("Review added successfully");
         setComment("");
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
+        setTimeout(() => window.location.reload(), 1200);
       } else {
-        toast.error(data.error || "Review failed");
+        toast.error(data.message || data.error || "Review failed");
       }
     } catch {
       toast.error("Server error. Please try again.");

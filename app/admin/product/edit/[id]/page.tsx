@@ -1,6 +1,10 @@
 import EditProductForm from "@/components/EditProductForm";
-import db from "@/lib/db";
 import Link from "next/link";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
+
+export const dynamic = "force-dynamic";
 
 export default async function EditProductPage({
   params,
@@ -9,12 +13,19 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
 
-  const [products]: any = await db.query(
-    "SELECT * FROM products WHERE id = ?",
-    [id]
-  );
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return (
+      <main className="min-h-screen bg-gray-100 px-6 py-6">
+        <h1 className="text-3xl font-bold">Invalid product ID</h1>
+      </main>
+    );
+  }
 
-  if (products.length === 0) {
+  await connectDB();
+
+  const product: any = await Product.findById(id).lean();
+
+  if (!product) {
     return (
       <main className="min-h-screen bg-gray-100 px-6 py-6">
         <h1 className="text-3xl font-bold">Product not found</h1>
@@ -22,7 +33,10 @@ export default async function EditProductPage({
     );
   }
 
-  const product = products[0];
+  const formattedProduct = {
+    ...product,
+    id: String(product._id),
+  };
 
   return (
     <main className="min-h-screen bg-gray-100 px-6 py-5">
@@ -37,7 +51,7 @@ export default async function EditProductPage({
         <div className="w-full bg-white p-6 rounded-xl shadow">
           <h1 className="text-3xl font-bold mb-6">Edit Product</h1>
 
-          <EditProductForm product={product} />
+          <EditProductForm product={formattedProduct} />
         </div>
       </div>
     </main>

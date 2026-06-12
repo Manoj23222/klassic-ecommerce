@@ -1,38 +1,52 @@
 import Header from "@/components/Header";
-import db from "@/lib/db";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
+import Order from "@/models/Order";
+
+export const dynamic = "force-dynamic";
 
 export default async function SellerOrdersPage() {
   const cookieStore = await cookies();
-  const userId = cookieStore.get("user_id")?.value;
 
-  if (!userId) {
+  const sellerId =
+    cookieStore.get("seller_id")?.value ||
+    cookieStore.get("user_id")?.value;
+
+  if (!sellerId) {
     return (
       <main className="min-h-screen bg-gray-100">
         <Header />
         <div className="p-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Please login first</h1>
-          <Link href="/login" className="bg-blue-600 text-white px-6 py-3 rounded-xl">
-            Login
+          <Link
+            href="/seller/login"
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl"
+          >
+            Seller Login
           </Link>
         </div>
       </main>
     );
   }
 
-  const [users]: any = await db.query(
-    "SELECT id, role FROM users WHERE id = ?",
-    [userId]
-  );
+  await connectDB();
 
-  if (!users[0] || users[0].role !== "seller") {
+  const seller = await Seller.findById(sellerId)
+    .select("_id status")
+    .lean();
+
+  if (!seller || seller.status !== "Approved") {
     return (
       <main className="min-h-screen bg-gray-100">
         <Header />
         <div className="p-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Seller access required</h1>
-          <Link href="/become-seller" className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold">
+          <Link
+            href="/become-seller"
+            className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold"
+          >
             Become a Seller
           </Link>
         </div>
@@ -40,28 +54,29 @@ export default async function SellerOrdersPage() {
     );
   }
 
-  const [orders]: any = await db.query(
-    `
-    SELECT 
-      oi.id as item_id,
-      oi.order_id,
-      oi.product_name,
-      oi.price,
-      oi.quantity,
-      oi.color,
-      oi.size,
-      o.customer_name,
-      o.phone,
-      o.address,
-      o.status,
-      o.created_at
-    FROM order_items oi
-    JOIN products p ON oi.product_id = p.id
-    JOIN orders o ON oi.order_id = o.id
-    WHERE p.seller_id = ?
-    ORDER BY o.id DESC
-    `,
-    [userId]
+  const ordersRaw = await Order.find({
+    "items.seller_id": sellerId,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const orders = ordersRaw.flatMap((order: any) =>
+    (order.items || [])
+      .filter((item: any) => String(item.seller_id || "") === sellerId)
+      .map((item: any, index: number) => ({
+        item_id: `${String(order._id)}-${index}`,
+        order_id: String(order._id),
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        color: item.color,
+        size: item.size,
+        customer_name: order.customer_name,
+        phone: order.phone,
+        address: order.address,
+        status: order.status,
+        created_at: order.createdAt,
+      }))
   );
 
   return (
@@ -107,7 +122,7 @@ export default async function SellerOrdersPage() {
                 orders.map((order: any) => (
                   <tr key={order.item_id}>
                     <td className="border p-2 font-bold">
-                      #{order.order_id}
+                      #{order.order_id.slice(-6)}
                     </td>
 
                     <td className="border p-2">
@@ -118,12 +133,20 @@ export default async function SellerOrdersPage() {
                       </p>
                     </td>
 
-                    <td className="border p-2">{order.customer_name || "Guest"}</td>
-                    <td className="border p-2">{order.phone || "-"}</td>
-                    <td className="border p-2">{order.quantity}</td>
+                    <td className="border p-2">
+                      {order.customer_name || "Guest"}
+                    </td>
+
+                    <td className="border p-2">
+                      {order.phone || "-"}
+                    </td>
+
+                    <td className="border p-2">
+                      {order.quantity || 1}
+                    </td>
 
                     <td className="border p-2 font-bold text-green-600">
-                      ₹{(Number(order.price) * Number(order.quantity)).toFixed(2)}
+                      ₹{(Number(order.price || 0) * Number(order.quantity || 1)).toFixed(2)}
                     </td>
 
                     <td className="border p-2">

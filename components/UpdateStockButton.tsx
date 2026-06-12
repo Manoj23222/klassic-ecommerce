@@ -7,7 +7,7 @@ export default function UpdateStockButton({
   id,
   currentStock,
 }: {
-  id: number;
+  id: string;
   currentStock: number;
 }) {
   const [stock, setStock] = useState(currentStock);
@@ -37,7 +37,7 @@ export default function UpdateStockButton({
 
         setTimeout(() => {
           window.location.reload();
-        }, 1200);
+        }, 800);
       } else {
         toast.error(data.message || "Stock update failed");
       }
@@ -53,9 +53,9 @@ export default function UpdateStockButton({
       <input
         type="number"
         min={0}
-        className="border p-2 rounded-xl w-24 outline-none focus:ring-2 focus:ring-blue-500"
         value={stock}
         onChange={(e) => setStock(Number(e.target.value))}
+        className="border p-2 rounded-xl w-24 outline-none focus:ring-2 focus:ring-blue-500"
       />
 
       <button

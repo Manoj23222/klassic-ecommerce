@@ -63,19 +63,27 @@ function CheckoutContent() {
     const loadCheckout = async () => {
       if (productId) {
         const res = await fetch(`/api/products/${productId}`);
-        const product = await res.json();
+const data = await res.json();
 
-        setCart([
-          {
-            id: product.id,
-            name: product.name,
-            price: Number(product.price),
-            image: product.image,
-            quantity: 1,
-            color: colorFromUrl || "",
-            size: sizeFromUrl || "",
-          },
-        ]);
+if (!data.success || !data.product) {
+  toast.error("Product not found");
+  return;
+}
+
+const product = data.product;
+
+setCart([
+  {
+    id: product._id || product.id,
+    _id: product._id || product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+    quantity: 1,
+    color: colorFromUrl || "",
+    size: sizeFromUrl || "",
+  },
+]);
       } else {
         setCart(JSON.parse(localStorage.getItem("cart") || "[]"));
       }

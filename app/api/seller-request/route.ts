@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
 
 function isGmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
@@ -28,6 +29,8 @@ function isStrongPassword(password: string) {
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const body = await req.json();
 
     const name = String(body.name || "").trim();
@@ -86,23 +89,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const [verifiedOtp]: any = await db.query(
-      `SELECT id FROM otp_verifications
-       WHERE identifier = ?
-       AND purpose = ?
-       AND verified = 1
-       ORDER BY id DESC
-       LIMIT 1`,
-      [email, "seller-register"]
-    );
-
-    if (verifiedOtp.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "Please verify seller Gmail OTP first" },
-        { status: 400 }
-      );
-    }
-
     if (!isIndianMobile(phone)) {
       return NextResponse.json(
         {
@@ -115,7 +101,10 @@ export async function POST(req: Request) {
 
     if (store_name.length < 3) {
       return NextResponse.json(
-        { success: false, message: "Store name must be at least 3 characters" },
+        {
+          success: false,
+          message: "Store name must be at least 3 characters",
+        },
         { status: 400 }
       );
     }
@@ -142,21 +131,23 @@ export async function POST(req: Request) {
 
     if (address.length < 10) {
       return NextResponse.json(
-        { success: false, message: "Enter full pickup/store address" },
+        {
+          success: false,
+          message: "Enter full pickup/store address",
+        },
         { status: 400 }
       );
     }
 
-    const [existing]: any = await db.query(
-      "SELECT id, status FROM seller_requests WHERE email = ? OR phone = ?",
-      [email, phone]
-    );
+    const existing = await Seller.findOne({
+      $or: [{ email }, { phone }],
+    });
 
-    if (existing.length > 0) {
+    if (existing) {
       return NextResponse.json(
         {
           success: false,
-          message: `Seller request already submitted. Status: ${existing[0].status}`,
+          message: `Seller request already submitted. Status: ${existing.status}`,
         },
         { status: 409 }
       );
@@ -164,30 +155,25 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await db.query(
-      `INSERT INTO seller_requests 
-      (name, email, phone, password, store_name, business_type, category, pan, gst, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name,
-        email,
-        phone,
-        hashedPassword,
-        store_name,
-        business_type,
-        category,
-        pan,
-        gst || "",
-        address,
-      ]
-    );
+    await Seller.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
 
-    await db.query(
-      `DELETE FROM otp_verifications
-       WHERE identifier = ?
-       AND purpose = ?`,
-      [email, "seller-register"]
-    );
+      store_name,
+      storeName: store_name,
+
+      business_type,
+      businessType: business_type,
+
+      category,
+      pan,
+      gst: gst || "",
+      address,
+
+      status: "Pending",
+    });
 
     return NextResponse.json({
       success: true,

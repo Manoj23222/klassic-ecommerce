@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;

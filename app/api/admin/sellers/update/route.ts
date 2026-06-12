@@ -1,57 +1,63 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
 
-export async function POST(req: Request) {
+const allowedStatus = ["Pending", "Approved", "Rejected"];
+
+async function updateSellerStatus(req: Request) {
   try {
-    const { id, status } = await req.json();
+    await connectDB();
 
-    if (!id || !status) {
+    const { id, sellerId, status } = await req.json();
+    const finalSellerId = sellerId || id;
+
+    if (!finalSellerId || !mongoose.Types.ObjectId.isValid(finalSellerId)) {
       return NextResponse.json(
-        { success: false, message: "Missing data" },
+        { success: false, message: "Invalid seller ID" },
         { status: 400 }
       );
     }
 
-    const [rows]: any = await db.query(
-      "SELECT email FROM seller_requests WHERE id = ?",
-      [id]
-    );
-
-    if (rows.length === 0) {
+    if (!allowedStatus.includes(status)) {
       return NextResponse.json(
-        { success: false, message: "Seller request not found" },
+        { success: false, message: "Invalid status" },
+        { status: 400 }
+      );
+    }
+
+    const seller = await Seller.findByIdAndUpdate(
+      finalSellerId,
+      { status },
+      { new: true }
+    ).select("-password");
+
+    if (!seller) {
+      return NextResponse.json(
+        { success: false, message: "Seller not found" },
         { status: 404 }
       );
     }
 
-    const sellerEmail = rows[0].email;
-
-    await db.query(
-      "UPDATE seller_requests SET status = ? WHERE id = ?",
-      [status, id]
-    );
-
-    if (status === "Approved") {
-      await db.query(
-        "UPDATE users SET role = 'seller' WHERE email = ?",
-        [sellerEmail]
-      );
-    }
-
-    if (status === "Rejected") {
-      await db.query(
-        "UPDATE users SET role = 'customer' WHERE email = ? AND role = 'seller'",
-        [sellerEmail]
-      );
-    }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Seller status updated",
+      seller,
+    });
   } catch (error) {
-    console.error("Seller status update error:", error);
+    console.error("Seller update error:", error);
 
     return NextResponse.json(
-      { success: false, message: "Server error" },
+      { success: false, message: "Failed to update seller" },
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: Request) {
+  return updateSellerStatus(req);
+}
+
+export async function PATCH(req: Request) {
+  return updateSellerStatus(req);
 }

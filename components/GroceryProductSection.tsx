@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 
 type Product = {
-  id: number;
+  _id?: string;
+  id?: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  stock: number;
-  image: string;
+  stock?: number;
+  image?: string;
   category?: string;
 };
 
@@ -51,6 +52,7 @@ export default function GroceryProductSection({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-10">
         {groceryCategories.map((item) => (
           <button
+            type="button"
             key={item.name}
             onClick={() => setActiveCategory(item.name)}
             className={`rounded-2xl shadow p-4 text-center transition ${
@@ -78,49 +80,57 @@ export default function GroceryProductSection({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((item) => (
-            <Link
-              key={item.id}
-              href={`/product/${item.id}`}
-              className="bg-white rounded-2xl shadow hover:shadow-xl transition overflow-hidden block"
-            >
-              <div className="relative">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-56 w-full object-contain p-5 bg-white"
-                />
+          {filteredProducts.map((item) => {
+            const productId = item._id || item.id;
+            if (!productId) return null;
 
-                <span className="absolute top-4 left-4 bg-green-600 text-white text-xs px-3 py-1 rounded-full font-bold">
-                  Fresh
-                </span>
-              </div>
+            return (
+              <Link
+                key={productId}
+                href={`/product/${productId}`}
+                className="bg-white rounded-2xl shadow hover:shadow-xl transition overflow-hidden block"
+              >
+                <div className="relative">
+                  <img
+                    src={item.image || "/placeholder.png"}
+                    alt={item.name}
+                    className="h-56 w-full object-contain p-5 bg-white"
+                  />
 
-              <div className="p-5">
-                <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
-                  {item.category || "Grocery"}
-                </span>
+                  <span className="absolute top-4 left-4 bg-green-600 text-white text-xs px-3 py-1 rounded-full font-bold">
+                    Fresh
+                  </span>
+                </div>
 
-                <h4 className="mt-3 font-bold text-lg">{item.name}</h4>
+                <div className="p-5">
+                  <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
+                    {item.category || "Grocery"}
+                  </span>
 
-                <p className="text-sm text-gray-500 line-clamp-2">
-                  {item.description}
-                </p>
+                  <h4 className="mt-3 font-bold text-lg">{item.name}</h4>
 
-                <p className="text-green-700 font-bold text-xl mt-2">
-                  ₹{Number(item.price).toFixed(2)}
-                </p>
+                  <p className="text-sm text-gray-500 line-clamp-2">
+                    {item.description || "Fresh grocery product"}
+                  </p>
 
-                <p className="text-gray-600 font-semibold mt-1">
-                  Stock: {item.stock}
-                </p>
+                  <p className="text-green-700 font-bold text-xl mt-2">
+                    ₹{Number(item.price || 0).toFixed(2)}
+                  </p>
 
-                <button className="mt-4 w-full bg-green-600 text-white py-3 rounded-xl font-bold">
-                  View Product
-                </button>
-              </div>
-            </Link>
-          ))}
+                  <p className="text-gray-600 font-semibold mt-1">
+                    Stock: {item.stock ?? 0}
+                  </p>
+
+                  <button
+                    type="button"
+                    className="mt-4 w-full bg-green-600 text-white py-3 rounded-xl font-bold"
+                  >
+                    View Product
+                  </button>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>

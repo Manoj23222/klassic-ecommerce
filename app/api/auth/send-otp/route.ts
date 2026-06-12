@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Otp from "@/models/Otp";
 
 function isGmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
@@ -12,6 +13,8 @@ function generateOtp() {
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { email, purpose } = await req.json();
 
     if (!email || !purpose) {
@@ -31,24 +34,31 @@ export async function POST(req: Request) {
     }
 
     const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const expiresAt = new Date(Date.now() + 60 * 1000);
+    await Otp.deleteMany({
+      identifier: cleanEmail,
+      purpose,
+      verified: false,
+    });
 
-    await db.query(
-      "INSERT INTO otp_verifications (identifier, otp, purpose, expires_at) VALUES (?, ?, ?, ?)",
-      [cleanEmail, otp, purpose, expiresAt]
-    );
+    await Otp.create({
+      identifier: cleanEmail,
+      otp,
+      purpose,
+      expires_at: expiresAt,
+    });
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_APP_PASSWORD,
+        user: process.env.SMTP_EMAIL || process.env.EMAIL_USER,
+        pass: process.env.SMTP_APP_PASSWORD || process.env.EMAIL_PASS,
       },
     });
 
     await transporter.sendMail({
-      from: `"Klassic" <${process.env.SMTP_EMAIL}>`,
+      from: `"Klassic" <${process.env.SMTP_EMAIL || process.env.EMAIL_USER}>`,
       to: cleanEmail,
       subject: "Your Klassic OTP Code",
       html: `

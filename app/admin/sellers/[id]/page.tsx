@@ -1,6 +1,10 @@
 import SellerStatusButtons from "@/components/admin/SellerStatusButtons";
-import db from "@/lib/db";
 import Link from "next/link";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
+
+export const dynamic = "force-dynamic";
 
 export default async function SellerDetailPage({
   params,
@@ -9,16 +13,19 @@ export default async function SellerDetailPage({
 }) {
   const { id } = await params;
 
-  const [rows]: any = await db.query(
-    "SELECT * FROM seller_requests WHERE id = ?",
-    [id]
-  );
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return <h1 className="text-2xl font-bold">Invalid seller ID</h1>;
+  }
 
-  if (rows.length === 0) {
+  await connectDB();
+
+  const seller: any = await Seller.findById(id).lean();
+
+  if (!seller) {
     return <h1 className="text-2xl font-bold">Seller request not found</h1>;
   }
 
-  const seller = rows[0];
+  const sellerId = String(seller._id);
 
   return (
     <div>
@@ -36,7 +43,7 @@ export default async function SellerDetailPage({
               {seller.store_name}
             </h1>
             <p className="text-gray-500 text-sm">
-              Seller Request #{seller.id}
+              Seller Request #{sellerId.slice(-6)}
             </p>
           </div>
 
@@ -54,51 +61,33 @@ export default async function SellerDetailPage({
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 text-sm">
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">Owner Name</p>
-            <b>{seller.name}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">Email</p>
-            <b>{seller.email}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">Phone</p>
-            <b>{seller.phone}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">Business Type</p>
-            <b>{seller.business_type}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">Category</p>
-            <b>{seller.category}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">PAN</p>
-            <b>{seller.pan || "N/A"}</b>
-          </div>
-
-          <div className="border rounded-xl p-4">
-            <p className="text-gray-500">GST</p>
-            <b>{seller.gst || "N/A"}</b>
-          </div>
+          <InfoCard label="Owner Name" value={seller.name} />
+          <InfoCard label="Email" value={seller.email} />
+          <InfoCard label="Phone" value={seller.phone || "N/A"} />
+          <InfoCard label="Business Type" value={seller.business_type || "N/A"} />
+          <InfoCard label="Category" value={seller.category || "N/A"} />
+          <InfoCard label="PAN" value={seller.pan || "N/A"} />
+          <InfoCard label="GST" value={seller.gst || "N/A"} />
 
           <div className="border rounded-xl p-4 md:col-span-2">
             <p className="text-gray-500">Address</p>
-            <b>{seller.address}</b>
+            <b>{seller.address || "N/A"}</b>
           </div>
         </div>
 
         <div className="mt-6">
-          <SellerStatusButtons id={seller.id} />
+          <SellerStatusButtons id={sellerId} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500">{label}</p>
+      <b>{value}</b>
     </div>
   );
 }

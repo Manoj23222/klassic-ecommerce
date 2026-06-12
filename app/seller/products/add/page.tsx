@@ -84,35 +84,40 @@ export default function SellerAddProductPage() {
 
     setLoading(true);
 
-    const res = await fetch("/api/seller/products", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        seller_id: seller.id,
-        seller_store_name: seller.store_name || seller.storeName || "",
-        name: form.name,
-        category: form.category,
-        description: form.description,
-        price: Number(form.price),
-        stock: Number(form.stock),
-        image,
-        gallery_images: galleryImages,
-        colors: form.colors,
-        sizes: form.sizes,
-        sku: form.sku,
-      }),
-    });
+    try {
+      const res = await fetch("/api/seller/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          seller_id: seller.id,
+          seller_store_name: seller.storeName || "",
+          name: form.name,
+          category: form.category,
+          description: form.description,
+          price: Number(form.price),
+          stock: Number(form.stock),
+          image,
+          gallery_images: galleryImages,
+          colors: form.colors,
+          sizes: form.sizes,
+          sku: form.sku,
+        }),
+      });
 
-    const data = await res.json();
-    setLoading(false);
+      const data = await res.json();
 
-    if (data.success) {
-      toast.success("Product submitted for approval");
-      router.push("/seller/products");
-    } else {
-      toast.error(data.message || "Product submit failed");
+      if (data.success) {
+        toast.success("Product submitted for approval");
+        router.push("/seller/products");
+      } else {
+        toast.error(data.message || "Product submit failed");
+      }
+    } catch {
+      toast.error("Server error");
+    } finally {
+      setLoading(false);
     }
   };
 

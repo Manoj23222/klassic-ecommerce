@@ -3,45 +3,53 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
+type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+
 export default function UpdateOrderStatus({
   orderId,
   currentStatus,
 }: {
-  orderId: number;
-  currentStatus: string;
+  orderId: string;
+  currentStatus: OrderStatus;
 }) {
   const [loading, setLoading] = useState(false);
 
-  const nextStatus =
+  const nextStatus: OrderStatus =
     currentStatus === "Pending"
+      ? "Processing"
+      : currentStatus === "Processing"
       ? "Shipped"
       : currentStatus === "Shipped"
       ? "Delivered"
-      : "Delivered";
+      : currentStatus;
 
   const updateStatus = async () => {
     try {
       setLoading(true);
 
       const res = await fetch("/api/orders/update-status", {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id: orderId, status: nextStatus }),
+        body: JSON.stringify({
+          orderId,
+          status: nextStatus,
+        }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
-        toast.success(`Order marked as ${nextStatus}`);
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
-      } else {
+      if (!res.ok || !data.success) {
         toast.error(data.message || "Status update failed");
+        return;
       }
+
+      toast.success(`Order marked as ${nextStatus}`);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
     } catch {
       toast.error("Server error. Please try again.");
     } finally {
@@ -53,6 +61,14 @@ export default function UpdateOrderStatus({
     return (
       <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-green-100 text-green-700 px-4 py-2 font-extrabold">
         ✅ Order Delivered
+      </div>
+    );
+  }
+
+  if (currentStatus === "Cancelled") {
+    return (
+      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-red-100 text-red-700 px-4 py-2 font-extrabold">
+        ❌ Order Cancelled
       </div>
     );
   }

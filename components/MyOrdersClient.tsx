@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Order = {
-  id: number;
+  id: string;
   customer_name?: string;
   phone?: string;
   status?: string;
@@ -30,7 +30,7 @@ export default function MyOrdersClient({ orders }: { orders: Order[] }) {
       const q = search.toLowerCase();
 
       const matchSearch =
-        String(order.id).includes(q) ||
+        String(order.id).toLowerCase().includes(q) ||
         (order.customer_name || "").toLowerCase().includes(q) ||
         (order.phone || "").toLowerCase().includes(q);
 
@@ -108,7 +108,7 @@ export default function MyOrdersClient({ orders }: { orders: Order[] }) {
                   <div className="grid md:grid-cols-[1.2fr_160px_220px] gap-4 items-start">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">
-                        Order #{order.id}
+                        Order #{order.id.slice(-6).toUpperCase()}
                       </p>
 
                       <p className="text-sm text-gray-600 mt-2">
@@ -121,14 +121,16 @@ export default function MyOrdersClient({ orders }: { orders: Order[] }) {
 
                       <p className="text-xs text-gray-400 mt-2">
                         {order.created_at
-                          ?new Date(order.created_at).toLocaleDateString("en-IN")
+                          ? new Date(order.created_at).toLocaleDateString(
+                              "en-IN"
+                            )
                           : ""}
                       </p>
                     </div>
 
                     <div>
                       <p className="text-sm font-bold">
-                        ₹{order.total_amount}
+                        ₹{order.total_amount || 0}
                       </p>
 
                       <p className="text-xs text-gray-500 mt-2">

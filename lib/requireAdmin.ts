@@ -1,22 +1,31 @@
 import { cookies } from "next/headers";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
 export async function requireAdmin() {
   const cookieStore = await cookies();
-  const userId = cookieStore.get("userId")?.value;
+
+  const userId =
+    cookieStore.get("user_id")?.value ||
+    cookieStore.get("userId")?.value;
 
   if (!userId) {
     throw new Error("Unauthorized");
   }
 
-  const [users]: any = await db.query(
-    "SELECT id, role FROM users WHERE id = ?",
-    [userId]
-  );
+  await connectDB();
 
-  if (users.length === 0 || users[0].role !== "admin") {
+  const user: any = await User.findById(userId)
+    .select("_id name email role")
+    .lean();
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (user.role !== "admin") {
     throw new Error("Admin access required");
   }
 
-  return users[0];
+  return user;
 }

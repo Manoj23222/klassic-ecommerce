@@ -1,27 +1,24 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const { id, status } = await req.json();
+    await connectDB();
 
-    if (!id || !status) {
-      return NextResponse.json(
-        { success: false, message: "Missing data" },
-        { status: 400 }
-      );
-    }
+    const sellers = await Seller.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
 
-    await db.query(
-      "UPDATE seller_requests SET status = ? WHERE id = ?",
-      [status, id]
-    );
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      sellers,
+    });
   } catch (error) {
-    console.error("Seller status update error:", error);
+    console.error("Admin Sellers Error:", error);
+
     return NextResponse.json(
-      { success: false, message: "Server error" },
+      { success: false, message: "Failed to fetch sellers" },
       { status: 500 }
     );
   }

@@ -1,16 +1,19 @@
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
 export async function GET() {
-  const [products]: any = await db.query(`
-    SELECT id, name, price, stock
-    FROM products
-    ORDER BY id DESC
-  `);
+  await connectDB();
+
+  const products = await Product.find({})
+    .sort({ createdAt: -1 })
+    .select("name price stock")
+    .lean();
 
   const csv = [
     ["ID", "Name", "Price", "Stock"],
+
     ...products.map((p: any) => [
-      p.id,
+      String(p._id),
       p.name || "",
       p.price || 0,
       p.stock || 0,
@@ -22,8 +25,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition":
-        "attachment; filename=products.csv",
+      "Content-Disposition": "attachment; filename=products.csv",
     },
   });
 }

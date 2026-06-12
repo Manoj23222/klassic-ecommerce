@@ -1,4 +1,8 @@
-import db from "@/lib/db";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
+
+export const dynamic = "force-dynamic";
 
 export default async function InvoicePage({
   params,
@@ -7,25 +11,24 @@ export default async function InvoicePage({
 }) {
   const { id } = await params;
 
-  const [orders]: any = await db.query(
-    "SELECT * FROM orders WHERE id = ?",
-    [id]
-  );
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return <h1 className="p-10 text-3xl">Invalid order ID</h1>;
+  }
 
-  const [items]: any = await db.query(
-    "SELECT * FROM order_items WHERE order_id = ?",
-    [id]
-  );
+  await connectDB();
 
-  if (orders.length === 0) {
+  const order: any = await Order.findById(id).lean();
+
+  if (!order) {
     return <h1 className="p-10 text-3xl">Order not found</h1>;
   }
 
-  const order = orders[0];
+  const items = order.items || [];
+  const orderId = String(order._id);
 
   return (
-    <main className="min-h-screen bg-white p-10 text-black">
-      <div className="max-w-4xl mx-auto border p-8">
+    <main className="min-h-screen bg-white p-4 md:p-10 text-black">
+      <div className="max-w-4xl mx-auto border p-5 md:p-8">
         <div className="flex justify-between border-b pb-4 mb-6">
           <div>
             <h1 className="text-4xl font-bold">Klassic</h1>
@@ -34,9 +37,11 @@ export default async function InvoicePage({
 
           <div className="text-right">
             <h2 className="text-2xl font-bold">Invoice</h2>
-            <p>Order #{order.id}</p>
+            <p>Order #{orderId.slice(-8).toUpperCase()}</p>
             <p>
-              {new Date(order.created_at).toLocaleDateString("en-IN")}
+              {order.createdAt
+                ? new Date(order.createdAt).toLocaleDateString("en-IN")
+                : "N/A"}
             </p>
           </div>
         </div>
@@ -50,7 +55,7 @@ export default async function InvoicePage({
           <p><b>Status:</b> {order.status || "Pending"}</p>
         </div>
 
-        <table className="w-full border mb-6">
+        <table className="w-full border mb-6 text-sm">
           <thead>
             <tr className="bg-gray-200">
               <th className="border p-3 text-left">Product</th>
@@ -61,35 +66,45 @@ export default async function InvoicePage({
           </thead>
 
           <tbody>
-            {items.map((item: any) => (
-              <tr key={item.id}>
-<td className="border p-3">
-  <p className="font-bold">{item.product_name}</p>
-
-  {item.color && (
-    <p className="text-sm text-gray-600">
-      Color: <b>{item.color}</b>
-    </p>
-  )}
-
-  {item.size && (
-    <p className="text-sm text-gray-600">
-      Size: <b>{item.size}</b>
-    </p>
-  )}
-</td>                <td className="border p-3">₹{item.price}</td>
-                <td className="border p-3">{item.quantity}</td>
-                <td className="border p-3">
-                  ₹{Number(item.price) * Number(item.quantity)}
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="border p-4 text-center text-gray-500">
+                  No items found
                 </td>
               </tr>
-            ))}
+            ) : (
+              items.map((item: any, index: number) => (
+                <tr key={`${item.product_id}-${index}`}>
+                  <td className="border p-3">
+                    <p className="font-bold">{item.product_name}</p>
+
+                    {item.color && (
+                      <p className="text-sm text-gray-600">
+                        Color: <b>{item.color}</b>
+                      </p>
+                    )}
+
+                    {item.size && (
+                      <p className="text-sm text-gray-600">
+                        Size: <b>{item.size}</b>
+                      </p>
+                    )}
+                  </td>
+
+                  <td className="border p-3">₹{Number(item.price || 0).toFixed(2)}</td>
+                  <td className="border p-3">{item.quantity || 1}</td>
+                  <td className="border p-3">
+                    ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
 
         <div className="text-right">
           <p className="text-2xl font-bold">
-            Total: ₹{order.total_amount}
+            Total: ₹{Number(order.total_amount || 0).toFixed(2)}
           </p>
         </div>
 
@@ -99,6 +114,7 @@ export default async function InvoicePage({
 
         <div className="mt-6 text-center print:hidden">
           <button
+            type="button"
             onClick={() => window.print()}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg"
           >

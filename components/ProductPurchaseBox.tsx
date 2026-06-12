@@ -5,7 +5,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;

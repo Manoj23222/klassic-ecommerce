@@ -6,31 +6,82 @@ import WishlistButton from "@/components/WishlistButton";
 import ReviewForm from "@/components/ReviewForm";
 import Header from "@/components/Header";
 import Link from "next/link";
-import db from "@/lib/db";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
-type Product = {
-  id: number;
+type ProductType = {
+  _id: string;
+  id?: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  stock: number;
-  image: string;
+  stock?: number;
+  image?: string;
   category?: string;
-  gallery_images?: string;
+  gallery_images?: string[];
   colors?: string;
   sizes?: string;
 };
 
-async function getProduct(id: string): Promise<Product | null> {
+async function getProduct(id: string): Promise<ProductType | null> {
   try {
-    const [rows]: any = await db.query("SELECT * FROM products WHERE id = ?", [
-      id,
-    ]);
+    await connectDB();
 
-    if (rows.length === 0) return null;
-    return rows[0];
-  } catch {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+
+    const product: any = await Product.findOne({
+      _id: id,
+      status: "Approved",
+    }).lean();
+
+    if (!product) return null;
+
+    const productId = product._id.toString();
+
+    return {
+      ...product,
+      _id: productId,
+      id: productId,
+      price: Number(product.price || 0),
+      stock: Number(product.stock || 0),
+      image: product.image || "",
+      description: product.description || "",
+    };
+  } catch (error) {
+    console.error("Product fetch error:", error);
     return null;
+  }
+}
+
+async function getRelatedProducts(category?: string, productId?: string) {
+  try {
+    await connectDB();
+
+    const query: any = {
+      category: category || "General",
+      status: "Approved",
+    };
+
+    if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+      query._id = { $ne: new mongoose.Types.ObjectId(productId) };
+    }
+
+    const products = await Product.find(query)
+      .limit(4)
+      .select("name price image category")
+      .lean();
+
+    return products.map((item: any) => ({
+      ...item,
+      _id: item._id.toString(),
+      id: item._id.toString(),
+      price: Number(item.price || 0),
+      image: item.image || "",
+    }));
+  } catch (error) {
+    console.error("Related products error:", error);
+    return [];
   }
 }
 
@@ -44,29 +95,16 @@ export default async function ProductPage({
 
   if (!product) return <h1 className="p-10 text-3xl">Product not found</h1>;
 
-  const [reviews]: any = await db.query(
-    "SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC",
-    [id]
-  );
+  const productId = product.id || product._id;
 
-  const [relatedProducts]: any = await db.query(
-    "SELECT * FROM products WHERE category = ? AND id != ? LIMIT 4",
-    [product.category, id]
-  );
+  const reviews: any[] = [];
+  const relatedProducts = await getRelatedProducts(product.category, productId);
 
-  const offerPrice = Number(product.price);
+  const offerPrice = Number(product.price || 0);
   const mrp = Math.round(offerPrice * 1.25);
-  const discount = Math.round(((mrp - offerPrice) / mrp) * 100);
+  const discount = mrp > 0 ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
 
-  const avgRating =
-    reviews.length > 0
-      ? (
-          reviews.reduce(
-            (sum: number, review: any) => sum + Number(review.rating),
-            0
-          ) / reviews.length
-        ).toFixed(1)
-      : "0.0";
+  const avgRating = "0.0";
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -80,19 +118,17 @@ export default async function ProductPage({
         <div className="mt-4 bg-white rounded-2xl shadow grid lg:grid-cols-2 gap-5 md:gap-8 p-3 md:p-6">
           <div>
             <ProductGallery
-              mainImage={product.image}
-              galleryImages={
-                product.gallery_images ? product.gallery_images.split(",") : []
-              }
+              mainImage={product.image || ""}
+              galleryImages={product.gallery_images || []}
             />
 
-            {product.stock > 0 ? (
+            {(product.stock || 0) > 0 ? (
               <ProductPurchaseBox
                 product={{
-                  id: product.id,
+                  id: productId,
                   name: product.name,
-                  price: Number(product.price),
-                  image: product.image,
+                  price: offerPrice,
+                  image: product.image || "",
                   colors: product.colors,
                   sizes: product.sizes,
                 }}
@@ -109,10 +145,10 @@ export default async function ProductPage({
             <div className="mt-4">
               <WishlistButton
                 product={{
-                  id: product.id,
+                  id: productId,
                   name: product.name,
-                  price: Number(product.price),
-                  image: product.image,
+                  price: offerPrice,
+                  image: product.image || "",
                 }}
               />
             </div>
@@ -138,9 +174,7 @@ export default async function ProductPage({
             </div>
 
             <div className="text-yellow-500 text-base md:text-lg mt-1">
-              {reviews.length > 0
-                ? "⭐".repeat(Math.round(Number(avgRating)))
-                : "No ratings yet"}
+              No ratings yet
             </div>
 
             <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -157,12 +191,14 @@ export default async function ProductPage({
 
             <p
               className={
-                product.stock > 0
+                (product.stock || 0) > 0
                   ? "mt-3 text-green-600 font-bold"
                   : "mt-3 text-red-600 font-bold"
               }
             >
-              {product.stock > 0 ? `In Stock: ${product.stock}` : "Out of Stock"}
+              {(product.stock || 0) > 0
+                ? `In Stock: ${product.stock}`
+                : "Out of Stock"}
             </p>
 
             <div className="mt-5 border rounded-2xl p-4">
@@ -217,7 +253,7 @@ export default async function ProductPage({
                 <div className="bg-gray-50 p-3 rounded-xl">
                   Stock
                   <br />
-                  <b>{product.stock}</b>
+                  <b>{product.stock || 0}</b>
                 </div>
               </div>
             </div>
@@ -225,7 +261,7 @@ export default async function ProductPage({
             <div className="mt-5 border rounded-2xl p-4">
               <h3 className="font-bold mb-2">All details</h3>
               <p className="text-gray-600 leading-7 text-sm md:text-base">
-                {product.description}
+                {product.description || "No description available"}
               </p>
             </div>
           </div>
@@ -236,50 +272,34 @@ export default async function ProductPage({
             Customer Reviews
           </h2>
 
-          {reviews.length === 0 ? (
-            <p className="text-gray-500">No reviews yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {reviews.map((review: any) => (
-                <div key={review.id} className="border-b pb-4">
-                  <p className="font-bold">{review.customer_name}</p>
-                  <p className="text-yellow-500">
-                    {"⭐".repeat(Number(review.rating))}
-                  </p>
-                  <p className="text-gray-600 mt-1">{review.comment}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {new Date(review.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="text-gray-500">No reviews yet.</p>
         </div>
 
-        <ReviewForm productId={product.id} />
+        <ReviewForm productId={productId} />
 
         <RecentlyViewed
           product={{
-            id: product.id,
+            id: productId,
             name: product.name,
-            price: Number(product.price),
-            image: product.image,
+            price: offerPrice,
+            image: product.image || "",
           }}
         />
+
         <FrequentlyBoughtTogether
-  mainProduct={{
-    id: product.id,
-    name: product.name,
-    price: Number(product.price),
-    image: product.image,
-  }}
-  products={relatedProducts.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    price: Number(item.price),
-    image: item.image,
-  }))}
-/>
+          mainProduct={{
+            id: productId,
+            name: product.name,
+            price: offerPrice,
+            image: product.image || "",
+          }}
+          products={relatedProducts.map((item: any) => ({
+            id: item.id || item._id,
+            name: item.name,
+            price: Number(item.price || 0),
+            image: item.image || "",
+          }))}
+        />
 
         <div className="mt-6 bg-white rounded-2xl shadow p-4 md:p-6">
           <h2 className="text-xl md:text-2xl font-bold mb-4">
@@ -287,25 +307,29 @@ export default async function ProductPage({
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-            {relatedProducts.map((item: any) => (
-              <Link
-                key={item.id}
-                href={`/product/${item.id}`}
-                className="border rounded-xl p-3 md:p-4 hover:shadow"
-              >
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-28 md:h-40 w-full object-contain"
-                />
+            {relatedProducts.map((item: any) => {
+              const relatedId = item.id || item._id;
 
-                <h3 className="font-bold mt-3 text-sm md:text-base line-clamp-2">
-                  {item.name}
-                </h3>
+              return (
+                <Link
+                  key={relatedId}
+                  href={`/product/${relatedId}`}
+                  className="border rounded-xl p-3 md:p-4 hover:shadow"
+                >
+                  <img
+                    src={item.image || "/placeholder.png"}
+                    alt={item.name}
+                    className="h-28 md:h-40 w-full object-contain"
+                  />
 
-                <p className="text-green-700 font-bold">₹{item.price}</p>
-              </Link>
-            ))}
+                  <h3 className="font-bold mt-3 text-sm md:text-base line-clamp-2">
+                    {item.name}
+                  </h3>
+
+                  <p className="text-green-700 font-bold">₹{item.price}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

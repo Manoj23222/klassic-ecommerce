@@ -2,21 +2,26 @@ import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
 
 type Product = {
-  id: number;
+  _id?: string;
+  id?: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  stock: number;
-  image: string;
+  stock?: number;
+  image?: string;
   category?: string;
 };
 
 async function getProducts(): Promise<Product[]> {
-  const res = await fetch("http://localhost:3000/api/products", {
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/products`,
+    {
+      cache: "no-store",
+    }
+  );
 
   const data = await res.json();
+
   return Array.isArray(data) ? data : [];
 }
 

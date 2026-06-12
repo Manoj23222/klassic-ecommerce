@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 export default function DeleteReviewButton({
   id,
 }: {
-  id: number;
+  id: string;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +31,7 @@ export default function DeleteReviewButton({
 
         setTimeout(() => {
           window.location.reload();
-        }, 1200);
+        }, 800);
       } else {
         toast.error(data.message || "Delete failed");
       }
@@ -44,6 +44,7 @@ export default function DeleteReviewButton({
 
   return (
     <button
+      type="button"
       onClick={deleteReview}
       disabled={loading}
       className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold transition disabled:bg-gray-400"

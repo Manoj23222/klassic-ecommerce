@@ -1,8 +1,9 @@
 import Header from "@/components/Header";
 import MyOrdersClient from "@/components/MyOrdersClient";
-import db from "@/lib/db";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
 
 export default async function MyOrdersPage() {
   const cookieStore = await cookies();
@@ -29,19 +30,20 @@ export default async function MyOrdersPage() {
     );
   }
 
-  const [orders]: any = await db.query(
-    "SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC",
-    [userId]
-  );
+  await connectDB();
+
+  const orders = await Order.find({ user_id: userId })
+    .sort({ createdAt: -1 })
+    .lean();
 
   const cleanOrders = orders.map((order: any) => ({
-    id: order.id,
+    id: order._id.toString(),
     customer_name: order.customer_name,
     phone: order.phone,
     status: order.status,
-    total_amount: Number(order.total_amount),
+    total_amount: Number(order.total_amount || 0),
     payment_method: order.payment_method,
-    created_at: order.created_at ? String(order.created_at) : "",
+    created_at: order.createdAt ? String(order.createdAt) : "",
   }));
 
   return (

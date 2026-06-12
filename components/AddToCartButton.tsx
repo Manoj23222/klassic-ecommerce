@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 
 type Props = {
   product: {
-    id: number;
+    id: string;
     name: string;
     price: number;
     image: string;

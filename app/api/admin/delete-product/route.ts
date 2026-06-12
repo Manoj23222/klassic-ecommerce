@@ -1,19 +1,44 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import mongoose from "mongoose";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
 export async function POST(request: Request) {
   try {
+    await connectDB();
+
     const { id } = await request.json();
 
-    await db.query("DELETE FROM products WHERE id = ?", [id]);
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid product ID" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true });
+    const product = await Product.findByIdAndDelete(id);
+
+    if (!product) {
+      return NextResponse.json(
+        { success: false, message: "Product not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Product deleted successfully",
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Delete product error:", error);
 
     return NextResponse.json(
-      { success: false },
+      { success: false, message: "Server error" },
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  return POST(request);
 }

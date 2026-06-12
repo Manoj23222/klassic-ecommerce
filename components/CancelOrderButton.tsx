@@ -6,7 +6,7 @@ import { useState } from "react";
 export default function CancelOrderButton({
   orderId,
 }: {
-  orderId: number;
+  orderId: string;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -32,10 +32,7 @@ export default function CancelOrderButton({
 
       if (data.success) {
         toast.success("Order cancelled successfully");
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
+        setTimeout(() => window.location.reload(), 1200);
       } else {
         toast.error(data.message || "Cancel failed");
       }

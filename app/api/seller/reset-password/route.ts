@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Seller from "@/models/Seller";
 
 function isStrongPassword(password: string) {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(
@@ -10,14 +11,13 @@ function isStrongPassword(password: string) {
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { token, password } = await req.json();
 
     if (!token || !password) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Token and password required",
-        },
+        { success: false, message: "Token and password required" },
         { status: 400 }
       );
     }
@@ -33,39 +33,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const [rows]: any = await db.query(
-      `
-      SELECT id
-      FROM seller_requests
-      WHERE reset_token = ?
-      AND reset_token_expiry > NOW()
-      LIMIT 1
-      `,
-      [token]
-    );
+    const seller: any = await Seller.findOne({
+      reset_token: token,
+      reset_token_expiry: { $gt: new Date() },
+    });
 
-    if (rows.length === 0) {
+    if (!seller) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid or expired reset link",
-        },
+        { success: false, message: "Invalid or expired reset link" },
         { status: 400 }
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    seller.password = await bcrypt.hash(password, 10);
+    seller.reset_token = undefined;
+    seller.reset_token_expiry = undefined;
 
-    await db.query(
-      `
-      UPDATE seller_requests
-      SET password = ?,
-          reset_token = NULL,
-          reset_token_expiry = NULL
-      WHERE id = ?
-      `,
-      [hashedPassword, rows[0].id]
-    );
+    await seller.save();
 
     return NextResponse.json({
       success: true,
@@ -75,10 +59,7 @@ export async function POST(req: Request) {
     console.error("Seller reset password error:", error);
 
     return NextResponse.json(
-      {
-        success: false,
-        message: "Password reset failed",
-      },
+      { success: false, message: "Password reset failed" },
       { status: 500 }
     );
   }

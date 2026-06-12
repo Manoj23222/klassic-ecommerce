@@ -1,17 +1,12 @@
-import db from "@/lib/db";
+import connectDB from "@/lib/mongodb";
+import Order from "@/models/Order";
 
 export async function GET() {
-  const [orders]: any = await db.query(`
-    SELECT
-      id,
-      customer_name,
-      phone,
-      total_amount,
-      status,
-      created_at
-    FROM orders
-    ORDER BY id DESC
-  `);
+  await connectDB();
+
+  const orders = await Order.find({})
+    .sort({ createdAt: -1 })
+    .lean();
 
   const csv = [
     [
@@ -22,13 +17,16 @@ export async function GET() {
       "Status",
       "Date",
     ],
+
     ...orders.map((o: any) => [
-      o.id,
-      o.customer_name,
-      o.phone,
-      o.total_amount,
-      o.status,
-      o.created_at,
+      String(o._id),
+      o.customer_name || "",
+      o.phone || "",
+      o.total_amount || 0,
+      o.status || "",
+      o.createdAt
+        ? new Date(o.createdAt).toISOString()
+        : "",
     ]),
   ]
     .map((row) => row.join(","))
