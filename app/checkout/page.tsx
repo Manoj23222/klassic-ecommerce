@@ -1,4 +1,5 @@
 "use client";
+
 import toast from "react-hot-toast";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -7,6 +8,17 @@ declare global {
   interface Window {
     Razorpay: any;
   }
+}
+
+function getSizePrice(basePrice: number, size: string) {
+  const clean = String(size || "").toLowerCase().replace(/\s/g, "");
+
+  if (clean === "500g") return basePrice * 0.5;
+  if (clean === "1kg") return basePrice;
+  if (clean === "5kg") return basePrice * 5;
+  if (clean === "10kg") return basePrice * 10;
+
+  return basePrice;
 }
 
 function CheckoutContent() {
@@ -25,65 +37,73 @@ function CheckoutContent() {
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [cart, setCart] = useState<any[]>([]);
 
+  const offerCoupons = [
+    { code: "WELCOME50", text: "₹50 OFF" },
+    { code: "SAVE10", text: "10% OFF" },
+    { code: "FLAT100", text: "₹100 OFF" },
+  ];
+
   useEffect(() => {
-  const loadSavedAddress = async () => {
-    try {
-      const res = await fetch("/api/account/address", {
-        cache: "no-store",
-      });
+    const loadSavedAddress = async () => {
+      try {
+        const res = await fetch("/api/account/address", {
+          cache: "no-store",
+        });
 
-      const data = await res.json();
+        const data = await res.json();
+        const saved = data.address || data.user;
 
-      const saved = data.address || data.user;
+        if (data.success && saved) {
+          setName(saved.name || "");
+          setPhone(saved.phone || "");
 
-      if (data.success && saved) {
-        setName(saved.name || "");
-        setPhone(saved.phone || "");
+          const fullAddress = [
+            saved.address,
+            saved.city,
+            saved.state,
+            saved.pincode,
+          ]
+            .filter(Boolean)
+            .join(", ");
 
-        const fullAddress = [
-          saved.address,
-          saved.city,
-          saved.state,
-          saved.pincode,
-        ]
-          .filter(Boolean)
-          .join(", ");
-
-        setAddress(fullAddress);
+          setAddress(fullAddress);
+        }
+      } catch (error) {
+        console.error("Address auto-fill error:", error);
       }
-    } catch (error) {
-      console.error("Address auto-fill error:", error);
-    }
-  };
+    };
 
-  loadSavedAddress();
-}, []);
+    loadSavedAddress();
+  }, []);
 
   useEffect(() => {
     const loadCheckout = async () => {
       if (productId) {
         const res = await fetch(`/api/products/${productId}`);
-const data = await res.json();
+        const data = await res.json();
 
-if (!data.success || !data.product) {
-  toast.error("Product not found");
-  return;
-}
+        if (!data.success || !data.product) {
+          toast.error("Product not found");
+          return;
+        }
 
-const product = data.product;
+        const product = data.product;
+        const basePrice = Number(product.price);
+        const finalPrice = getSizePrice(basePrice, sizeFromUrl || "");
 
-setCart([
-  {
-    id: product._id || product.id,
-    _id: product._id || product.id,
-    name: product.name,
-    price: Number(product.price),
-    image: product.image,
-    quantity: 1,
-    color: colorFromUrl || "",
-    size: sizeFromUrl || "",
-  },
-]);
+        setCart([
+          {
+            id: product._id || product.id,
+            _id: product._id || product.id,
+            name: product.name,
+            price: finalPrice,
+            basePrice,
+            image: product.image,
+            quantity: 1,
+            color: colorFromUrl || "",
+            size: sizeFromUrl || "",
+          },
+        ]);
       } else {
         setCart(JSON.parse(localStorage.getItem("cart") || "[]"));
       }
@@ -103,18 +123,9 @@ setCart([
 
   const total = Math.max(subtotal - discount, 0);
 
-  useEffect(() => {
-    if (couponFromUrl && subtotal > 0) {
-      if (couponFromUrl === "WELCOME50") setDiscount(50);
-      else if (couponFromUrl === "SAVE10")
-        setDiscount(Math.round(subtotal * 0.1));
-      else if (couponFromUrl === "FLAT100") setDiscount(100);
-    }
-  }, [couponFromUrl, subtotal]);
-
-  const applyCoupon = async () => {
-    if (!coupon.trim()) {
-     toast.error("Enter coupon code");
+  const applyCouponCode = async (code: string) => {
+    if (!code.trim()) {
+      toast.error("Enter coupon code");
       return;
     }
 
@@ -123,18 +134,23 @@ setCart([
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ code: coupon, subtotal }),
+      body: JSON.stringify({ code, subtotal }),
     });
 
     const data = await res.json();
 
     if (data.success) {
+      setCoupon(code);
       setDiscount(data.discount);
-     toast.success(`Coupon applied: ₹${data.discount} OFF`);
+      toast.success(`Coupon applied: ₹${data.discount} OFF`);
     } else {
       setDiscount(0);
-     toast.error(data.message || "Invalid coupon");
+      toast.error(data.message || "Invalid coupon");
     }
+  };
+
+  const applyCoupon = async () => {
+    await applyCouponCode(coupon);
   };
 
   const saveOrder = async (method: string) => {
@@ -162,7 +178,7 @@ setCart([
     const orderData = await saveOrder("Paytm");
 
     if (!orderData.success) {
-     toast.error("Order save failed");
+      toast.error("Order save failed");
       return;
     }
 
@@ -212,7 +228,7 @@ setCart([
     e.preventDefault();
 
     if (cart.length === 0) {
-     toast.error("Cart is empty");
+      toast.error("Cart is empty");
       return;
     }
 
@@ -352,7 +368,9 @@ setCart([
                   )}
 
                   <p>Qty: {item.quantity || 1}</p>
-                  <p className="font-bold text-green-600">₹{item.price}</p>
+                  <p className="font-bold text-green-600">
+                    ₹{Number(item.price).toFixed(2)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -363,7 +381,7 @@ setCart([
               className="flex-1 border p-3 rounded-xl"
               placeholder="Coupon code"
               value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
+              onChange={(e) => setCoupon(e.target.value.toUpperCase())}
             />
 
             <button
@@ -375,25 +393,45 @@ setCart([
             </button>
           </div>
 
+          <div className="mt-4">
+            <h3 className="font-bold mb-2">Available Offers</h3>
+
+            <div className="grid gap-2">
+              {offerCoupons.map((offer) => (
+                <button
+                  key={offer.code}
+                  type="button"
+                  onClick={() => applyCouponCode(offer.code)}
+                  className="flex justify-between items-center border border-green-200 bg-green-50 hover:bg-green-100 p-3 rounded-xl text-left"
+                >
+                  <span>
+                    <b>{offer.code}</b>
+                    <span className="text-sm text-gray-600 ml-2">
+                      {offer.text}
+                    </span>
+                  </span>
+
+                  <span className="text-blue-600 font-bold">Apply</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-6 space-y-2 text-lg">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <b>₹{subtotal}</b>
+              <b>₹{subtotal.toFixed(2)}</b>
             </div>
 
             <div className="flex justify-between text-green-600">
               <span>Discount</span>
-              <b>-₹{discount}</b>
+              <b>-₹{discount.toFixed(2)}</b>
             </div>
 
             <div className="flex justify-between text-2xl font-bold border-t pt-3">
               <span>Total</span>
-              <span>₹{total}</span>
+              <span>₹{total.toFixed(2)}</span>
             </div>
-          </div>
-
-          <div className="mt-5 bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-sm">
-            Coupons: <b>WELCOME50</b>, <b>SAVE10</b>, <b>FLAT100</b>
           </div>
         </div>
       </div>

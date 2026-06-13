@@ -3,12 +3,22 @@ import mongoose, { Schema, models } from "mongoose";
 const OrderItemSchema = new Schema(
   {
     product_id: { type: String, required: true },
+    seller_id: { type: String, default: "" },
+    seller_store_name: { type: String, default: "" },
+
     product_name: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, default: 1 },
+
     color: { type: String, default: "" },
     size: { type: String, default: "" },
     image: { type: String, default: "" },
+
+    item_status: {
+      type: String,
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      default: "Pending",
+    },
   },
   { _id: false }
 );

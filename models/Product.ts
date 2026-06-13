@@ -17,7 +17,22 @@ const ProductSchema = new Schema(
       required: true,
     },
 
+    short_description: {
+      type: String,
+      default: "",
+    },
+
     description: {
+      type: String,
+      default: "",
+    },
+
+    brand: {
+      type: String,
+      default: "",
+    },
+
+    tags: {
       type: String,
       default: "",
     },
@@ -25,6 +40,11 @@ const ProductSchema = new Schema(
     price: {
       type: Number,
       required: true,
+    },
+
+    sale_price: {
+      type: Number,
+      default: 0,
     },
 
     stock: {
@@ -47,6 +67,11 @@ const ProductSchema = new Schema(
       default: "General",
     },
 
+    sub_category: {
+      type: String,
+      default: "",
+    },
+
     colors: {
       type: String,
       default: "",
@@ -60,11 +85,17 @@ const ProductSchema = new Schema(
     sku: {
       type: String,
       default: "",
+      unique: true,
     },
 
     status: {
       type: String,
-      enum: ["Pending Approval", "Approved", "Rejected", "Draft"],
+      enum: [
+        "Pending Approval",
+        "Approved",
+        "Rejected",
+        "Draft",
+      ],
       default: "Pending Approval",
     },
 
@@ -72,14 +103,36 @@ const ProductSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    rejection_reason: {
-  type: String,
-  default: "",
-},
+
+    reject_reason: {
+      type: String,
+      default: "",
+    },
+
+    ai_score: {
+      type: Number,
+      default: 0,
+    },
+
+    views: {
+      type: Number,
+      default: 0,
+    },
+
+    sales_count: {
+      type: Number,
+      default: 0,
+    },
+
+    rating: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export default models.Product || mongoose.model("Product", ProductSchema);
+export default models.Product ||
+  mongoose.model("Product", ProductSchema);

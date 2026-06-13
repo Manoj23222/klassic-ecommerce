@@ -1,69 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
-const categories = [
-  "Fashion",
-  "Men's Clothing",
-  "Women's Clothing",
-  "Kids Clothing",
-  "Shoes",
-  "Bags",
-  "Watches",
-  "Jewelry",
-  "Electronics",
-  "Mobile Phones",
-  "Laptops",
-  "Tablets",
-  "Headphones",
-  "Smart Watches",
-  "Accessories",
-  "Home & Kitchen",
-  "Furniture",
-  "Home Decor",
-  "Kitchen Tools",
-  "Storage & Organization",
-  "Lighting",
-  "Beauty & Personal Care",
-  "Skincare",
-  "Hair Care",
-  "Makeup",
-  "Perfumes",
-  "Grooming",
-  "Grocery",
-  "Fruits & Vegetables",
-  "Snacks",
-  "Beverages",
-  "Dairy Products",
-  "Organic Foods",
-  "Sports & Fitness",
-  "Gym Equipment",
-  "Yoga Accessories",
-  "Outdoor Sports",
-  "Cycling",
-  "Toys & Games",
-  "Action Figures",
-  "Educational Toys",
-  "Board Games",
-  "Remote Control Toys",
-  "Books & Stationery",
-  "Books",
-  "Notebooks",
-  "Pens & Pencils",
-  "Office Supplies",
-  "Automotive",
-  "Car Accessories",
-  "Bike Accessories",
-  "Tyres",
-  "Car Care",
-  "Pet Supplies",
-  "Dog Food",
-  "Cat Food",
-  "Pet Toys",
-  "Pet Accessories",
-];
+const categoryMap: Record<string, string[]> = {
+  Fashion: [
+    "Men's Clothing",
+    "Women's Clothing",
+    "Kids Clothing",
+    "Shoes",
+    "Bags",
+    "Watches",
+    "Jewelry",
+  ],
+  Electronics: [
+    "Mobile Phones",
+    "Laptops",
+    "Tablets",
+    "Headphones",
+    "Smart Watches",
+    "Accessories",
+  ],
+  "Home & Kitchen": [
+    "Furniture",
+    "Home Decor",
+    "Kitchen Tools",
+    "Storage & Organization",
+    "Lighting",
+  ],
+  "Beauty & Personal Care": [
+    "Skincare",
+    "Hair Care",
+    "Makeup",
+    "Perfumes",
+    "Grooming",
+  ],
+  Grocery: [
+    "Fruits & Vegetables",
+    "Snacks",
+    "Beverages",
+    "Dairy Products",
+    "Organic Foods",
+  ],
+  "Sports & Fitness": [
+    "Gym Equipment",
+    "Yoga Accessories",
+    "Outdoor Sports",
+    "Cycling",
+  ],
+  "Toys & Games": [
+    "Action Figures",
+    "Educational Toys",
+    "Board Games",
+    "Remote Control Toys",
+  ],
+  "Books & Stationery": [
+    "Books",
+    "Notebooks",
+    "Pens & Pencils",
+    "Office Supplies",
+  ],
+  Automotive: ["Car Accessories", "Bike Accessories", "Tyres", "Car Care"],
+  "Pet Supplies": ["Dog Food", "Cat Food", "Pet Toys", "Pet Accessories"],
+};
+
+const mainCategories = Object.keys(categoryMap);
+
+function makeSku(name: string, category: string) {
+  const namePart =
+    name
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 4) || "PROD";
+
+  const categoryPart =
+    category
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 3) || "CAT";
+
+  const randomPart = Math.floor(1000 + Math.random() * 9000);
+
+  return `KLS-${categoryPart}-${namePart}-${randomPart}`;
+}
 
 export default function SellerProductForm({
   sellerId,
@@ -79,26 +101,51 @@ export default function SellerProductForm({
     stock: "",
     image: "",
     category: "Fashion",
+    sub_category: "Men's Clothing",
+    sku: "",
     colors: "",
     sizes: "",
   });
 
   const [loading, setLoading] = useState(false);
 
+  const subCategories = useMemo(() => {
+    return categoryMap[form.category] || [];
+  }, [form.category]);
+
   const updateField = (key: string, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      if (key === "category") {
+        return {
+          ...prev,
+          category: value,
+          sub_category: categoryMap[value]?.[0] || "",
+        };
+      }
+
+      return { ...prev, [key]: value };
+    });
+  };
+
+  const generateSku = () => {
+    const sku = makeSku(form.name, form.category);
+    setForm((prev) => ({ ...prev, sku }));
+    toast.success("SKU generated");
   };
 
   const addProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (form.name.trim().length < 2) return toast.error("Enter product name");
+    if (!form.category) return toast.error("Select main category");
+    if (!form.sub_category) return toast.error("Select sub category");
     if (form.description.trim().length < 5)
       return toast.error("Enter product description");
     if (!form.price || Number(form.price) <= 0)
       return toast.error("Enter valid price");
     if (!form.stock || Number(form.stock) < 0)
       return toast.error("Enter valid stock");
+    if (!form.sku.trim()) return toast.error("Generate or enter SKU");
     if (!form.image.trim()) return toast.error("Enter product image URL");
 
     try {
@@ -143,7 +190,7 @@ export default function SellerProductForm({
           Add Seller Product
         </h2>
         <p className="text-sm text-gray-600 mt-1">
-          Submit your product. Klassic admin will review and approve it.
+          Amazon/Flipkart style product listing with category, sub category and SKU.
         </p>
       </div>
 
@@ -152,28 +199,6 @@ export default function SellerProductForm({
         placeholder="Product Name *"
         value={form.name}
         onChange={(e) => updateField("name", e.target.value)}
-        required
-      />
-
-      <select
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-white"
-        value={form.category}
-        onChange={(e) => updateField("category", e.target.value)}
-        required
-      >
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-      </select>
-
-      <textarea
-        className="border p-3 rounded-xl md:col-span-2 outline-none focus:ring-2 focus:ring-green-500"
-        placeholder="Product Description *"
-        rows={5}
-        value={form.description}
-        onChange={(e) => updateField("description", e.target.value)}
         required
       />
 
@@ -186,12 +211,65 @@ export default function SellerProductForm({
         required
       />
 
+      <select
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-white"
+        value={form.category}
+        onChange={(e) => updateField("category", e.target.value)}
+        required
+      >
+        {mainCategories.map((category) => (
+          <option key={category} value={category}>
+            {category}
+          </option>
+        ))}
+      </select>
+
+      <select
+        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-white"
+        value={form.sub_category}
+        onChange={(e) => updateField("sub_category", e.target.value)}
+        required
+      >
+        {subCategories.map((sub) => (
+          <option key={sub} value={sub}>
+            {sub}
+          </option>
+        ))}
+      </select>
+
       <input
         className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
         placeholder="Stock *"
         type="number"
         value={form.stock}
         onChange={(e) => updateField("stock", e.target.value)}
+        required
+      />
+
+      <div className="flex gap-2">
+        <input
+          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500 flex-1"
+          placeholder="SKU *"
+          value={form.sku}
+          onChange={(e) => updateField("sku", e.target.value.toUpperCase())}
+          required
+        />
+
+        <button
+          type="button"
+          onClick={generateSku}
+          className="bg-black text-white px-4 rounded-xl font-bold"
+        >
+          Auto
+        </button>
+      </div>
+
+      <textarea
+        className="border p-3 rounded-xl md:col-span-2 outline-none focus:ring-2 focus:ring-green-500"
+        placeholder="Product Description *"
+        rows={5}
+        value={form.description}
+        onChange={(e) => updateField("description", e.target.value)}
         required
       />
 
@@ -223,7 +301,7 @@ export default function SellerProductForm({
 
       <input
         className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
-        placeholder="Sizes comma separated e.g. S, M, L"
+        placeholder="Sizes e.g. S, M, L, XL OR 500g, 1kg, 5kg"
         value={form.sizes}
         onChange={(e) => updateField("sizes", e.target.value)}
       />

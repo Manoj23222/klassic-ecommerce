@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 type Seller = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   store_name: string;
@@ -56,75 +56,77 @@ export default function SellerDashboardPage() {
 
   if (checking) {
     return (
-      <main className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow p-6 font-bold">
           Checking seller access...
         </div>
-      </main>
+      </div>
     );
   }
 
   if (!seller) return null;
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl shadow-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-          <div>
-            <p className="text-sm opacity-90">Welcome to Klassic Seller Hub</p>
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl shadow-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div>
+          <p className="text-sm opacity-90">
+            Welcome to Klassic Seller Hub
+          </p>
 
-            <h1 className="text-3xl md:text-4xl font-extrabold mt-1">
-              {seller.store_name || seller.name}
-            </h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold mt-1">
+            {seller.store_name || seller.name}
+          </h1>
 
-            <p className="mt-2 text-sm opacity-90">{seller.email}</p>
+          <p className="mt-2 text-sm opacity-90">
+            {seller.email}
+          </p>
 
-            <span className="inline-block mt-3 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-extrabold">
-              ✅ {seller.status}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={logoutSeller}
-            className="bg-white text-blue-700 px-5 py-3 rounded-xl font-extrabold hover:bg-blue-50 transition"
-          >
-            Logout
-          </button>
+          <span className="inline-block mt-3 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-extrabold">
+            ✅ {seller.status}
+          </span>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5 mt-6">
-          <Link
-            href="/seller/products/add"
-            className="bg-white rounded-2xl shadow p-6 border hover:shadow-lg transition"
-          >
-            <div className="text-4xl mb-3">➕</div>
-            <h2 className="text-xl font-extrabold">Add Product</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              Upload product details for admin approval.
-            </p>
-          </Link>
+        <button
+          type="button"
+          onClick={logoutSeller}
+          className="bg-white text-blue-700 px-5 py-3 rounded-xl font-extrabold hover:bg-blue-50 transition"
+        >
+          Logout
+        </button>
+      </div>
 
-          <Link
-            href="/seller/products"
-            className="bg-white rounded-2xl shadow p-6 border hover:shadow-lg transition"
-          >
-            <div className="text-4xl mb-3">📦</div>
-            <h2 className="text-xl font-extrabold">My Products</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              View and manage products submitted by your store.
-            </p>
-          </Link>
+      <div className="grid md:grid-cols-3 gap-5 mt-6">
+        <Link
+          href="/seller/products/add"
+          className="bg-white rounded-2xl shadow p-6 border hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-3">➕</div>
+          <h2 className="text-xl font-extrabold">Add Product</h2>
+          <p className="text-sm text-gray-500 mt-2">
+            Upload product details for admin approval.
+          </p>
+        </Link>
 
-          <div className="bg-white rounded-2xl shadow p-6 border">
-            <div className="text-4xl mb-3">📊</div>
-            <h2 className="text-xl font-extrabold">Seller Status</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              Your account is approved and ready to sell.
-            </p>
-          </div>
+        <Link
+          href="/seller/products"
+          className="bg-white rounded-2xl shadow p-6 border hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-3">📦</div>
+          <h2 className="text-xl font-extrabold">My Products</h2>
+          <p className="text-sm text-gray-500 mt-2">
+            View and manage products submitted by your store.
+          </p>
+        </Link>
+
+        <div className="bg-white rounded-2xl shadow p-6 border">
+          <div className="text-4xl mb-3">📊</div>
+          <h2 className="text-xl font-extrabold">Seller Status</h2>
+          <p className="text-sm text-gray-500 mt-2">
+            Your account is approved and ready to sell.
+          </p>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -17,7 +17,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const seller = await Seller.findOne({ email });
+    const seller = await Seller.findOne({
+      email: String(email).trim().toLowerCase(),
+    });
 
     if (!seller) {
       return NextResponse.json(
@@ -47,6 +49,14 @@ export async function POST(req: Request) {
 
     const cookieStore = await cookies();
 
+    cookieStore.set("seller_id", seller._id.toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
     cookieStore.set("sellerId", seller._id.toString(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -55,14 +65,19 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    cookieStore.delete("user_id");
+
     return NextResponse.json({
       success: true,
       message: "Seller login successful",
       seller: {
-        id: seller._id,
+        _id: seller._id.toString(),
+        id: seller._id.toString(),
         name: seller.name,
         email: seller.email,
         status: seller.status,
+        store_name: seller.store_name || "",
+        storeName: seller.store_name || "",
       },
     });
   } catch (error) {

@@ -38,15 +38,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderItems = cart.map((item: any) => ({
-      product_id: item._id || item.id,
-      product_name: item.name,
-      price: Number(item.price),
-      quantity: Number(item.quantity || 1),
-      color: item.color || "",
-      size: item.size || "",
-      image: item.image || "",
-    }));
+    const productIds = cart.map((item: any) => item._id || item.id);
+
+    const products = await Product.find({
+      _id: { $in: productIds },
+    }).lean();
+
+    const productMap = new Map(
+      products.map((p: any) => [p._id.toString(), p])
+    );
+
+    const orderItems = cart.map((item: any) => {
+      const productId = String(item._id || item.id);
+      const product: any = productMap.get(productId);
+
+      return {
+        product_id: productId,
+        seller_id: product?.seller_id || "",
+        seller_store_name: product?.seller_store_name || "",
+        product_name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity || 1),
+        color: item.color || "",
+        size: item.size || "",
+        image: item.image || "",
+        item_status: "Pending",
+      };
+    });
 
     const order = await Order.create({
       user_id: userId,
@@ -68,7 +86,10 @@ export async function POST(request: Request) {
           stock: { $gte: item.quantity },
         },
         {
-          $inc: { stock: -item.quantity },
+          $inc: {
+            stock: -item.quantity,
+            sales_count: item.quantity,
+          },
         }
       );
     }
