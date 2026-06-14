@@ -49,6 +49,24 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    cookieStore.set("user_role", user.role || "customer", {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    if (user.role === "admin") {
+      cookieStore.set("admin_token", user._id.toString(), {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       user: {
