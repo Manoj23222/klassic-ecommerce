@@ -1,4 +1,3 @@
-
 import ToastProvider from "@/components/ToastProvider";
 import AIShoppingAssistant from "@/components/AIShoppingAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -23,9 +22,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html
       lang="en"
@@ -37,9 +36,8 @@ export default function RootLayout({
           <AIShoppingAssistant />
         </main>
 
-       
         <MobileBottomNav />
-    <ToastProvider />
+        <ToastProvider />
       </body>
     </html>
   );

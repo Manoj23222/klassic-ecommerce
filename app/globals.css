@@ -72,3 +72,43 @@ a {
     padding: 12px;
   }
 }
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: max(72px, env(safe-area-inset-bottom));
+  }
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+* {
+  box-sizing: border-box;
+}

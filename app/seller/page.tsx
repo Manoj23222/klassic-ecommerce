@@ -281,7 +281,7 @@ if (!mongoose.Types.ObjectId.isValid(sellerId)) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
               <Stat title="My Products" value={productsTotal} color="text-gray-900" />
               <Stat title="Approved" value={approvedTotal} color="text-green-600" />
               <Stat title="Pending" value={pendingTotal} color="text-yellow-600" />

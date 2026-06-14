@@ -153,13 +153,45 @@ export default async function ProductsPage() {
                     </td>
 
                     <td className="p-4">
-                      <Link
-                        href={`/admin/products/${product._id}`}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
-                      >
-                        Review
-                      </Link>
-                    </td>
+  <div className="flex flex-wrap gap-2">
+
+    <Link
+      href={`/admin/products/${product._id}`}
+      className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold"
+    >
+      View
+    </Link>
+
+    <Link
+      href={`/admin/product/edit/${product._id}`}
+      className="bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-bold"
+    >
+      Edit
+    </Link>
+
+    <button
+      className="bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold"
+      onClick={async () => {
+        if (!confirm("Delete product?")) return;
+
+        await fetch("/api/admin/delete-product", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: product._id,
+          }),
+        });
+
+        window.location.reload();
+      }}
+    >
+      Delete
+    </button>
+
+  </div>
+</td>
                   </tr>
                 ))}
               </tbody>
