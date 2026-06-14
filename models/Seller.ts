@@ -56,7 +56,7 @@ const SellerSchema = new Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
+      enum: ["Pending", "Approved", "Rejected", "Suspended"],
       default: "Pending",
     },
 

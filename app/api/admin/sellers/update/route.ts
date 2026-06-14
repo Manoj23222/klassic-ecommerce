@@ -3,7 +3,12 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Seller from "@/models/Seller";
 
-const allowedStatus = ["Pending", "Approved", "Rejected"];
+const allowedStatus = [
+  "Pending",
+  "Approved",
+  "Rejected",
+  "Suspended",
+];
 
 async function updateSellerStatus(req: Request) {
   try {

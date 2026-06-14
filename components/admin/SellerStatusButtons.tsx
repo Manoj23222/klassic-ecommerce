@@ -4,11 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-export default function SellerStatusButtons({
-  id,
-}: {
-  id: string;
-}) {
+export default function SellerStatusButtons({ id }: { id: string }) {
   const router = useRouter();
   const [loadingStatus, setLoadingStatus] = useState("");
 
@@ -21,7 +17,10 @@ export default function SellerStatusButtons({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({
+          id,
+          status,
+        }),
       });
 
       const data = await res.json();
@@ -31,40 +30,49 @@ export default function SellerStatusButtons({
         return;
       }
 
-      toast.success(`Seller ${status.toLowerCase()} successfully`);
+      toast.success(`Seller status changed to ${status}`);
       router.refresh();
     } catch {
-      toast.error("Server error. Please try again.");
+      toast.error("Server error");
     } finally {
       setLoadingStatus("");
     }
   };
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="space-y-3">
       <button
         type="button"
         disabled={loadingStatus !== ""}
         onClick={() => updateStatus("Approved")}
-        className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold transition disabled:bg-gray-400"
+        className="w-full bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-extrabold transition disabled:bg-gray-400"
       >
-        {loadingStatus === "Approved" ? "Approving..." : "✅ Approve"}
+        {loadingStatus === "Approved" ? "Approving..." : "✅ Approve Seller"}
       </button>
 
       <button
         type="button"
         disabled={loadingStatus !== ""}
         onClick={() => updateStatus("Rejected")}
-        className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold transition disabled:bg-gray-400"
+        className="w-full bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-extrabold transition disabled:bg-gray-400"
       >
-        {loadingStatus === "Rejected" ? "Rejecting..." : "❌ Reject"}
+        {loadingStatus === "Rejected" ? "Rejecting..." : "❌ Reject Seller"}
+      </button>
+
+      <button
+        type="button"
+        disabled={loadingStatus !== ""}
+        onClick={() => updateStatus("Suspended")}
+        className="w-full bg-gray-800 hover:bg-black text-white px-5 py-3 rounded-2xl font-extrabold transition disabled:bg-gray-400"
+      >
+        {loadingStatus === "Suspended" ? "Suspending..." : "⛔ Suspend Seller"}
       </button>
 
       <button
         type="button"
         disabled={loadingStatus !== ""}
         onClick={() => updateStatus("Pending")}
-        className="bg-yellow-500 hover:bg-yellow-600 text-black px-5 py-3 rounded-xl font-bold transition disabled:bg-gray-300"
+        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black px-5 py-3 rounded-2xl font-extrabold transition disabled:bg-gray-300"
       >
         {loadingStatus === "Pending" ? "Updating..." : "⏳ Mark Pending"}
       </button>
