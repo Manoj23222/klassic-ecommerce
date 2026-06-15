@@ -2,11 +2,22 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
   try {
     await connectDB();
 
-    const products = await Product.find().sort({
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+
+    const filter: any = {};
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    const products = await Product.find(filter).sort({
       createdAt: -1,
     });
 
@@ -31,28 +42,11 @@ export async function POST(request: Request) {
   try {
     await connectDB();
 
-    const {
-      seller_id,
-      seller_store_name,
-      name,
-      short_description,
-      description,
-      brand,
-      tags,
-      price,
-      sale_price,
-      stock,
-      image,
-      category,
-      sub_category,
-      gallery_images,
-      colors,
-      sizes,
-      sku,
-      status,
-    } = await request.json();
+    const body = await request.json();
 
-    if (!name || !price || !image || !sku) {
+    const cleanSku = String(body.sku || "").trim().toUpperCase();
+
+    if (!body.name || !body.price || !body.image || !cleanSku) {
       return NextResponse.json(
         {
           success: false,
@@ -61,8 +55,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const cleanSku = String(sku).trim().toUpperCase();
 
     const oldSku = await Product.findOne({ sku: cleanSku });
 
@@ -77,31 +69,36 @@ export async function POST(request: Request) {
     }
 
     const product = await Product.create({
-      seller_id: seller_id || "admin",
-      seller_store_name: seller_store_name || "Klassic Admin",
+      seller_id: body.seller_id || "admin",
+      seller_store_name: body.seller_store_name || "Klassic Admin",
 
-      name: String(name).trim(),
-      short_description: short_description || "",
-      description: description || "",
-      brand: brand || "",
-      tags: tags || "",
+      name: String(body.name).trim(),
+      short_description: body.short_description || "",
+      description: body.description || "",
+      brand: body.brand || "",
+      tags: body.tags || "",
 
-      price: Number(price),
-      sale_price: Number(sale_price || 0),
-      stock: Number(stock || 0),
+      price: Number(body.price),
+      sale_price: Number(body.sale_price || 0),
+      stock: Number(body.stock || 0),
 
-      image,
-      category: category || "General",
-      sub_category: sub_category || "",
-      gallery_images: Array.isArray(gallery_images) ? gallery_images : [],
+      image: body.image,
+      gallery_images: Array.isArray(body.gallery_images)
+        ? body.gallery_images
+        : [],
 
-      colors: colors || "",
-      sizes: sizes || "",
+      category: body.category || "General",
+      sub_category: body.sub_category || "",
+
+      colors: body.colors || "",
+      sizes: body.sizes || "",
       sku: cleanSku,
 
-      status: status || "Approved",
+      status: body.status || "Approved",
       reject_reason: "",
-      featured: false,
+      approval_comment: "",
+      admin_notes: "",
+      featured: Boolean(body.featured || false),
     });
 
     return NextResponse.json({

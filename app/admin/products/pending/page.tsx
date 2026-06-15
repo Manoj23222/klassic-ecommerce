@@ -1,169 +1,90 @@
-"use client";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
+import ProductApprovalActions from "@/components/admin/ProductApprovalActions";
+import Link from "next/link";
 
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+export const dynamic = "force-dynamic";
 
-type Product = {
-  _id: string;
-  name: string;
-  seller_store_name: string;
-  category: string;
-  price: number;
-  stock: number;
-  image: string;
-  sku: string;
-  status: string;
-  rejection_reason?: string;
-};
+export default async function PendingProductsPage() {
+  await connectDB();
 
-export default function PendingProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch("/api/admin/products");
-      const data = await res.json();
-
-      if (data.success) {
-        setProducts(data.products);
-      } else {
-        toast.error(data.message || "Products fetch failed");
-      }
-    } catch {
-      toast.error("Server error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const updateStatus = async (
-    productId: string,
-    status: "Approved" | "Rejected"
-  ) => {
-    let rejection_reason = "";
-
-    if (status === "Rejected") {
-      const reason = prompt("Enter rejection reason:");
-
-      if (!reason || reason.trim().length < 3) {
-        toast.error("Rejection reason required");
-        return;
-      }
-
-      rejection_reason = reason.trim();
-    }
-
-    const res = await fetch("/api/admin/products/update", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        productId,
-        status,
-        rejection_reason,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      toast.success(`Product ${status}`);
-      fetchProducts();
-    } else {
-      toast.error(data.message || "Update failed");
-    }
-  };
-
-  const pendingProducts = products.filter(
-    (product) => product.status === "Pending Approval"
-  );
+  const products = await Product.find({ status: "Pending Approval" })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">
-          Pending Product Approval
+    <main>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          Product Approval Center
         </h1>
-
-        <div className="bg-white rounded-2xl shadow overflow-x-auto">
-          {loading ? (
-            <p className="p-6">Loading...</p>
-          ) : pendingProducts.length === 0 ? (
-            <p className="p-6">No pending products.</p>
-          ) : (
-            <table className="w-full text-left min-w-[1000px]">
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="p-4">Image</th>
-                  <th className="p-4">Product</th>
-                  <th className="p-4">Seller</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">SKU</th>
-                  <th className="p-4">Price</th>
-                  <th className="p-4">Stock</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Action</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {pendingProducts.map((product) => (
-                  <tr key={product._id} className="border-t">
-                    <td className="p-4">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    </td>
-
-                    <td className="p-4 font-semibold">{product.name}</td>
-                    <td className="p-4">
-                      {product.seller_store_name || "Seller"}
-                    </td>
-                    <td className="p-4">{product.category}</td>
-                    <td className="p-4">{product.sku || "-"}</td>
-                    <td className="p-4">₹{product.price}</td>
-                    <td className="p-4">{product.stock}</td>
-
-                    <td className="p-4">
-                      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
-                        {product.status}
-                      </span>
-                    </td>
-
-                    <td className="p-4 flex gap-2">
-                      <button
-                        onClick={() =>
-                          updateStatus(product._id, "Approved")
-                        }
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg"
-                      >
-                        Approve
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          updateStatus(product._id, "Rejected")
-                        }
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg"
-                      >
-                        Reject
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <p className="text-gray-500 text-sm mt-1">
+          Review seller submitted products before publishing.
+        </p>
       </div>
-    </div>
+
+      {products.length === 0 ? (
+        <div className="bg-white rounded-2xl p-8 text-center shadow-sm border">
+          <h2 className="text-xl font-bold">No pending products</h2>
+          <p className="text-gray-500 mt-2">All products are reviewed.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {products.map((item: any) => (
+            <div
+              key={String(item._id)}
+              className="bg-white rounded-2xl shadow-sm border overflow-hidden"
+            >
+              <div className="flex gap-4 p-4">
+                <img
+                  src={item.image || "/placeholder.png"}
+                  alt={item.name}
+                  className="w-28 h-28 object-contain rounded-xl border bg-gray-50"
+                />
+
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-bold text-lg line-clamp-2">
+                    {item.name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    Seller: {item.seller_store_name || "Klassic Seller"}
+                  </p>
+
+                  <p className="text-sm text-gray-500">
+                    SKU: {item.sku || "N/A"}
+                  </p>
+
+                  <p className="text-sm font-semibold mt-2">
+                    ₹{Number(item.price || 0).toFixed(2)}
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
+                      Pending Approval
+                    </span>
+
+                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+                      {item.category || "General"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-4 pb-4">
+                <ProductApprovalActions productId={String(item._id)} />
+
+                <Link
+                  href={`/admin/products/edit/${String(item._id)}`}
+                  className="block text-center mt-3 bg-gray-900 text-white py-2 rounded-xl text-sm font-semibold"
+                >
+                  View / Edit Product
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </main>
   );
 }

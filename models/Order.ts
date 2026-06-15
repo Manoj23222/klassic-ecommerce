@@ -16,7 +16,18 @@ const OrderItemSchema = new Schema(
 
     item_status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: [
+        "Pending",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+        "Return Requested",
+        "Return Approved",
+        "Return Rejected",
+        "Refund Pending",
+        "Refunded",
+      ],
       default: "Pending",
     },
   },
@@ -31,11 +42,28 @@ const OrderSchema = new Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: [
+        "Pending",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+        "Return Requested",
+        "Return Approved",
+        "Return Rejected",
+        "Refund Pending",
+        "Refunded",
+      ],
       default: "Pending",
     },
 
     payment_method: { type: String, default: "COD" },
+
+    payment_status: {
+      type: String,
+      enum: ["Pending", "Paid", "Failed", "Refunded"],
+      default: "Pending",
+    },
 
     customer_name: { type: String, required: true },
     phone: { type: String, required: true },
@@ -43,6 +71,24 @@ const OrderSchema = new Schema(
 
     coupon_code: { type: String, default: "" },
     discount: { type: Number, default: 0 },
+
+    return_reason: { type: String, default: "" },
+    return_status: {
+      type: String,
+      enum: ["None", "Requested", "Approved", "Rejected"],
+      default: "None",
+    },
+    return_requested_at: { type: Date, default: null },
+    return_action_at: { type: Date, default: null },
+
+    refund_amount: { type: Number, default: 0 },
+    refund_status: {
+      type: String,
+      enum: ["None", "Pending", "Completed", "Rejected"],
+      default: "None",
+    },
+    refund_note: { type: String, default: "" },
+    refunded_at: { type: Date, default: null },
 
     items: {
       type: [OrderItemSchema],

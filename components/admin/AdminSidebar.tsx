@@ -87,15 +87,15 @@ const menus = [
   },
 
   {
-    title: "AI Center",
-    items: [
-      { name: "AI Product Description", href: "/admin/ai/product-description" },
-      { name: "AI SEO Generator", href: "/admin/ai/seo" },
-      { name: "AI Product Title", href: "/admin/ai/title" },
-      { name: "AI Sales Prediction", href: "/admin/ai/sales" },
-      { name: "AI Trending Products", href: "/admin/ai/trending" },
-    ],
-  },
+  title: "AI Center",
+  items: [
+    { name: "AI Product Description", href: "/admin/ai-center/description" },
+    { name: "AI SEO Generator", href: "/admin/ai-center/seo" },
+    { name: "AI Product Title", href: "/admin/ai-center/title" },
+    { name: "AI Sales Prediction", href: "/admin/ai-center/sales-prediction" },
+    { name: "AI Trending Products", href: "/admin/ai-center/trending" },
+  ],
+},
 
   {
     title: "Settings",
@@ -113,8 +113,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[300px] min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-slate-950 text-white overflow-y-auto">
-      <div className="p-6 border-b border-white/10">
+<aside className="w-[280px] h-screen sticky top-0 bg-gradient-to-b from-slate-950 via-blue-950 to-slate-950 text-white overflow-y-auto">      <div className="p-6 border-b border-white/10">
         <h1 className="text-3xl font-extrabold">
           Klassic
         </h1>

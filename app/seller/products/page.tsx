@@ -100,7 +100,7 @@ function SellerProductsContent() {
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
-      <SellerTopBar />
+      
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6 gap-4">
           <div>

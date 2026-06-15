@@ -148,7 +148,7 @@ export default function AdminProductsTable({
                 <td className="py-4 px-4">
                   <div className="flex gap-3 items-center">
                     <Link
-                      href={`/admin/product/edit/${item.id}`}
+                      href={`/admin/products/edit/${item.id}`}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm"
                     >
                       Edit

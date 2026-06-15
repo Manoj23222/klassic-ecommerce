@@ -183,6 +183,54 @@ const SellerSchema = new Schema(
     reset_token_expiry: {
       type: Date,
     },
+    verification_status: {
+  type: String,
+  enum: ["Pending", "Verified", "Rejected"],
+  default: "Pending",
+},
+
+verification_comment: {
+  type: String,
+  default: "",
+},
+
+total_products: {
+  type: Number,
+  default: 0,
+},
+
+total_orders: {
+  type: Number,
+  default: 0,
+},
+
+total_sales: {
+  type: Number,
+  default: 0,
+},
+
+wallet_balance: {
+  type: Number,
+  default: 0,
+},
+
+pending_payout: {
+  type: Number,
+  default: 0,
+},
+
+last_login: {
+  type: Date,
+},
+
+approved_by: {
+  type: String,
+  default: "",
+},
+
+approved_at: {
+  type: Date,
+},
   },
   {
     timestamps: true,

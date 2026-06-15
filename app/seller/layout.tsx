@@ -11,14 +11,12 @@ export default function SellerLayout({
       <SellerMobileHeader />
 
       <div className="md:flex">
-        <div className="hidden md:block">
-          <SellerSidebar />
-        </div>
+  <SellerSidebar />
 
-        <section className="flex-1 p-3 md:p-6 overflow-x-hidden">
-          {children}
-        </section>
-      </div>
+  <section className="flex-1 p-3 md:p-6 overflow-x-hidden lg:ml-[280px]">
+    {children}
+  </section>
+</div>
     </main>
   );
 }

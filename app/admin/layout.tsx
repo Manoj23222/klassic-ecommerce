@@ -7,12 +7,12 @@ export default function AdminLayout({
 }) {
   return (
     <main className="min-h-screen bg-gray-100">
-      <div className="md:flex">
-        <div className="hidden md:block">
+      <div className="flex min-h-screen w-full overflow-x-hidden">
+        <div className="hidden lg:block shrink-0">
           <AdminSidebar />
         </div>
 
-        <section className="flex-1 p-3 md:p-8 overflow-x-hidden">
+        <section className="min-w-0 flex-1 w-full p-3 sm:p-4 lg:p-8">
           {children}
         </section>
       </div>

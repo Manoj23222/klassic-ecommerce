@@ -1,88 +1,85 @@
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
-import Order from "@/models/Order";
+import AdminCustomersTable from "@/components/admin/AdminCustomersTable";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
-export default async function CustomersPage() {
-  await connectDB();
+async function getCustomers() {
+  const cookieStore = await cookies();
 
-  const users = await User.find({})
-    .sort({ createdAt: -1 })
-    .select("name email role createdAt")
-    .lean();
-
-  const customerStats = await Order.aggregate([
-    {
-      $group: {
-        _id: "$user_id",
-        totalOrders: { $sum: 1 },
-        totalSpend: { $sum: "$total_amount" },
-      },
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/admin/customers`, {
+    cache: "no-store",
+    headers: {
+      Cookie: cookieStore.toString(),
     },
-  ]);
+  });
 
-  const statsMap = new Map(
-    customerStats.map((item: any) => [
-      String(item._id || ""),
-      {
-        totalOrders: Number(item.totalOrders || 0),
-        totalSpend: Number(item.totalSpend || 0),
+  if (!res.ok) {
+    return {
+      customers: [],
+      stats: {
+        totalCustomers: 0,
+        activeCustomers: 0,
+        blockedCustomers: 0,
+        totalRevenue: 0,
       },
-    ])
-  );
+    };
+  }
+
+  return res.json();
+}
+
+export default async function AdminCustomersPage() {
+  const data = await getCustomers();
+
+  const stats = data.stats || {
+    totalCustomers: 0,
+    activeCustomers: 0,
+    blockedCustomers: 0,
+    totalRevenue: 0,
+  };
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-10">
-      <h1 className="text-3xl md:text-4xl font-bold mb-6">Customers</h1>
-
-      <div className="bg-white rounded-xl shadow p-4 md:p-6 overflow-x-auto">
-        <table className="w-full min-w-[850px]">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left p-3">ID</th>
-              <th className="text-left p-3">Name</th>
-              <th className="text-left p-3">Email</th>
-              <th className="text-left p-3">Role</th>
-              <th className="text-left p-3">Orders</th>
-              <th className="text-left p-3">Total Spend</th>
-              <th className="text-left p-3">Date</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  No customers found
-                </td>
-              </tr>
-            ) : (
-              users.map((user: any) => {
-                const userId = String(user._id);
-                const stats = statsMap.get(userId) || {
-                  totalOrders: 0,
-                  totalSpend: 0,
-                };
-
-                return (
-                  <tr key={userId} className="border-t">
-                    <td className="p-3">#{userId.slice(-6)}</td>
-                    <td className="p-3">{user.name || "Unknown"}</td>
-                    <td className="p-3">{user.email}</td>
-                    <td className="p-3">{user.role}</td>
-                    <td className="p-3">{stats.totalOrders}</td>
-                    <td className="p-3">₹{stats.totalSpend}</td>
-                    <td className="p-3">
-                      {new Date(user.createdAt).toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+    <main>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          Customer Management
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Manage customer accounts, orders and activity.
+        </p>
       </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border">
+          <p className="text-sm text-gray-500">Total Customers</p>
+          <h2 className="text-2xl font-bold">{stats.totalCustomers}</h2>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border">
+          <p className="text-sm text-gray-500">Active</p>
+          <h2 className="text-2xl font-bold text-green-600">
+            {stats.activeCustomers}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border">
+          <p className="text-sm text-gray-500">Blocked</p>
+          <h2 className="text-2xl font-bold text-red-600">
+            {stats.blockedCustomers}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border">
+          <p className="text-sm text-gray-500">Revenue</p>
+          <h2 className="text-2xl font-bold">
+            ₹{Number(stats.totalRevenue || 0).toFixed(0)}
+          </h2>
+        </div>
+      </div>
+
+      <section className="bg-white rounded-2xl shadow-sm border p-4">
+        <AdminCustomersTable customers={data.customers || []} />
+      </section>
     </main>
   );
 }

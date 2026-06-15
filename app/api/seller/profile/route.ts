@@ -75,3 +75,38 @@ export async function PUT(req: Request) {
     );
   }
 }
+export async function DELETE(req: Request) {
+  try {
+    await connectDB();
+
+    const { seller_id } = await req.json();
+
+    await Seller.findByIdAndUpdate(seller_id, {
+      store_name: "",
+      store_description: "",
+      support_email: "",
+      support_phone: "",
+      store_logo: "",
+      store_banner: "",
+      business_address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      return_policy: "",
+      shipping_policy: "",
+      store_category: "",
+      facebook: "",
+      instagram: "",
+      website: "",
+    });
+
+    return Response.json({
+      success: true,
+    });
+  } catch {
+    return Response.json({
+      success: false,
+      message: "Delete failed",
+    });
+  }
+}
