@@ -27,17 +27,11 @@ export default async function SellerDashboardPage() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/seller/login"
-              className="rounded-2xl bg-slate-950 px-6 py-3 font-black text-white"
-            >
+            <Link href="/seller/login" className="rounded-2xl bg-slate-950 px-6 py-3 font-black text-white">
               Login to Seller Hub
             </Link>
 
-            <Link
-              href="/become-seller"
-              className="rounded-2xl bg-orange-500 px-6 py-3 font-black text-white"
-            >
+            <Link href="/become-seller" className="rounded-2xl bg-orange-500 px-6 py-3 font-black text-white">
               Register as Seller
             </Link>
           </div>
@@ -49,7 +43,7 @@ export default async function SellerDashboardPage() {
   await connectDB();
 
   const seller: any = await Seller.findById(sellerId)
-    .select("name email status store_name storeName")
+    .select("name email status store_name storeName seller_store_name")
     .lean();
 
   if (!seller || seller.status !== "Approved") {
@@ -64,17 +58,11 @@ export default async function SellerDashboardPage() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/seller/login"
-              className="rounded-2xl bg-slate-950 px-6 py-3 font-black text-white"
-            >
+            <Link href="/seller/login" className="rounded-2xl bg-slate-950 px-6 py-3 font-black text-white">
               Login
             </Link>
 
-            <Link
-              href="/become-seller"
-              className="rounded-2xl bg-orange-500 px-6 py-3 font-black text-white"
-            >
+            <Link href="/become-seller" className="rounded-2xl bg-orange-500 px-6 py-3 font-black text-white">
               Register
             </Link>
           </div>
@@ -82,6 +70,29 @@ export default async function SellerDashboardPage() {
       </main>
     );
   }
+
+  const storeName =
+    seller.store_name ||
+    seller.storeName ||
+    seller.seller_store_name ||
+    "Klassic Seller Store";
+
+  const sellerNames = [
+    seller.store_name,
+    seller.storeName,
+    seller.seller_store_name,
+    storeName,
+  ].filter(Boolean);
+
+  const sellerOrderQuery: any = {
+    $or: [
+      { "items.seller_id": sellerId },
+      { "items.seller_id": String(seller._id) },
+      ...(sellerNames.length
+        ? [{ "items.seller_store_name": { $in: sellerNames } }]
+        : []),
+    ],
+  };
 
   const [
     productsTotal,
@@ -98,16 +109,18 @@ export default async function SellerDashboardPage() {
     Product.countDocuments({ seller_id: sellerId, status: "Approved" }),
     Product.countDocuments({ seller_id: sellerId, status: "Rejected" }),
     Product.countDocuments({ seller_id: sellerId, status: "Draft" }),
-    Order.find({ "items.seller_id": sellerId })
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .lean()
-      .catch(() => []),
+    Order.find(sellerOrderQuery).sort({ createdAt: -1 }).limit(20).lean().catch(() => []),
   ]);
 
   const sellerOrderItems = sellerOrdersRaw.flatMap((order: any) =>
     (order.items || [])
-      .filter((item: any) => String(item.seller_id || "") === sellerId)
+      .filter((item: any) => {
+        return (
+          String(item.seller_id || "") === sellerId ||
+          String(item.seller_id || "") === String(seller._id) ||
+          sellerNames.includes(item.seller_store_name)
+        );
+      })
       .map((item: any, index: number) => ({
         order_id: String(order._id),
         item_index: index,
@@ -120,9 +133,11 @@ export default async function SellerDashboardPage() {
   );
 
   const totalOrders = sellerOrderItems.length;
+
   const pendingOrders = sellerOrderItems.filter(
     (item: any) => item.status === "Pending"
   ).length;
+
   const deliveredOrders = sellerOrderItems.filter(
     (item: any) => item.status === "Delivered"
   ).length;
@@ -133,6 +148,7 @@ export default async function SellerDashboardPage() {
   );
 
   const trustScore = Math.min(100, 60 + approvedTotal * 5 + deliveredOrders * 2);
+
   const aiScore = Math.min(
     100,
     50 + approvedTotal * 4 + totalOrders * 3 - rejectedTotal * 5
@@ -148,9 +164,6 @@ export default async function SellerDashboardPage() {
       : approvedTotal >= 3
       ? "Bronze Seller"
       : "New Seller";
-
-  const storeName =
-    seller.store_name || seller.storeName || "Klassic Seller Store";
 
   return (
     <main className="min-h-screen bg-[#f3f4f6] px-3 pb-24 pt-4 md:px-6 md:pb-8">
@@ -235,7 +248,14 @@ export default async function SellerDashboardPage() {
             <div className="mt-4 space-y-3">
               <ScoreRow title="Trust Score" value={trustScore} />
               <ScoreRow title="AI Health Score" value={aiScore} />
-              <ScoreRow title="Approval Rate" value={productsTotal ? Math.round((approvedTotal / productsTotal) * 100) : 0} />
+              <ScoreRow
+                title="Approval Rate"
+                value={
+                  productsTotal
+                    ? Math.round((approvedTotal / productsTotal) * 100)
+                    : 0
+                }
+              />
             </div>
 
             <div className="mt-4 rounded-2xl bg-orange-50 p-3">
@@ -267,10 +287,7 @@ export default async function SellerDashboardPage() {
               </p>
             </div>
 
-            <Link
-              href="/seller/orders"
-              className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white"
-            >
+            <Link href="/seller/orders" className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white">
               View All
             </Link>
           </div>
@@ -315,10 +332,7 @@ export default async function SellerDashboardPage() {
 
               <div className="space-y-2 md:hidden">
                 {sellerOrderItems.slice(0, 5).map((item: any) => (
-                  <div
-                    key={`${item.order_id}-${item.item_index}-mobile`}
-                    className="rounded-2xl border bg-slate-50 p-3"
-                  >
+                  <div key={`${item.order_id}-${item.item_index}-mobile`} className="rounded-2xl border bg-slate-50 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-black">#{item.order_id.slice(-6)}</p>
                       <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-700">
@@ -385,20 +399,9 @@ function MiniStat({
   );
 }
 
-function Action({
-  href,
-  icon,
-  title,
-}: {
-  href: string;
-  icon: string;
-  title: string;
-}) {
+function Action({ href, icon, title }: { href: string; icon: string; title: string }) {
   return (
-    <Link
-      href={href}
-      className="rounded-2xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
-    >
+    <Link href={href} className="rounded-2xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="text-xl">{icon}</div>
       <p className="mt-1 text-xs font-black text-slate-800">{title}</p>
     </Link>
@@ -417,10 +420,7 @@ function AITool({
   text: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="rounded-2xl border bg-slate-50 p-3 transition hover:border-orange-300 hover:bg-orange-50"
-    >
+    <Link href={href} className="rounded-2xl border bg-slate-50 p-3 transition hover:border-orange-300 hover:bg-orange-50">
       <div className="text-xl">{icon}</div>
       <h3 className="mt-2 text-sm font-black text-slate-900">{title}</h3>
       <p className="mt-1 text-[11px] text-slate-500">{text}</p>
@@ -446,13 +446,7 @@ function ScoreRow({ title, value }: { title: string; value: number }) {
   );
 }
 
-function RevenueCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: string | number;
-}) {
+function RevenueCard({ title, value }: { title: string; value: string | number }) {
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
       <p className="text-xs font-bold text-slate-500">{title}</p>

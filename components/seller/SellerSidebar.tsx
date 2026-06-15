@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -72,10 +73,14 @@ export default function SellerSidebar() {
   return (
     <>
 <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:block h-screen w-[280px] overflow-y-auto border-r border-white/10 bg-gradient-to-b from-[#020617] via-[#07111f] to-[#0f172a] text-white"><div className="border-b border-white/10 px-6 py-7">
-         <h2 className="text-4xl font-black tracking-tight">
-            Klassic</h2>
+         <Link href="/">
+  <h2 className="text-4xl font-black tracking-tight cursor-pointer hover:text-orange-300 transition">
+    Klassic
+  </h2>
+</Link>
           <p className="mt-2 text-sm font-bold text-orange-300">
             Seller Command Center
+              
           </p>
         </div>
 

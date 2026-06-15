@@ -60,8 +60,9 @@ if (!mongoose.Types.ObjectId.isValid(sellerId)) {
     </main>
   );
 }
-  const seller: any = await Seller.findById(sellerId).select("_id status").lean();
-
+const seller: any = await Seller.findById(sellerId)
+  .select("_id status storeName store_name seller_store_name")
+  .lean();
   if (!seller || seller.status !== "Approved") {
     return (
       <main className="min-h-screen bg-gray-100">
@@ -76,9 +77,21 @@ if (!mongoose.Types.ObjectId.isValid(sellerId)) {
     );
   }
 
-  const orderQuery: any = {
-    "items.seller_id": sellerId,
-  };
+  const sellerNames = [
+  seller?.storeName,
+  seller?.store_name,
+  seller?.seller_store_name,
+].filter(Boolean);
+
+const orderQuery: any = {
+  $or: [
+    { "items.seller_id": sellerId },
+    { "items.seller_id": String(seller?._id) },
+    ...(sellerNames.length
+      ? [{ "items.seller_store_name": { $in: sellerNames } }]
+      : []),
+  ],
+};
 
   if (statusFilter) {
     orderQuery["items.item_status"] = statusFilter;
@@ -91,7 +104,10 @@ if (!mongoose.Types.ObjectId.isValid(sellerId)) {
   const orders = ordersRaw.flatMap((order: any) =>
     (order.items || [])
       .filter((item: any) => {
-        const isSellerItem = String(item.seller_id || "") === sellerId;
+        const isSellerItem =
+  String(item.seller_id || "") === sellerId ||
+  String(item.seller_id || "") === String(seller?._id) ||
+  sellerNames.includes(item.seller_store_name);
         const isStatusMatch = statusFilter
           ? item.item_status === statusFilter
           : true;

@@ -69,10 +69,11 @@ export default function AddSellerProductPage() {
   const [discount, setDiscount] = useState("");
 
   const sku = useMemo(() => {
-    const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase();
-    const cleanCat = category.slice(0, 3).toUpperCase();
-    return `KL-${cleanCat}-${cleanName || "PROD"}-${Date.now().toString().slice(-5)}`;
-  }, [name, category]);
+  const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase();
+  const cleanCat = category.slice(0, 3).toUpperCase();
+  const random = Math.floor(10000 + Math.random() * 90000);
+  return `KL-${cleanCat}-${cleanName || "PROD"}-${random}`;
+}, [name, category]);
 
   async function uploadFile(file: File) {
     const formData = new FormData();
@@ -230,6 +231,57 @@ if (res.ok && data.success) {
       ? "Product saved as draft"
       : "Product sent for approval"
   );
+
+  setMainImage("");
+  setGallery([]);
+
+  setName("");
+  setShortDescription("");
+  setDescription("");
+  setBrand("");
+  setVideoUrl("");
+  setTags("");
+
+  setCategory("Fashion");
+  setSubcategory("Men");
+
+  setRegularPrice("");
+  setSalePrice("");
+  setCostPrice("");
+  setGst("");
+
+  setStock("");
+  setLowStock("");
+  setStockStatus("In Stock");
+
+  setColors("");
+  setSizes("");
+  setMaterial("");
+  setWeight("");
+
+  setShippingWeight("");
+  setLength("");
+  setWidth("");
+  setHeight("");
+  setShippingCharges("");
+  setFreeShipping(true);
+
+  setSeoTitle("");
+  setSeoDescription("");
+  setSeoKeywords("");
+  setSlug("");
+
+  setFeatures("");
+  setSpecs([{ key: "", value: "" }]);
+
+  setReturnAvailable(true);
+  setReturnDays("7");
+  setWarranty("");
+  setCod(true);
+
+  setFeatured(false);
+  setFlashSale(false);
+  setDiscount("");
 } else {
   toast.error(data.message || "Product submit failed");
 }
