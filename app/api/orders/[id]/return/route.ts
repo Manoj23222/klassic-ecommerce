@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 
-export async function PATCH(
+export const dynamic = "force-dynamic";
+
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -11,53 +13,46 @@ export async function PATCH(
     await connectDB();
 
     const { id } = await params;
-    const body = await req.json();
+    const formData = await req.formData();
+
+    const reason = String(formData.get("reason") || "").trim();
+    const message = String(formData.get("message") || "").trim();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid order ID" },
-        { status: 400 }
-      );
+      return NextResponse.redirect(new URL("/my-orders", req.url));
     }
 
-    if (!["Approved", "Rejected"].includes(body.return_status)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid return status" },
-        { status: 400 }
-      );
+    if (!reason) {
+      return NextResponse.redirect(new URL(`/my-orders/${id}/return`, req.url));
     }
 
-    const updateData: any = {
-      return_status: body.return_status,
-      return_action_at: new Date(),
-    };
+    const order: any = await Order.findById(id);
 
-    if (body.return_status === "Approved") {
-      updateData.status = "Return Approved";
-      updateData.refund_status = "Pending";
-      updateData.refund_amount = Number(body.refund_amount || 0);
+    if (!order) {
+      return NextResponse.redirect(new URL("/my-orders", req.url));
     }
 
-    if (body.return_status === "Rejected") {
-      updateData.status = "Return Rejected";
-      updateData.refund_status = "Rejected";
-      updateData.refund_note = body.refund_note || "Return rejected by admin";
+    if (order.status !== "Delivered") {
+      return NextResponse.redirect(new URL(`/my-orders/${id}`, req.url));
     }
 
-    const order = await Order.findByIdAndUpdate(id, updateData, { new: true });
+    if (order.return_status === "Requested") {
+      return NextResponse.redirect(new URL(`/my-orders/${id}`, req.url));
+    }
 
-    return NextResponse.json({
-      success: true,
-      message:
-        body.return_status === "Approved"
-          ? "Return approved successfully"
-          : "Return rejected successfully",
-      order,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message || "Return update failed" },
-      { status: 500 }
-    );
+    order.status = "Return Requested";
+    order.return_status = "Requested";
+    order.return_reason = reason;
+    order.return_message = message;
+    order.return_requested_at = new Date();
+    order.refund_status = "Pending";
+    order.refund_amount = Number(order.total_amount || 0);
+
+    await order.save();
+
+    return NextResponse.redirect(new URL(`/my-orders/${id}`, req.url));
+  } catch (error) {
+    console.error("Return request error:", error);
+    return NextResponse.redirect(new URL("/my-orders", req.url));
   }
 }

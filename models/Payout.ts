@@ -5,6 +5,7 @@ const PayoutSchema = new Schema(
     seller_id: {
       type: String,
       required: true,
+      index: true,
     },
 
     seller_store_name: {
@@ -12,9 +13,20 @@ const PayoutSchema = new Schema(
       default: "",
     },
 
-    amount: {
+    order_id: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    sale_amount: {
       type: Number,
-      required: true,
+      default: 0,
+    },
+
+    commission_rate: {
+      type: Number,
+      default: 0,
     },
 
     commission_amount: {
@@ -22,14 +34,19 @@ const PayoutSchema = new Schema(
       default: 0,
     },
 
-    net_amount: {
+    shipping_charge: {
       type: Number,
-      required: true,
+      default: 0,
+    },
+
+    payout_amount: {
+      type: Number,
+      default: 0,
     },
 
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Paid", "Rejected"],
+      enum: ["Pending", "Approved", "Paid", "Rejected"],
       default: "Pending",
     },
 
@@ -43,9 +60,14 @@ const PayoutSchema = new Schema(
       default: "",
     },
 
-    note: {
+    notes: {
       type: String,
       default: "",
+    },
+
+    approved_at: {
+      type: Date,
+      default: null,
     },
 
     paid_at: {
@@ -53,9 +75,10 @@ const PayoutSchema = new Schema(
       default: null,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
+
+PayoutSchema.index({ seller_id: 1, status: 1 });
+PayoutSchema.index({ status: 1, createdAt: -1 });
 
 export default models.Payout || mongoose.model("Payout", PayoutSchema);

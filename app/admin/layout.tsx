@@ -6,16 +6,12 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-gray-100">
-      <div className="flex min-h-screen w-full overflow-x-hidden">
-        <div className="hidden lg:block shrink-0">
-          <AdminSidebar />
-        </div>
+    <div className="flex min-h-screen bg-[#f4f6fb]">
+      <AdminSidebar />
 
-        <section className="min-w-0 flex-1 w-full p-3 sm:p-4 lg:p-8">
-          {children}
-        </section>
-      </div>
-    </main>
+      <main className="h-screen flex-1 overflow-y-auto p-4 md:p-6">
+        {children}
+      </main>
+    </div>
   );
 }

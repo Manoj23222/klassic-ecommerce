@@ -1,42 +1,64 @@
 import AdminCustomersTable from "@/components/admin/AdminCustomersTable";
-import { cookies } from "next/headers";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
+import Order from "@/models/Order";
 
 export const dynamic = "force-dynamic";
 
 async function getCustomers() {
-  const cookieStore = await cookies();
+  await connectDB();
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/admin/customers`, {
-    cache: "no-store",
-    headers: {
-      Cookie: cookieStore.toString(),
-    },
-  });
+  const customers = await User.find({ role: "customer" })
+    .select("-password")
+    .sort({ createdAt: -1 })
+    .lean();
 
-  if (!res.ok) {
-    return {
-      customers: [],
-      stats: {
-        totalCustomers: 0,
-        activeCustomers: 0,
-        blockedCustomers: 0,
-        totalRevenue: 0,
-      },
-    };
-  }
+  const customersWithStats = await Promise.all(
+    customers.map(async (customer: any) => {
+      const orders = await Order.find({
+        user_id: String(customer._id),
+      }).lean();
 
-  return res.json();
+      const totalSpend = orders.reduce(
+        (sum: number, order: any) => sum + Number(order.total_amount || 0),
+        0
+      );
+
+      return {
+        ...customer,
+        _id: String(customer._id),
+        totalOrders: orders.length,
+        totalSpend,
+        status: customer.status || "Active",
+        createdAt: customer.createdAt?.toISOString?.() || "",
+      };
+    })
+  );
+
+  const stats = {
+    totalCustomers: customersWithStats.length,
+    activeCustomers: customersWithStats.filter(
+      (c: any) => c.status !== "Blocked"
+    ).length,
+    blockedCustomers: customersWithStats.filter(
+      (c: any) => c.status === "Blocked"
+    ).length,
+    totalRevenue: customersWithStats.reduce(
+      (sum: number, c: any) => sum + Number(c.totalSpend || 0),
+      0
+    ),
+  };
+
+  return {
+    customers: customersWithStats,
+    stats,
+  };
 }
 
 export default async function AdminCustomersPage() {
   const data = await getCustomers();
 
-  const stats = data.stats || {
-    totalCustomers: 0,
-    activeCustomers: 0,
-    blockedCustomers: 0,
-    totalRevenue: 0,
-  };
+  const stats = data.stats;
 
   return (
     <main>

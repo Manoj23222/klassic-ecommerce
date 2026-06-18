@@ -3,6 +3,14 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
 
+export const dynamic = "force-dynamic";
+
+function text(value: any) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value === undefined || value === null) return "";
+  return String(value);
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -69,10 +77,14 @@ export async function PUT(
       name,
       category,
       sub_category,
+      subcategory,
       description,
       short_description,
+      shortDescription,
       price,
       sale_price,
+      salePrice,
+      regularPrice,
       stock,
       image,
       gallery_images,
@@ -81,6 +93,7 @@ export async function PUT(
       sku,
       brand,
       tags,
+      variants,
     } = body;
 
     if (!seller_id) {
@@ -129,24 +142,51 @@ export async function PUT(
 
     product.name = name ?? product.name;
     product.category = category ?? product.category;
-    product.sub_category = sub_category ?? product.sub_category;
+    product.sub_category = sub_category ?? subcategory ?? product.sub_category;
     product.description = description ?? product.description;
-    product.short_description = short_description ?? product.short_description;
+    product.short_description =
+      short_description ?? shortDescription ?? product.short_description;
 
-    product.price = price !== undefined ? Number(price) : product.price;
+    product.price =
+      price !== undefined
+        ? Number(price)
+        : salePrice !== undefined
+        ? Number(salePrice)
+        : product.price;
+
     product.sale_price =
-      sale_price !== undefined ? Number(sale_price || 0) : product.sale_price;
-    product.stock = stock !== undefined ? Number(stock) : product.stock;
+      sale_price !== undefined
+        ? Number(sale_price || 0)
+        : salePrice !== undefined
+        ? Number(salePrice || 0)
+        : product.sale_price;
+
+    product.regularPrice =
+      regularPrice !== undefined ? Number(regularPrice || 0) : product.regularPrice;
+
+    product.stock = stock !== undefined ? Number(stock || 0) : product.stock;
 
     product.image = image ?? product.image;
+
     product.gallery_images = Array.isArray(gallery_images)
       ? gallery_images
       : product.gallery_images;
 
-    product.colors = colors ?? product.colors;
-    product.sizes = sizes ?? product.sizes;
+    product.colors = text(colors ?? product.colors);
+    product.sizes = text(sizes ?? product.sizes);
     product.brand = brand ?? product.brand;
-    product.tags = tags ?? product.tags;
+    product.tags = text(tags ?? product.tags);
+
+    if (Array.isArray(variants)) {
+      product.variants = variants.map((v: any) => ({
+        color: v.color || "",
+        image: v.image || "",
+        size: v.size || "",
+        stock: String(v.stock || ""),
+        price: String(v.price || ""),
+        sku: String(v.sku || "").toUpperCase(),
+      }));
+    }
 
     product.status = "Pending Approval";
     product.reject_reason = "";

@@ -13,50 +13,80 @@ export default function AdminOrderReturnActions({
 }) {
   const router = useRouter();
   const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const updateReturn = async (return_status: "Approved" | "Rejected") => {
-    const res = await fetch(`/api/admin/orders/${orderId}/return`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        return_status,
-        refund_amount: amount,
-        refund_note: note,
-      }),
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
+      const res = await fetch(`/api/admin/orders/${orderId}/return`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          return_status,
+          refund_amount: amount,
+          refund_note: note,
+        }),
+      });
 
-    if (data.success) {
-      toast.success(data.message);
-      router.refresh();
-    } else {
-      toast.error(data.message || "Action failed");
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(data.message || "Return updated");
+        router.refresh();
+      } else {
+        toast.error(data.message || "Action failed");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <input
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Admin note optional"
-        className="w-full border rounded-lg px-3 py-2 text-sm"
-      />
+    <div className="space-y-4">
+      <div>
+        <label className="mb-2 block text-xs font-black uppercase tracking-widest text-gray-400">
+          Admin Note
+        </label>
 
-      <div className="flex gap-2">
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional note for return/refund decision..."
+          rows={3}
+          className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-black"
+        />
+      </div>
+
+      <div className="rounded-2xl bg-white p-4">
+        <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+          Refund Amount
+        </p>
+
+        <p className="mt-1 text-2xl font-black">
+          ₹{Number(amount || 0).toLocaleString("en-IN")}
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <button
+          type="button"
+          disabled={loading}
           onClick={() => updateReturn("Approved")}
-          className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold"
+          className="rounded-full bg-green-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Approve Return
+          {loading ? "Processing..." : "Approve Return"}
         </button>
 
         <button
+          type="button"
+          disabled={loading}
           onClick={() => updateReturn("Rejected")}
-          className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-bold"
+          className="rounded-full bg-red-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Reject
+          {loading ? "Processing..." : "Reject Return"}
         </button>
       </div>
     </div>

@@ -13,33 +13,44 @@ export default async function ProductsPage() {
     .lean();
 
   const formattedProducts = products.map((product: any) => ({
-    ...product,
-    _id: String(product._id),
-    id: String(product._id),
-    createdAt: product.createdAt
-      ? new Date(product.createdAt).toISOString()
-      : "",
-    updatedAt: product.updatedAt
-      ? new Date(product.updatedAt).toISOString()
-      : "",
-  }));
+  ...product,
+  _id: String(product._id),
+  id: String(product._id),
+  createdAt: product.createdAt?.toISOString?.() || "",
+  updatedAt: product.updatedAt?.toISOString?.() || "",
+
+  variants: Array.isArray(product.variants)
+    ? product.variants.map((v: any) => ({
+        ...v,
+        _id: v._id ? String(v._id) : "",
+      }))
+    : [],
+
+  color_variants: Array.isArray(product.color_variants)
+    ? product.color_variants.map((v: any) => ({
+        ...v,
+        _id: v._id ? String(v._id) : "",
+      }))
+    : [],
+
+  specifications: Array.isArray(product.specifications)
+    ? product.specifications.map((s: any) => ({
+        ...s,
+        _id: s._id ? String(s._id) : "",
+      }))
+    : [],
+
+  attributeMeta: Array.isArray(product.attributeMeta)
+    ? product.attributeMeta.map((a: any) => ({
+        ...a,
+        _id: a._id ? String(a._id) : "",
+      }))
+    : [],
+}));
 
   return (
     <main className="min-h-screen bg-gray-100 px-3 py-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Product Management
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Add, edit, delete and manage marketplace products.
-          </p>
-        </div>
-
-        <section className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
-          <AdminProductForm />
-        </section>
-
         <section className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <AdminProductsTable products={formattedProducts} />
         </section>

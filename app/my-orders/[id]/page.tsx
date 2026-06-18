@@ -1,17 +1,33 @@
 import CancelOrderButton from "@/components/CancelOrderButton";
 import Header from "@/components/Header";
-import ReviewForm from "@/components/ReviewForm";
 import Link from "next/link";
 import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 
+export const dynamic = "force-dynamic";
+
 const steps = ["Pending", "Processing", "Shipped", "Delivered"];
 
 function getStatusIndex(status: string) {
   if (status === "Cancelled") return -1;
-  const index = steps.indexOf(status);
+  if (status === "Packed") return 1;
+  if (status === "Out For Delivery") return 2;
+
+  const index = steps.indexOf(status || "Pending");
   return index >= 0 ? index : 0;
+}
+
+function canReturn(order: any) {
+  if (order.status !== "Delivered" || !order.updatedAt) return false;
+
+  const deliveredDate = new Date(order.updatedAt);
+  const now = new Date();
+
+  const diffDays =
+    (now.getTime() - deliveredDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  return diffDays <= 7 && order.return_status !== "Requested";
 }
 
 export default async function MyOrderDetailsPage({
@@ -24,257 +40,350 @@ export default async function MyOrderDetailsPage({
   await connectDB();
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return <h1 className="p-10 text-2xl font-bold">Invalid order ID</h1>;
+    return <h1 className="p-10 text-2xl font-black">Invalid order ID</h1>;
   }
 
   const order: any = await Order.findById(id).lean();
 
   if (!order) {
-    return <h1 className="p-10 text-2xl font-bold">Order not found</h1>;
+    return <h1 className="p-10 text-2xl font-black">Order not found</h1>;
   }
 
   const items = order.items || [];
   const orderId = order._id.toString();
   const currentStep = getStatusIndex(order.status || "Pending");
 
-  const subtotal = items.reduce(
-    (sum: number, item: any) =>
-      sum + Number(item.price) * Number(item.quantity),
-    0
+  const subtotal = Number(
+    order.subtotal ||
+      items.reduce(
+        (sum: number, item: any) =>
+          sum + Number(item.price || 0) * Number(item.quantity || 1),
+        0
+      )
   );
 
   const discount = Number(order.discount || 0);
-  const deliveryCharge = subtotal > 499 ? 0 : 40;
-  const finalTotal = Number(order.total_amount || subtotal - discount + deliveryCharge);
+  const deliveryCharge = Number(order.delivery_charge || 0);
+  const gstAmount = Number(order.gst_amount || 0);
+  const finalTotal = Number(
+    order.total_amount || subtotal - discount + deliveryCharge + gstAmount
+  );
+
+  const returnAvailable = canReturn(order);
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-[#fafafa]">
       <Header />
 
-      <section className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6">
-        <div className="text-sm text-gray-500 mb-4">
-          <Link href="/" className="hover:text-blue-600">Home</Link>{" "}
-          ›{" "}
-          <Link href="/my-orders" className="hover:text-blue-600">
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-6 text-sm font-semibold text-gray-400">
+          <Link href="/" className="hover:text-black">
+            Home
+          </Link>{" "}
+          /{" "}
+          <Link href="/my-orders" className="hover:text-black">
             My Orders
           </Link>{" "}
-          › Order #{orderId.slice(-6).toUpperCase()}
+          / Order #{orderId.slice(-8).toUpperCase()}
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_330px] gap-4">
-          <div className="space-y-4">
-            <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold">
-                    Order #{orderId.slice(-6).toUpperCase()}
-                  </h1>
+        <div className="mb-8 rounded-[2rem] bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
+                Order Details
+              </p>
 
-                  <p className="text-xs md:text-sm text-gray-500 mt-1">
-                    Placed on{" "}
-                    {order.createdAt
-                      ? new Date(order.createdAt).toLocaleDateString("en-IN")
-                      : "N/A"}
-                  </p>
-                </div>
+              <h1 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
+                #{orderId.slice(-8).toUpperCase()}
+              </h1>
 
-                <span
-                  className={`w-fit px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
-                    order.status === "Delivered"
-                      ? "bg-green-100 text-green-700"
-                      : order.status === "Cancelled"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {order.status || "Pending"}
-                </span>
-              </div>
+              <p className="mt-2 text-sm font-semibold text-gray-500">
+                Placed on{" "}
+                {order.createdAt
+                  ? new Date(order.createdAt).toLocaleString("en-IN")
+                  : "-"}
+              </p>
             </div>
 
-            <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-              <h2 className="text-base md:text-lg font-bold mb-5">
-                Order Tracking
-              </h2>
-
-              {order.status === "Cancelled" ? (
-                <div className="flex items-start gap-3">
-                  <span className="w-3 h-3 bg-red-500 rounded-full mt-2" />
-                  <div>
-                    <h3 className="text-sm md:text-base font-bold text-red-600">
-                      Order Cancelled
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Your order has been cancelled.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative ml-2 border-l-2 border-gray-200 space-y-7">
-                  {steps.map((step, index) => {
-                    const active = index <= currentStep;
-
-                    return (
-                      <div key={step} className="relative pl-6">
-                        <span
-                          className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${
-                            active ? "bg-green-600" : "bg-gray-300"
-                          }`}
-                        />
-
-                        <h3
-                          className={`text-sm md:text-base font-bold ${
-                            active ? "text-gray-900" : "text-gray-400"
-                          }`}
-                        >
-                          {step}
-                        </h3>
-
-                        <p className="text-xs md:text-sm text-gray-500 mt-1">
-                          {step === "Pending" && "Your order has been placed."}
-                          {step === "Processing" && "Seller is preparing your item."}
-                          {step === "Shipped" && "Your item is on the way."}
-                          {step === "Delivered" && "Your item has been delivered."}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Badge text={order.status || "Pending"} />
+              <Badge text={order.payment_method || "COD"} light />
+              <Badge text={order.payment_status || "Pending"} light />
             </div>
+          </div>
 
-            <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-              <h2 className="text-base md:text-lg font-bold mb-4">
-                Ordered Items
-              </h2>
+         
+        </div>
 
-              <div className="space-y-3">
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <section className="space-y-6">
+            <LuxuryCard title="Product">
+              <div className="space-y-5">
                 {items.map((item: any, index: number) => {
-                  const itemTotal = Number(item.price) * Number(item.quantity);
+                  const itemTotal =
+                    Number(item.price || 0) * Number(item.quantity || 1);
 
                   return (
-                    <div key={`${item.product_id}-${index}`} className="border rounded p-3 md:p-4">
-                      <div className="grid md:grid-cols-[90px_1fr_120px] gap-3">
-                        {item.image && (
-                          <img
-                            src={item.image}
-                            alt={item.product_name}
-                            className="w-20 h-20 object-contain bg-gray-100 rounded"
-                          />
-                        )}
+                    <div
+                      key={`${item.product_id}-${index}`}
+                      className="rounded-3xl bg-gray-50 p-4"
+                    >
+                      <div className="grid gap-4 md:grid-cols-[110px_1fr_140px]">
+                        <img
+                          src={item.image || "/placeholder.png"}
+                          alt={item.product_name || "Product"}
+                          className="h-28 w-28 rounded-2xl bg-white object-contain p-2"
+                        />
 
                         <div>
-                          <h3 className="text-sm md:text-base font-semibold line-clamp-2">
+                          <h3 className="line-clamp-2 text-lg font-black text-gray-900">
                             {item.product_name}
                           </h3>
 
-                          <div className="flex flex-wrap gap-3 mt-2 text-xs md:text-sm text-gray-500">
-                            {item.color && <span>Color: {item.color}</span>}
-                            {item.size && <span>Size: {item.size}</span>}
-                            <span>Qty: {item.quantity}</span>
-                          </div>
+                          <p className="mt-2 text-sm font-semibold text-gray-500">
+                            {item.color ? `Color: ${item.color}` : ""}
+                            {item.size ? ` | Size: ${item.size}` : ""}
+                            {` | Qty: ${item.quantity || 1}`}
+                          </p>
+
+                          <p className="mt-1 text-sm font-semibold text-gray-500">
+                            Sold by:{" "}
+                            {item.seller_store_name || "Klassic Seller"}
+                          </p>
+
+                          <p className="mt-2 text-xs font-black uppercase tracking-widest text-gray-400">
+                            Item Status: {item.item_status || order.status}
+                          </p>
                         </div>
 
                         <div className="md:text-right">
-                          <p className="text-sm font-bold text-gray-900">
-                            ₹{itemTotal.toFixed(2)}
+                          <p className="text-xl font-black">
+                            ₹{itemTotal.toLocaleString("en-IN")}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            ₹{Number(item.price).toFixed(2)} each
+                          <p className="mt-1 text-xs font-semibold text-gray-500">
+                            ₹
+                            {Number(item.price || 0).toLocaleString("en-IN")}{" "}
+                            each
                           </p>
                         </div>
                       </div>
-
-                      {order.status === "Delivered" && item.product_id && (
-                        <ReviewForm
-                          productId={item.product_id as any}
-                          orderId={orderId as any}
-                          defaultName={order.customer_name || ""}
-                        />
-                      )}
-
-                      {order.status !== "Delivered" && (
-                        <p className="text-xs text-gray-500 mt-3">
-                          Review option will unlock after delivery.
-                        </p>
-                      )}
                     </div>
                   );
                 })}
               </div>
-            </div>
-          </div>
+              
+               <TrackingBar
+            status={order.status || "Pending"}
+            activeIndex={currentStep}
+          />
+            </LuxuryCard>
 
-          <aside className="space-y-4">
-            <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-              <h2 className="text-base md:text-lg font-bold mb-3">
-                Delivery Address
-              </h2>
+            <LuxuryCard title="Shipping Address">
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-lg font-black">
+                  {order.customer_name || "N/A"}
+                </p>
 
-              <p className="text-sm font-bold">
-                {order.customer_name || "N/A"}
-              </p>
-              <p className="text-sm text-gray-700 mt-2">
-                {order.address || "N/A"}
-              </p>
-              <p className="text-sm mt-2">
-                <b>Phone:</b> {order.phone || "N/A"}
-              </p>
-            </div>
+                <p className="mt-2 text-sm font-semibold text-gray-600">
+                  {order.address || "N/A"}
+                </p>
 
-            <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-              <h2 className="text-base md:text-lg font-bold mb-3">
-                Price Details
-              </h2>
+                <div className="mt-3 grid gap-2 text-sm font-semibold text-gray-500 md:grid-cols-2">
+                  <p>Phone: {order.phone || "N/A"}</p>
+                  <p>Pincode: {order.pincode || "-"}</p>
+                  <p>City: {order.city || "-"}</p>
+                  <p>State: {order.state || "-"}</p>
+                </div>
+              </div>
+            </LuxuryCard>
+          </section>
 
+          <aside className="space-y-5 lg:sticky lg:top-8 lg:h-fit">
+            <LuxuryCard title="Order Actions">
+              <div className="grid gap-3">
+                <Link
+                  href={`/my-orders/${orderId}`}
+                  className="rounded-full bg-black px-5 py-3 text-center text-sm font-black text-white"
+                >
+                  Tracking
+                </Link>
+
+                <Link
+                  href={`/my-orders/${orderId}/invoice`}
+                  className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-black text-black hover:border-black"
+                >
+                  Invoice
+                </Link>
+
+                <Link
+                  href="/help-center"
+                  className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-black text-black hover:border-black"
+                >
+                  Need Help
+                </Link>
+
+                {["Pending", "Processing"].includes(order.status) && (
+                  <CancelOrderButton orderId={orderId as any} />
+                )}
+
+                {returnAvailable && (
+                  <Link
+                    href={`/my-orders/${orderId}/return`}
+                    className="rounded-full border border-orange-200 bg-orange-50 px-5 py-3 text-center text-sm font-black text-orange-600"
+                  >
+                    Request Return
+                  </Link>
+                )}
+
+                {order.status === "Delivered" && (
+                  <Link
+                    href={`/my-orders/${orderId}/review`}
+                    className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-black text-black hover:border-black"
+                  >
+                    Write Review
+                  </Link>
+                )}
+
+                <Link
+                  href="/"
+                  className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-black text-black hover:border-black"
+                >
+                  Buy Again
+                </Link>
+              </div>
+            </LuxuryCard>
+
+            <LuxuryCard title="Payment Info">
+              <div className="space-y-3 text-sm font-semibold text-gray-600">
+                <p>
+                  Method:{" "}
+                  <b className="text-black">{order.payment_method || "COD"}</b>
+                </p>
+                <p>
+                  Payment Status:{" "}
+                  <b className="text-black">
+                    {order.payment_status || "Pending"}
+                  </b>
+                </p>
+                <p>
+                  Order Status:{" "}
+                  <b className="text-black">{order.status || "Pending"}</b>
+                </p>
+              </div>
+            </LuxuryCard>
+
+            <LuxuryCard title="Price Details">
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
-                </div>
+                <PriceRow label="Subtotal" value={subtotal} />
+                <PriceRow label="Discount" value={-discount} green />
+                <PriceRow
+                  label="Delivery Charges"
+                  text={deliveryCharge === 0 ? "Free" : `₹${deliveryCharge}`}
+                  green={deliveryCharge === 0}
+                />
+                <PriceRow label="GST" value={gstAmount} />
 
-                <div className="flex justify-between">
-                  <span>Discount</span>
-                  <span className="text-green-600">-₹{discount.toFixed(2)}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Delivery Charges</span>
-                  <span className={deliveryCharge === 0 ? "text-green-600" : ""}>
-                    {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge.toFixed(2)}`}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Payment</span>
-                  <span>{order.payment_method || "COD"}</span>
-                </div>
-
-                <div className="border-t pt-3 flex justify-between text-base font-bold">
-                  <span>Total</span>
-                  <span>₹{finalTotal.toFixed(2)}</span>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between text-xl font-black">
+                    <span>Total</span>
+                    <span>₹{finalTotal.toLocaleString("en-IN")}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {order.status === "Pending" && (
-              <div className="bg-white border rounded shadow-sm p-4 md:p-5">
-                <h2 className="text-base font-bold mb-3 text-red-600">
-                  Order Actions
-                </h2>
-                <CancelOrderButton orderId={orderId as any} />
-              </div>
-            )}
-
-            <Link
-              href={`/my-orders/${orderId}/invoice`}
-              className="block text-center bg-green-600 text-white px-4 py-3 rounded font-semibold text-sm hover:bg-green-700"
-            >
-              Download Invoice
-            </Link>
+            </LuxuryCard>
           </aside>
         </div>
       </section>
     </main>
+  );
+}
+
+function TrackingBar({
+  status,
+  activeIndex,
+}: {
+  status: string;
+  activeIndex: number;
+}) {
+  if (status === "Cancelled") {
+    return (
+      <div className="mt-6 rounded-3xl bg-red-50 p-4 text-sm font-black text-red-600">
+        Order Cancelled
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-7">
+      <div className="grid grid-cols-4 gap-2">
+        {steps.map((step, index) => {
+          const done = index <= activeIndex;
+
+          return (
+            <div key={step}>
+              <div
+                className={`h-2 rounded-full ${
+                  done ? "bg-black" : "bg-gray-200"
+                }`}
+              />
+              <p
+                className={`mt-2 text-xs font-black ${
+                  done ? "text-black" : "text-gray-400"
+                }`}
+              >
+                {step}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LuxuryCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-6">
+      <h2 className="mb-5 text-xl font-black tracking-tight">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Badge({ text, light = false }: { text: string; light?: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-4 py-2 text-xs font-black ${
+        light ? "bg-gray-100 text-gray-700" : "bg-black text-white"
+      }`}
+    >
+      {text}
+    </span>
+  );
+}
+
+function PriceRow({
+  label,
+  value,
+  text,
+  green = false,
+}: {
+  label: string;
+  value?: number;
+  text?: string;
+  green?: boolean;
+}) {
+  return (
+    <div className={`flex justify-between ${green ? "text-green-700" : ""}`}>
+      <span className="font-semibold text-gray-500">{label}</span>
+      <b>{text || `₹${Number(value || 0).toLocaleString("en-IN")}`}</b>
+    </div>
   );
 }

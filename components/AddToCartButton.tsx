@@ -4,35 +4,63 @@ import toast from "react-hot-toast";
 
 type Props = {
   product: {
-    id: string;
+    id?: string;
+    _id?: string;
     name: string;
     price: number;
     image: string;
+    sku?: string;
     color?: string;
     size?: string;
+    stock?: number;
   };
 };
 
 export default function AddToCartButton({ product }: Props) {
   const handleAddToCart = () => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    try {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const productId = String(product._id || product.id || "");
 
-    cart.push({
-      ...product,
-      quantity: 1,
-    });
+      const existingIndex = cart.findIndex(
+        (item: any) =>
+          String(item.id) === productId &&
+          item.color === product.color &&
+          item.size === product.size &&
+          item.sku === product.sku
+      );
 
-    localStorage.setItem("cart", JSON.stringify(cart));
+      if (existingIndex > -1) {
+        cart[existingIndex].quantity =
+          Number(cart[existingIndex].quantity || 1) + 1;
+      } else {
+        cart.push({
+          id: productId,
+          name: product.name,
+          image: product.image,
+          price: Number(product.price || 0),
+          sku: product.sku || "",
+          color: product.color || "",
+          size: product.size || "",
+          stock: Number(product.stock || 0),
+          quantity: 1,
+        });
+      }
 
-    window.dispatchEvent(new Event("storage"));
+      localStorage.setItem("cart", JSON.stringify(cart));
+      window.dispatchEvent(new Event("storage"));
 
-    toast.success(`${product.name} added to cart`);
+      toast.success("Added to cart");
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to add product");
+    }
   };
 
   return (
     <button
       onClick={handleAddToCart}
-      className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xl font-bold transition"
+      className="w-full rounded-full bg-black py-4 text-sm font-black text-white shadow-lg transition hover:bg-gray-800 sm:text-base"
     >
       Add To Cart
     </button>

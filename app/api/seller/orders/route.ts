@@ -2,49 +2,50 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-
     const sellerId = searchParams.get("seller_id");
-    const status = searchParams.get("status");
 
     if (!sellerId) {
       return NextResponse.json(
-        { success: false, message: "Seller ID required" },
+        { success: false, message: "seller_id required" },
         { status: 400 }
       );
     }
 
-    const query: any = {
+    const orders = await Order.find({
       "items.seller_id": sellerId,
-    };
-
-    if (status) {
-      query["items.item_status"] = status;
-    }
-
-    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
     const sellerOrders = orders.map((order: any) => {
-      const items = order.items.filter(
-        (item: any) =>
-          item.seller_id === sellerId &&
-          (!status || item.item_status === status)
+      const sellerItems = (order.items || []).filter(
+        (item: any) => String(item.seller_id) === String(sellerId)
       );
 
-      const seller_total = items.reduce(
+      const amount = sellerItems.reduce(
         (sum: number, item: any) =>
-          sum + Number(item.price) * Number(item.quantity),
+          sum + Number(item.price || 0) * Number(item.quantity || 1),
         0
       );
 
       return {
-        ...order,
-        items,
-        seller_total,
+        _id: String(order._id),
+        customer_name: order.customer_name,
+        phone: order.phone,
+        address: order.address,
+        status: order.status,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        amount,
+        items: sellerItems,
+        createdAt: order.createdAt,
       };
     });
 
@@ -56,7 +57,10 @@ export async function GET(req: Request) {
     console.error("Seller orders fetch error:", error);
 
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      {
+        success: false,
+        message: error.message || "Server error",
+      },
       { status: 500 }
     );
   }

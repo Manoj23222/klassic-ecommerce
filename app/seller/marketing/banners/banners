@@ -1,0 +1,7 @@
+import SellerBannerManager from "@/components/seller/SellerBannerManager";
+
+export const dynamic = "force-dynamic";
+
+export default function SellerBannersPage() {
+  return <SellerBannerManager />;
+}

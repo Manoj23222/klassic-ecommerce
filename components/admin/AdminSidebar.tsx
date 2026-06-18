@@ -6,147 +6,220 @@ import { usePathname } from "next/navigation";
 const menus = [
   {
     title: "Dashboard",
+    badge: "01",
+    icon: "📊",
     items: [
-      { name: "Overview", href: "/admin" },
+      { name: "Command Center", href: "/admin" },
+      { name: "Reports", href: "/admin/reports" },
     ],
   },
-
   {
-    title: "Users",
+    title: "Seller Management",
+    badge: "02",
+    icon: "🏪",
     items: [
-      { name: "Customers", href: "/admin/customers" },
-      { name: "Sellers", href: "/admin/sellers" },
-      { name: "Admins", href: "/admin/admins" },
+      { name: "All Sellers", href: "/admin/sellers" },
+      { name: "Seller KYC", href: "/admin/sellers" },
+      { name: "Seller Payouts", href: "/admin/seller-payouts" },
+      { name: "Withdraw Requests", href: "/admin/withdraw-requests" },
+      { name: "Seller Performance", href: "/admin/reports/sellers" },
     ],
   },
-
   {
-    title: "Products",
+    title: "Catalog Engine",
+    badge: "03",
+    icon: "🧠",
+    items: [
+      { name: "Categories", href: "/admin/categories" },
+      { name: "Attribute Rules", href: "/admin/attribute-rules" },
+      { name: "Brands Master", href: "/admin/brands" },
+      { name: "Inventory", href: "/admin/inventory" },
+    ],
+  },
+  {
+    title: "Product Moderation",
+    badge: "04",
+    icon: "📦",
     items: [
       { name: "All Products", href: "/admin/products" },
       { name: "Pending Approval", href: "/admin/products/pending" },
+      { name: "Approved Products", href: "/admin/products/approved" },
       { name: "Rejected Products", href: "/admin/products/rejected" },
-      { name: "Categories", href: "/admin/categories" },
-      { name: "Brands", href: "/admin/brands" },
-      { name: "Reviews", href: "/admin/reviews" },
+      { name: "Reviews Moderation", href: "/admin/reviews" },
     ],
   },
-
   {
-    title: "Orders",
-    items: [
-      { name: "All Orders", href: "/admin/orders" },
-      { name: "Pending", href: "/admin/orders/pending" },
-      { name: "Processing", href: "/admin/orders/processing" },
-      { name: "Delivered", href: "/admin/orders/delivered" },
-      { name: "Returns", href: "/admin/returns" },
-      { name: "Refunds", href: "/admin/refunds" },
-    ],
-  },
-
-  {
-    title: "Seller Management",
-    items: [
-      { name: "Seller Requests", href: "/admin/sellers" },
-      { name: "Verification", href: "/admin/seller-verification" },
-      { name: "Documents", href: "/admin/seller-documents" },
-      { name: "Payouts", href: "/admin/seller-payouts" },
-    ],
-  },
-
-  {
-    title: "Finance",
+    title: "Financials",
+    badge: "05",
+    icon: "💰",
     items: [
       { name: "Revenue", href: "/admin/reports" },
-      { name: "Commissions", href: "/admin/commissions" },
-      { name: "Withdraw Requests", href: "/admin/withdraws" },
-      { name: "Settlements", href: "/admin/settlements" },
+      { name: "Payouts", href: "/admin/seller-payouts" },
+      { name: "Withdraw Requests", href: "/admin/withdraw-requests" },
+      { name: "Refunds", href: "/admin/refunds" },
       { name: "Transactions", href: "/admin/transactions" },
     ],
   },
-
   {
-    title: "Marketing",
+    title: "Orders & Shipping",
+    badge: "06",
+    icon: "🚚",
+    items: [
+      { name: "All Orders", href: "/admin/orders" },
+      { name: "Delivered Orders", href: "/admin/orders/delivered" },
+      { name: "Returns", href: "/admin/orders/returns" },
+      { name: "Refunds", href: "/admin/refunds" },
+      { name: "Shipping Config", href: "/admin/settings/shipping" },
+    ],
+  },
+  {
+    title: "Customers & Disputes",
+    badge: "07",
+    icon: "👥",
+    items: [
+      { name: "Customers", href: "/admin/customers" },
+      { name: "Customer Reviews", href: "/admin/reviews" },
+      { name: "Disputes", href: "/admin/disputes" },
+      { name: "Support Tickets", href: "/admin/support" },
+    ],
+  },
+  {
+    title: "Marketing Control",
+    badge: "08",
+    icon: "📣",
     items: [
       { name: "Banners", href: "/admin/banners" },
-      { name: "Homepage Sections", href: "/admin/homepage" },
       { name: "Coupons", href: "/admin/coupons" },
       { name: "Flash Sales", href: "/admin/flash-sales" },
       { name: "Notifications", href: "/admin/notifications" },
+      { name: "Homepage Sections", href: "/admin/homepage" },
     ],
   },
-
   {
-    title: "Reports",
+    title: "Staff & RBAC",
+    badge: "09",
+    icon: "🔐",
     items: [
-      { name: "Sales Reports", href: "/admin/reports/sales" },
-      { name: "Customer Reports", href: "/admin/reports/customers" },
-      { name: "Seller Reports", href: "/admin/reports/sellers" },
-      { name: "Product Reports", href: "/admin/reports/products" },
-    ],
-  },
-
-  {
-  title: "AI Center",
-  items: [
-    { name: "AI Product Description", href: "/admin/ai-center/description" },
-    { name: "AI SEO Generator", href: "/admin/ai-center/seo" },
-    { name: "AI Product Title", href: "/admin/ai-center/title" },
-    { name: "AI Sales Prediction", href: "/admin/ai-center/sales-prediction" },
-    { name: "AI Trending Products", href: "/admin/ai-center/trending" },
-  ],
-},
-
-  {
-    title: "Settings",
-    items: [
-      { name: "Website Settings", href: "/admin/settings" },
-      { name: "Payment Gateway", href: "/admin/settings/payment" },
-      { name: "SMTP Email", href: "/admin/settings/email" },
-      { name: "Security", href: "/admin/settings/security" },
+      { name: "Admins", href: "/admin/admins" },
       { name: "Roles & Permissions", href: "/admin/settings/roles" },
+      { name: "Security", href: "/admin/settings/security" },
+      { name: "Website Settings", href: "/admin/settings" },
     ],
   },
+  
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-<aside className="w-[280px] h-screen sticky top-0 bg-gradient-to-b from-slate-950 via-blue-950 to-slate-950 text-white overflow-y-auto">      <div className="p-6 border-b border-white/10">
-        <h1 className="text-3xl font-extrabold">
-          Klassic
-        </h1>
+    <aside className="hidden h-screen w-[290px] shrink-0 overflow-hidden border-r border-white/10 bg-[#050816] text-white lg:sticky lg:top-0 lg:block">
+      <div className="relative flex h-full flex-col">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.13),transparent_35%)]" />
 
-        <p className="text-blue-300 text-sm mt-1">
-          Admin Control Center
-        </p>
-      </div>
+        <div className="relative border-b border-white/10 p-6">
+          <Link href="/admin" className="block">
+            <h1 className="text-4xl font-black tracking-tight">
+              Klassic
+            </h1>
+          </Link>
 
-      <div className="p-4 space-y-6">
-        {menus.map((section) => (
-          <div key={section.title}>
-            <h3 className="text-xs uppercase tracking-wider text-blue-300 font-bold mb-3">
-              {section.title}
-            </h3>
+          <div className="mt-4 rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
+              Super Admin
+            </p>
 
-            <div className="space-y-1">
-              {section.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block px-4 py-3 rounded-xl text-sm font-semibold transition ${
-                    pathname === item.href
-                      ? "bg-blue-600 text-white"
-                      : "hover:bg-white/10 text-gray-200"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+            <p className="mt-2 text-sm font-bold text-white/70">
+              Luxury Command Center
+            </p>
+
+            <div className="mt-4 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
+              <span className="text-xs font-bold text-white/50">
+                System Online
+              </span>
             </div>
           </div>
-        ))}
+        </div>
+
+        <nav className="relative flex-1 space-y-4 overflow-y-auto px-4 py-5">
+          {menus.map((section) => {
+            const sectionActive = section.items.some(
+              (item) =>
+                pathname === item.href ||
+                (item.href !== "/admin" && pathname.startsWith(item.href))
+            );
+
+            return (
+              <div
+                key={section.title}
+                className={`rounded-[1.5rem] border p-2 transition ${
+                  sectionActive
+                    ? "border-cyan-300/20 bg-white/[0.07]"
+                    : "border-transparent"
+                }`}
+              >
+                <div className="mb-2 flex items-center gap-3 px-2">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-base">
+                    {section.icon}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                      {section.title}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-black text-white/50">
+                    {section.badge}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const active =
+                      pathname === item.href ||
+                      (item.href !== "/admin" &&
+                        pathname.startsWith(item.href));
+
+                    return (
+                      <Link
+                        key={`${section.title}-${item.name}-${item.href}`}
+                        href={item.href}
+                        className={`group flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition ${
+                          active
+                            ? "bg-white text-black shadow-[0_15px_40px_rgba(255,255,255,0.12)]"
+                            : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <span className="truncate">{item.name}</span>
+
+                        {active ? (
+                          <span className="h-2 w-2 rounded-full bg-black" />
+                        ) : (
+                          <span className="text-white/20 transition group-hover:text-white/60">
+                            →
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="relative mt-auto border-t border-white/10 p-4">
+          <div className="rounded-3xl bg-white/[0.06] p-4">
+            <p className="text-xs font-black uppercase tracking-widest text-white/40">
+              Klassic Admin
+            </p>
+            <p className="mt-1 text-sm font-bold text-white/70">
+              Marketplace OS v1
+            </p>
+          </div>
+        </div>
       </div>
     </aside>
   );

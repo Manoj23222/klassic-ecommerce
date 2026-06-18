@@ -2,7 +2,7 @@ import EditProductForm from "@/components/EditProductForm";
 import Link from "next/link";
 import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
-import Product from "@/models/Product";
+import Products from "@/models/Product";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function EditProductPage({
 
   await connectDB();
 
-  const product: any = await Product.findById(id).lean();
+  const product = await Products.findById(id).lean();
 
   if (!product) {
     return (
@@ -33,16 +33,13 @@ export default async function EditProductPage({
     );
   }
 
-  const formattedProduct = {
-    ...product,
-    id: String(product._id),
-  };
+  const formattedProduct = JSON.parse(JSON.stringify(product));
 
   return (
     <main className="min-h-screen bg-gray-100 px-6 py-5">
       <div className="max-w-5xl mx-auto">
         <Link
-          href="/admin/product"
+          href="/admin/products"
           className="inline-flex items-center bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg shadow mb-4"
         >
           ← Back to Products

@@ -1,5 +1,4 @@
 import ToastProvider from "@/components/ToastProvider";
-import AIShoppingAssistant from "@/components/AIShoppingAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -33,7 +32,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <main className="flex-1">
           {children}
-          <AIShoppingAssistant />
+        
         </main>
 
         <MobileBottomNav />

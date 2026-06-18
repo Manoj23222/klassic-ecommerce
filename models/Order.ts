@@ -19,7 +19,9 @@ const OrderItemSchema = new Schema(
       enum: [
         "Pending",
         "Processing",
+        "Packed",
         "Shipped",
+        "Out For Delivery",
         "Delivered",
         "Cancelled",
         "Return Requested",
@@ -30,6 +32,10 @@ const OrderItemSchema = new Schema(
       ],
       default: "Pending",
     },
+
+    tracking_number: { type: String, default: "" },
+    courier_name: { type: String, default: "" },
+    delivery_estimate: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -38,14 +44,57 @@ const OrderSchema = new Schema(
   {
     user_id: { type: String, default: "" },
 
+    customer_name: { type: String, required: true },
+    phone: { type: String, required: true },
+
+    address: { type: String, required: true },
+    pincode: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    landmark: { type: String, default: "" },
+    address_type: {
+      type: String,
+      enum: ["Home", "Work", "Other"],
+      default: "Home",
+    },
+
+    items: {
+      type: [OrderItemSchema],
+      default: [],
+    },
+
+    subtotal: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    delivery_charge: { type: Number, default: 0 },
+    gst_amount: { type: Number, default: 0 },
     total_amount: { type: Number, required: true },
+
+    coupon_code: { type: String, default: "" },
+
+    payment_method: {
+      type: String,
+      enum: ["COD", "UPI", "Card", "Wallet", "Net Banking", "EMI", "Paytm"],
+      default: "COD",
+    },
+
+    payment_status: {
+      type: String,
+      enum: ["Pending", "Paid", "Failed", "Refunded"],
+      default: "Pending",
+    },
+
+    payment_id: { type: String, default: "" },
+    gateway_order_id: { type: String, default: "" },
+    transaction_id: { type: String, default: "" },
 
     status: {
       type: String,
       enum: [
         "Pending",
         "Processing",
+        "Packed",
         "Shipped",
+        "Out For Delivery",
         "Delivered",
         "Cancelled",
         "Return Requested",
@@ -57,20 +106,7 @@ const OrderSchema = new Schema(
       default: "Pending",
     },
 
-    payment_method: { type: String, default: "COD" },
-
-    payment_status: {
-      type: String,
-      enum: ["Pending", "Paid", "Failed", "Refunded"],
-      default: "Pending",
-    },
-
-    customer_name: { type: String, required: true },
-    phone: { type: String, required: true },
-    address: { type: String, required: true },
-
-    coupon_code: { type: String, default: "" },
-    discount: { type: Number, default: 0 },
+    order_note: { type: String, default: "" },
 
     return_reason: { type: String, default: "" },
     return_status: {
@@ -90,10 +126,11 @@ const OrderSchema = new Schema(
     refund_note: { type: String, default: "" },
     refunded_at: { type: Date, default: null },
 
-    items: {
-      type: [OrderItemSchema],
-      default: [],
-    },
+    invoice_number: { type: String, default: "" },
+    invoice_url: { type: String, default: "" },
+
+    cancelled_reason: { type: String, default: "" },
+    cancelled_at: { type: Date, default: null },
   },
   { timestamps: true }
 );

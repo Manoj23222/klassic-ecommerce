@@ -15,17 +15,34 @@ const menu = [
     ],
   },
   {
-    title: "Products",
-    icon: "📦",
+  title: "Products",
+  icon: "📦",
+  links: [
+    { name: "All Products", href: "/seller/products" },
+    { name: "Add Product", href: "/seller/products/add" },
+    { name: "Bulk Upload", href: "/seller/bulk-upload" },
+    { name: "Pending Approval", href: "/seller/products?status=Pending Approval" },
+    { name: "Draft Products", href: "/seller/products?status=Draft" },
+    { name: "Low Stock", href: "/seller/products?stock=low" },
+    { name: "Reviews", href: "/seller/products/reviews" },
+  ],
+},
+
+   
+  {
+    title: "Marketing",
+    icon: "📈",
     links: [
-      { name: "All Products", href: "/seller/products" },
-      { name: "Add Product", href: "/seller/products/add" },
-      { name: "Pending Approval", href: "/seller/products?status=Pending Approval" },
-      { name: "Draft Products", href: "/seller/products?status=Draft" },
-      { name: "Low Stock", href: "/seller/products?stock=low" },
-      { name: "Reviews", href: "/seller/products/reviews" },
+      {
+  name: "Marketing Center",
+  href: "/seller/marketing",
+  icon: "📢",
+},
     ],
   },
+
+
+
   {
     title: "Orders",
     icon: "🚚",
@@ -38,15 +55,26 @@ const menu = [
     ],
   },
   {
-    title: "Finance",
-    icon: "💰",
-    links: [
-      { name: "Earnings", href: "/seller/earnings" },
-      { name: "Withdraw", href: "/seller/earnings/withdraw" },
-      { name: "Bank Details", href: "/seller/account/bank" },
-      { name: "Transactions", href: "/seller/earnings/transactions" },
-    ],
-  },
+  title: "Finance",
+  icon: "💰",
+  links: [
+    { name: "Seller Wallet", href: "/seller/wallet" },
+    { name: "Settlement History", href: "/seller/settlements" },
+    { name: "Earnings", href: "/seller/earnings" },
+    { name: "Withdraw Funds", href: "/seller/wallet" },
+    { name: "Transactions", href: "/seller/earnings/transactions" },
+    { name: "Bank Details", href: "/seller/account/bank" },
+  ],
+},
+{
+  title: "Inventory",
+  icon: "📊",
+  links: [
+    { name: "Inventory Center", href: "/seller/inventory" },
+    { name: "Low Stock Alerts", href: "/seller/inventory/low-stock" },
+    { name: "Out Of Stock", href: "/seller/products?stock=out" },
+  ],
+},
   {
     title: "AI Growth",
     icon: "🤖",
@@ -126,7 +154,7 @@ className={`group flex items-center justify-between rounded-2xl px-4 py-3 text-[
           <MobileLink href="/seller/products" icon="📦" label="Products" pathname={pathname} />
           <MobileLink href="/seller/products/add" icon="➕" label="Add" pathname={pathname} />
           <MobileLink href="/seller/orders" icon="🚚" label="Orders" pathname={pathname} />
-          <MobileLink href="/seller/earnings" icon="💰" label="Money" pathname={pathname} />
+          <MobileLink href="/seller/wallet" icon="💰" label="Wallet" pathname={pathname} />
         </div>
       </div>
     </>

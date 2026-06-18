@@ -1,14 +1,12 @@
-import mongoose from "mongoose";
-import SellerTopBar from "@/components/SellerTopBar";
-import { cookies } from "next/headers";
-import Link from "next/link";
 import connectDB from "@/lib/mongodb";
-import Seller from "@/models/Seller";
+import { cookies } from "next/headers";
 import Product from "@/models/Product";
 
 export const dynamic = "force-dynamic";
 
 export default async function SellerInventoryPage() {
+  await connectDB();
+
   const cookieStore = await cookies();
 
   const sellerId =
@@ -17,148 +15,98 @@ export default async function SellerInventoryPage() {
 
   if (!sellerId) {
     return (
-      <main className="min-h-screen bg-gray-100">
-        <SellerTopBar />
-        <div className="p-10 text-center">
-          <h1 className="text-2xl font-bold mb-4">Please login first</h1>
-          <Link href="/seller/login" className="bg-blue-600 text-white px-6 py-3 rounded-xl">
-            Seller Login
-          </Link>
-        </div>
+      <main className="min-h-screen bg-gray-100 p-6">
+        <h1 className="text-2xl font-black">Please login first</h1>
       </main>
     );
   }
 
-  await connectDB();
-
-if (!mongoose.Types.ObjectId.isValid(sellerId)) {
-  return (
-    <main className="min-h-screen bg-gray-100">
-      <SellerTopBar />
-      <div className="p-10 text-center">
-        <h1 className="text-2xl font-bold mb-4">Please login again</h1>
-        <Link
-          href="/seller/login"
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl"
-        >
-          Seller Login
-        </Link>
-      </div>
-    </main>
-  );
-}
-
-const seller: any = await Seller.findById(sellerId).select("_id status").lean();
-  if (!seller || seller.status !== "Approved") {
-    return (
-      <main className="min-h-screen bg-gray-100">
-        <SellerTopBar />
-        <div className="p-10 text-center">
-          <h1 className="text-2xl font-bold mb-4">Seller access required</h1>
-          <Link href="/become-seller" className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold">
-            Become a Seller
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  const products: any[] = await Product.find({ seller_id: sellerId })
+  const products = await Product.find({ seller_id: sellerId })
     .sort({ stock: 1 })
     .lean();
 
-  const totalProducts = products.length;
-  const outOfStock = products.filter((p) => Number(p.stock || 0) <= 0).length;
-  const lowStock = products.filter(
-    (p) => Number(p.stock || 0) > 0 && Number(p.stock || 0) <= 5
-  ).length;
+  const cleanProducts = products.map((item: any) => ({
+    ...item,
+    _id: item._id.toString(),
+    seller_id: item.seller_id?.toString?.() || item.seller_id,
+    createdAt: item.createdAt?.toISOString?.() || "",
+    updatedAt: item.updatedAt?.toISOString?.() || "",
+  }));
 
-  const totalStock = products.reduce(
-    (sum, p) => sum + Number(p.stock || 0),
+  const totalProducts = cleanProducts.length;
+  const totalStock = cleanProducts.reduce(
+    (sum, item) => sum + Number(item.stock || 0),
     0
   );
+  const lowStock = cleanProducts.filter(
+    (item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 5
+  ).length;
+  const outOfStock = cleanProducts.filter(
+    (item) => Number(item.stock || 0) <= 0
+  ).length;
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <SellerTopBar />
-
-      <section className="max-w-7xl mx-auto px-4 py-8">
-        <Link href="/seller" className="text-blue-600 font-semibold">
-          ← Back to Seller Dashboard
-        </Link>
-
-        <div className="mt-5 mb-6">
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
+    <main className="min-h-screen bg-gray-100 p-6">
+      <section className="max-w-7xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-black">Inventory Center</h1>
           <p className="text-gray-500">
-            Stock, low-stock aur out-of-stock products manage karo.
+            Track stock, low-stock products, and out-of-stock items.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Stat title="Total Products" value={totalProducts} color="text-gray-900" />
-          <Stat title="Total Stock" value={totalStock} color="text-blue-600" />
-          <Stat title="Low Stock" value={lowStock} color="text-orange-600" />
-          <Stat title="Out of Stock" value={outOfStock} color="text-red-600" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <InventoryCard title="Products" value={totalProducts} />
+          <InventoryCard title="Total Stock" value={totalStock} />
+          <InventoryCard title="Low Stock" value={lowStock} />
+          <InventoryCard title="Out of Stock" value={outOfStock} />
         </div>
 
-        <div className="bg-white rounded-2xl shadow overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead className="bg-gray-900 text-white">
-              <tr>
-                <th className="p-4 text-left">Product</th>
-                <th className="p-4 text-left">SKU</th>
-                <th className="p-4 text-left">Category</th>
-                <th className="p-4 text-left">Stock</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-left">Action</th>
-              </tr>
-            </thead>
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          <div className="p-5 border-b">
+            <h2 className="text-xl font-black">Stock List</h2>
+          </div>
 
-            <tbody>
-              {products.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-900 text-white">
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">
-                    No products found
-                  </td>
+                  <th className="p-4 text-left">Product</th>
+                  <th className="p-4 text-left">SKU</th>
+                  <th className="p-4 text-left">Category</th>
+                  <th className="p-4 text-left">Stock</th>
+                  <th className="p-4 text-left">Status</th>
+                  <th className="p-4 text-left">Approval</th>
                 </tr>
-              ) : (
-                products.map((product: any) => {
-                  const stock = Number(product.stock || 0);
+              </thead>
 
-                  const stockStatus =
-                    stock <= 0
-                      ? "Out of Stock"
-                      : stock <= 5
-                      ? "Low Stock"
-                      : "In Stock";
+              <tbody>
+                {cleanProducts.map((item: any) => {
+                  const stock = Number(item.stock || 0);
 
                   return (
-                    <tr key={String(product._id)} className="border-b hover:bg-gray-50">
+                    <tr key={item._id} className="border-b">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-14 h-14 object-cover rounded-lg border"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 bg-gray-200 rounded-lg" />
-                          )}
-
+                          <img
+                            src={item.image || "/placeholder.png"}
+                            alt={item.name}
+                            className="w-12 h-12 rounded-xl object-cover bg-gray-100"
+                          />
                           <div>
-                            <p className="font-bold">{product.name}</p>
+                            <p className="font-black">{item.name}</p>
                             <p className="text-xs text-gray-500">
-                              {product.status}
+                              ₹{Number(item.price || 0).toLocaleString("en-IN")}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="p-4">{product.sku || "-"}</td>
-                      <td className="p-4">{product.category || "General"}</td>
+                      <td className="p-4 font-bold">{item.sku || "-"}</td>
 
-                      <td className="p-4 font-bold">{stock}</td>
+                      <td className="p-4">{item.category || "General"}</td>
+
+                      <td className="p-4 font-black">{stock}</td>
 
                       <td className="p-4">
                         <span
@@ -166,47 +114,48 @@ const seller: any = await Seller.findById(sellerId).select("_id status").lean();
                             stock <= 0
                               ? "bg-red-100 text-red-700"
                               : stock <= 5
-                              ? "bg-orange-100 text-orange-700"
+                              ? "bg-yellow-100 text-yellow-700"
                               : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {stockStatus}
+                          {stock <= 0
+                            ? "Out of Stock"
+                            : stock <= 5
+                            ? "Low Stock"
+                            : "In Stock"}
                         </span>
                       </td>
 
                       <td className="p-4">
-                        <Link
-                          href={`/seller/products/edit/${String(product._id)}`}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold"
-                        >
-                          Update Stock
-                        </Link>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100">
+                          {item.status || "Pending Approval"}
+                        </span>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+
+                {cleanProducts.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-10 text-center text-gray-500">
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
   );
 }
 
-function Stat({
-  title,
-  value,
-  color,
-}: {
-  title: string;
-  value: number;
-  color: string;
-}) {
+function InventoryCard({ title, value }: { title: string; value: number }) {
   return (
-    <div className="bg-white p-5 rounded-2xl shadow">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <h2 className={`text-3xl font-bold ${color}`}>{value}</h2>
+    <div className="bg-white rounded-2xl shadow p-5">
+      <p className="text-gray-500 text-sm font-bold">{title}</p>
+      <h2 className="text-3xl font-black mt-2">{value}</h2>
     </div>
   );
 }

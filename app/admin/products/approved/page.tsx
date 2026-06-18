@@ -1,5 +1,5 @@
 import connectDB from "@/lib/mongodb";
-import Product from "@/models/Product";
+import Products from "@/models/Product";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function ApprovedProductsPage() {
   await connectDB();
 
-  const products = await Product.find({
+  const products = await Products.find({
     status: "Approved",
   })
     .sort({ approved_at: -1, createdAt: -1 })

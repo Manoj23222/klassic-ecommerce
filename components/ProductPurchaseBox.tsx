@@ -1,8 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+
+type Variant = {
+  color?: string;
+  colorName?: string;
+  colorCode?: string;
+  image?: string;
+  images?: string[];
+  size?: string;
+  stock?: string | number;
+  price?: string | number;
+  sale_price?: string | number;
+  sku?: string;
+};
 
 type Product = {
   id?: string;
@@ -12,57 +24,32 @@ type Product = {
   image: string;
   colors?: string | string[];
   sizes?: string | string[];
+  variants?: Variant[];
 };
 
-function toList(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-
-  if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
-function getSizeMultiplier(size: string) {
-  const clean = size.toLowerCase().replace(/\s/g, "");
-
-  if (clean === "500g") return 0.5;
-  if (clean === "1kg") return 1;
-  if (clean === "5kg") return 5;
-  if (clean === "10kg") return 10;
-
-  return 1;
-}
-
 export default function ProductPurchaseBox({ product }: { product: Product }) {
-  const [selectedColor, setSelectedColor] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
-
   const productId = product.id || product._id || "";
 
-  const colorList = toList(product.colors);
-  const sizeList = toList(product.sizes);
+  const firstVariant =
+    Array.isArray(product.variants) && product.variants.length > 0
+      ? product.variants[0]
+      : undefined;
 
-  const finalPrice = useMemo(() => {
-    if (!selectedSize) return Number(product.price);
-    return Number(product.price) * getSizeMultiplier(selectedSize);
-  }, [product.price, selectedSize]);
+  const finalPrice = Number(
+    firstVariant?.sale_price || firstVariant?.price || product.price || 0
+  );
+
+  const selectedImage =
+    firstVariant?.images?.[0] || firstVariant?.image || product.image;
+
+  const selectedColor =
+    firstVariant?.colorName || firstVariant?.color || "";
+
+  const selectedSize = firstVariant?.size || "";
+
+  const selectedSku = firstVariant?.sku || "";
 
   const addToCart = () => {
-    if (colorList.length > 0 && !selectedColor) {
-      toast.error("Please select color");
-      return;
-    }
-
-    if (sizeList.length > 0 && !selectedSize) {
-      toast.error("Please select size");
-      return;
-    }
-
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
     cart.push({
@@ -70,9 +57,10 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
       name: product.name,
       price: finalPrice,
       basePrice: product.price,
-      image: product.image,
+      image: selectedImage,
       color: selectedColor,
       size: selectedSize,
+      sku: selectedSku,
       quantity: 1,
     });
 
@@ -84,89 +72,54 @@ export default function ProductPurchaseBox({ product }: { product: Product }) {
 
   const buyNowLink = `/checkout?productId=${productId}&color=${encodeURIComponent(
     selectedColor
-  )}&size=${encodeURIComponent(selectedSize)}&price=${finalPrice}`;
+  )}&size=${encodeURIComponent(selectedSize)}&price=${finalPrice}&sku=${encodeURIComponent(
+    selectedSku
+  )}`;
 
   return (
-    <div>
-      <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4">
-        <p className="text-sm text-gray-500">Selected Price</p>
-        <h2 className="text-3xl font-extrabold text-green-700">
-          ₹{finalPrice.toFixed(2)}
-        </h2>
-
-        {selectedSize && (
-          <p className="mt-1 text-sm text-gray-600">
-            Size: <b>{selectedSize}</b>
-          </p>
-        )}
-      </div>
-
-      {colorList.length > 0 && (
-        <div className="mt-5">
-          <h3 className="mb-2 font-bold">Select Color</h3>
-
-          <div className="flex flex-wrap gap-3">
-            {colorList.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setSelectedColor(color)}
-                className={`rounded-lg border px-4 py-2 transition ${
-                  selectedColor === color
-                    ? "border-blue-600 bg-blue-600 text-white"
-                    : "bg-white hover:border-blue-600"
-                }`}
-              >
-                {color}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {sizeList.length > 0 && (
-        <div className="mt-5">
-          <h3 className="mb-2 font-bold">Select Size</h3>
-
-          <div className="flex flex-wrap gap-3">
-            {sizeList.map((size) => {
-              const sizePrice = Number(product.price) * getSizeMultiplier(size);
-
-              return (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => setSelectedSize(size)}
-                  className={`rounded-lg border px-4 py-2 transition ${
-                    selectedSize === size
-                      ? "border-blue-600 bg-blue-600 text-white"
-                      : "bg-white hover:border-blue-600"
-                  }`}
-                >
-                  <div className="font-bold">{size}</div>
-                  <div className="text-xs">₹{sizePrice.toFixed(2)}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-5 grid grid-cols-2 gap-4">
+    <div className="pb-24 md:pb-0">
+      <div className="mt-5 hidden grid-cols-2 gap-3 md:grid">
         <button
           type="button"
           onClick={addToCart}
-          className="flex h-[64px] w-full items-center justify-center rounded-lg bg-blue-600 text-lg font-bold text-white transition hover:bg-blue-700"
+          className="flex h-[58px] w-full items-center justify-center rounded-2xl bg-[#2874f0] text-base font-black text-white shadow transition hover:bg-blue-700"
         >
           Add To Cart
         </button>
 
         <Link
           href={buyNowLink}
-          className="flex h-[64px] w-full items-center justify-center rounded-lg bg-green-600 text-lg font-bold text-white transition hover:bg-green-700"
+          className="flex h-[58px] w-full items-center justify-center rounded-2xl bg-yellow-400 text-base font-black text-black shadow transition hover:bg-yellow-500"
         >
           Buy Now
         </Link>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-[999] border-t bg-white p-2 shadow-2xl md:hidden">
+        <div className="grid grid-cols-[54px_1fr_1fr] gap-2">
+          <button
+            type="button"
+            onClick={addToCart}
+            className="flex h-[54px] items-center justify-center rounded-xl border bg-white text-2xl"
+            aria-label="Add to cart"
+          >
+            🛒
+          </button>
+
+          <Link
+            href={buyNowLink}
+            className="flex h-[54px] items-center justify-center rounded-xl border bg-white text-center text-xs font-black text-slate-900"
+          >
+            Add Cart
+          </Link>
+
+          <Link
+            href={buyNowLink}
+            className="flex h-[54px] items-center justify-center rounded-xl bg-yellow-400 text-sm font-black text-black"
+          >
+            Buy ₹{finalPrice.toFixed(0)}
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import ColorVariantManager, {
+  ColorVariant,
+} from "@/components/seller/ColorVariantManager";
 
 export default function EditSellerProductPage() {
   const params = useParams();
@@ -12,8 +15,24 @@ export default function EditSellerProductPage() {
 
   const [sellerId, setSellerId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+const [saving, setSaving] = useState(false);
+const emptyVariant: ColorVariant = {
+  colorName: "",
+  colorCode: "#000000",
+  color: "",
+  size: "",
+  sku: "",
+  stock: "",
+  price: "",
+  sale_price: "",
+  salePrice: "",
+  regularPrice: "",
+  image: "",
+  images: [],
+  isDefault: true,
+};
 
+const [variants, setVariants] = useState<ColorVariant[]>([emptyVariant]);
   const [form, setForm] = useState({
     name: "",
     short_description: "",
@@ -73,6 +92,26 @@ export default function EditSellerProductPage() {
       }
 
       const p = data.product;
+      setVariants(
+  p.variants?.length
+    ? p.variants.map((v: any) => ({
+  colorName: v.colorName || v.color || "",
+  colorCode: v.colorCode || "#000000",
+  color: v.color || v.colorName || "",
+  size: v.size || "",
+  sku: v.sku || "",
+  stock: String(v.stock || ""),
+  price: String(v.price || v.regularPrice || ""),
+  sale_price: String(v.sale_price || v.salePrice || ""),
+  salePrice: String(v.salePrice || v.sale_price || ""),
+  regularPrice: String(v.regularPrice || v.price || ""),
+  image: v.image || v.images?.[0] || "",
+  images: v.images || (v.image ? [v.image] : []),
+  isDefault: Boolean(v.isDefault),
+}))
+    : [emptyVariant]
+);
+
 
       setForm({
         name: p.name || "",
@@ -189,10 +228,11 @@ export default function EditSellerProductPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...form,
-          seller_id: sellerId,
-        }),
+       body: JSON.stringify({
+  ...form,
+  variants,
+  seller_id: sellerId,
+}),
       });
 
       const data = await res.json();
@@ -381,13 +421,19 @@ export default function EditSellerProductPage() {
                     onClick={() => removeGalleryImage(index)}
                     className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full px-2"
                   >
-                    ×
+                  
                   </button>
                 </div>
               ))}
             </div>
           </div>
-
+<div className="md:col-span-2">
+  <ColorVariantManager
+    variants={variants}
+    setVariants={setVariants}
+    uploadImage={uploadImage}
+  />
+</div>
           <button
             type="submit"
             disabled={saving}

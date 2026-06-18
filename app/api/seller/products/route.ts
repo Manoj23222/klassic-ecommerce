@@ -5,8 +5,8 @@ import Product from "@/models/Product";
 
 export const dynamic = "force-dynamic";
 
-function arr(value: any) {
-  if (Array.isArray(value)) return value;
+function toArray(value: any) {
+  if (Array.isArray(value)) return value.filter(Boolean);
 
   if (typeof value === "string") {
     return value
@@ -18,10 +18,78 @@ function arr(value: any) {
   return [];
 }
 
-function text(value: any) {
+function cleanText(value: any) {
   if (Array.isArray(value)) return value.join(", ");
   if (value === undefined || value === null) return "";
   return String(value);
+}
+
+function cleanSku(value: any) {
+  return String(value || `KL-${Date.now()}`).trim().toUpperCase();
+}
+
+function cleanVariants(body: any) {
+  const rawVariants = Array.isArray(body.variants)
+    ? body.variants
+    : Array.isArray(body.color_variants)
+    ? body.color_variants
+    : [];
+
+  return rawVariants.map((v: any, index: number) => {
+    const sku = cleanSku(v.sku || `${body.sku || "KL"}-V${index + 1}`);
+
+    const images = Array.isArray(v.images)
+      ? v.images.filter(Boolean)
+      : v.image
+      ? [v.image]
+      : [];
+
+    return {
+      colorName: v.colorName || v.color || "",
+      colorCode: v.colorCode || "#000000",
+      color: v.color || v.colorName || "",
+      size: v.size || "",
+      material: v.material || "",
+
+      sku,
+
+      price: Number(v.price || body.price || body.regularPrice || 0),
+      sale_price: Number(
+        v.sale_price || v.salePrice || body.sale_price || body.salePrice || 0
+      ),
+      salePrice: Number(
+        v.salePrice || v.sale_price || body.salePrice || body.sale_price || 0
+      ),
+      regularPrice: Number(v.regularPrice || body.regularPrice || body.price || 0),
+
+      stock: Number(v.stock || 0),
+      lowStock: Number(v.lowStock || 0),
+
+      image: v.image || images[0] || "",
+      images,
+
+      isDefault: index === 0 ? true : Boolean(v.isDefault),
+      status: v.status || "Active",
+    };
+  });
+}
+
+async function checkDuplicateSku({
+  sku,
+  productId,
+}: {
+  sku: string;
+  productId?: string;
+}) {
+  const query: any = {
+    $or: [{ sku }, { "variants.sku": sku }, { "color_variants.sku": sku }],
+  };
+
+  if (productId) {
+    query._id = { $ne: productId };
+  }
+
+  return await Product.findOne(query).lean();
 }
 
 export async function POST(req: Request) {
@@ -30,71 +98,123 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const name = body.name;
-    const price = body.price || body.salePrice || body.regularPrice;
-    const image = body.image;
-    const stock = body.stock ?? 0;
+    const name = cleanText(body.name).trim();
+    const sku = cleanSku(body.sku);
+    const price = Number(body.price || body.regularPrice || body.salePrice || 0);
+    const image = cleanText(body.image);
+    const stock = Number(body.stock || 0);
 
     if (!name || !price || !image) {
       return NextResponse.json(
-        { success: false, message: "Name, price and image required" },
+        {
+          success: false,
+          message: "Name, price and image required",
+        },
         { status: 400 }
       );
     }
 
-    const sku = String(body.sku || `KL-${Date.now()}`)
-      .trim()
-      .toUpperCase();
+    const duplicateSku = await checkDuplicateSku({ sku });
 
-    const oldSku = await Product.findOne({ sku });
-
-    if (oldSku) {
+    if (duplicateSku) {
       return NextResponse.json(
-        { success: false, message: "SKU already exists" },
+        {
+          success: false,
+          message: "SKU already exists",
+        },
         { status: 400 }
       );
+    }
+
+    const variants = cleanVariants({ ...body, sku });
+
+    for (const variant of variants) {
+      const duplicateVariantSku = await checkDuplicateSku({
+        sku: variant.sku,
+      });
+
+      if (duplicateVariantSku) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Variant SKU already exists: ${variant.sku}`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const product = await Product.create({
-      seller_id: body.seller_id || "",
-      seller_store_name: body.seller_store_name || "Klassic Seller",
+      seller_id: cleanText(body.seller_id),
+      seller_store_name: cleanText(body.seller_store_name) || "Klassic Seller",
 
-      name: String(name).trim(),
-      short_description: body.short_description || body.shortDescription || "",
-      shortDescription: body.shortDescription || body.short_description || "",
+      name,
+      short_description:
+        cleanText(body.short_description) || cleanText(body.shortDescription),
+      shortDescription:
+        cleanText(body.shortDescription) || cleanText(body.short_description),
+      description:
+        cleanText(body.description) ||
+        cleanText(body.shortDescription) ||
+        cleanText(body.short_description),
 
-      description: body.description || body.shortDescription || "",
-      brand: body.brand || "",
-      tags: text(body.tags),
+      brand: cleanText(body.brand),
+      brandVerified: Boolean(body.brandVerified),
 
-      price: Number(price),
-      sale_price: Number(body.sale_price || body.salePrice || 0),
-      salePrice: Number(body.salePrice || body.sale_price || price),
-      regularPrice: Number(body.regularPrice || price),
-      costPrice: Number(body.costPrice || 0),
-      gst: Number(body.gst || 0),
-
-      stock: Number(stock),
-      lowStock: Number(body.lowStock || 0),
-      stockStatus: body.stockStatus || "In Stock",
-
-      image,
-      gallery_images: Array.isArray(body.gallery_images)
-        ? body.gallery_images
-        : [],
-
-      videoUrl: body.videoUrl || "",
-
-      category: body.category || "General",
-      sub_category: body.sub_category || body.subcategory || "",
-      subcategory: body.subcategory || body.sub_category || "",
-
-      colors: text(body.colors),
-      sizes: text(body.sizes),
-      material: body.material || "",
-      weight: body.weight || "",
+      tags: toArray(body.tags),
 
       sku,
+
+      category: cleanText(body.category) || "General",
+      sub_category: cleanText(body.sub_category) || cleanText(body.subcategory),
+      subcategory: cleanText(body.subcategory) || cleanText(body.sub_category),
+
+      category_id: cleanText(body.category_id),
+      category_slug: cleanText(body.category_slug),
+      category_path: toArray(body.category_path),
+      leaf_category: cleanText(body.leaf_category),
+
+      attributes: body.attributes || {},
+
+attributeMeta: Array.isArray(body.attributeMeta)
+  ? body.attributeMeta
+  : [],
+
+      price,
+      regularPrice: Number(body.regularPrice || body.price || price),
+      salePrice: Number(body.salePrice || body.sale_price || price),
+      sale_price: Number(body.sale_price || body.salePrice || price),
+      costPrice: Number(body.costPrice || 0),
+
+      stock,
+      lowStock: Number(body.lowStock || 0),
+      stockStatus: stock > 0 ? "In Stock" : "Out of Stock",
+
+      hsnCode: cleanText(body.hsnCode),
+      gst: Number(body.gst || 0),
+      countryOfOrigin: cleanText(body.countryOfOrigin) || "India",
+
+      image,
+      images: toArray(body.images),
+      gallery_images: toArray(body.gallery_images),
+      videoUrl: cleanText(body.videoUrl),
+
+      colors: toArray(body.colors),
+      sizes: toArray(body.sizes),
+      material: cleanText(body.material),
+      weight: cleanText(body.weight),
+
+      variants,
+      color_variants: variants,
+
+      specifications: Array.isArray(body.specifications)
+        ? body.specifications
+        : [],
+
+      shipping: body.shipping || {},
+
+      returnPolicy: body.returnPolicy || {},
+
       status: body.status || "Pending Approval",
 
       featured: Boolean(body.featured),
@@ -102,13 +222,7 @@ export async function POST(req: Request) {
       discount: Number(body.discount || 0),
 
       seo: body.seo || {},
-      features: arr(body.features),
-      specifications: Array.isArray(body.specifications)
-        ? body.specifications
-        : [],
-
-      shipping: body.shipping || {},
-      returnPolicy: body.returnPolicy || {},
+      features: toArray(body.features),
 
       reject_reason: "",
       approval_comment: "",
@@ -124,7 +238,10 @@ export async function POST(req: Request) {
     console.error("Seller product add error:", error);
 
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      {
+        success: false,
+        message: error.message || "Server error",
+      },
       { status: 500 }
     );
   }
@@ -148,9 +265,7 @@ export async function GET(req: Request) {
     if (stock === "out") query.stock = { $lte: 0 };
     if (stock === "low") query.stock = { $gt: 0, $lte: 5 };
 
-    const products = await Product.find(query)
-      .sort({ createdAt: -1 })
-      .lean();
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
 
     return NextResponse.json({
       success: true,
@@ -160,7 +275,10 @@ export async function GET(req: Request) {
     console.error("Seller products fetch error:", error);
 
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      {
+        success: false,
+        message: error.message || "Server error",
+      },
       { status: 500 }
     );
   }
@@ -172,12 +290,15 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
 
-    const productId = body.product_id;
-    const sellerId = body.seller_id;
+    const productId = cleanText(body.product_id);
+    const sellerId = cleanText(body.seller_id);
 
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json(
-        { success: false, message: "Invalid product ID" },
+        {
+          success: false,
+          message: "Invalid product ID",
+        },
         { status: 400 }
       );
     }
@@ -189,59 +310,136 @@ export async function PUT(req: Request) {
 
     if (!product) {
       return NextResponse.json(
-        { success: false, message: "Product not found or access denied" },
+        {
+          success: false,
+          message: "Product not found or access denied",
+        },
         { status: 404 }
       );
     }
 
     if (body.sku) {
-      const cleanSku = String(body.sku).trim().toUpperCase();
+      const sku = cleanSku(body.sku);
 
-      const oldSku = await Product.findOne({
-        sku: cleanSku,
-        _id: { $ne: productId },
+      const duplicateSku = await checkDuplicateSku({
+        sku,
+        productId,
       });
 
-      if (oldSku) {
+      if (duplicateSku) {
         return NextResponse.json(
-          { success: false, message: "SKU already exists" },
+          {
+            success: false,
+            message: "SKU already exists",
+          },
           { status: 400 }
         );
       }
 
-      product.sku = cleanSku;
+      product.sku = sku;
     }
 
-    product.name = body.name ?? product.name;
-    product.category = body.category ?? product.category;
+    const variants =
+      Array.isArray(body.variants) || Array.isArray(body.color_variants)
+        ? cleanVariants({ ...body, sku: product.sku })
+        : null;
+
+    if (variants) {
+      for (const variant of variants) {
+        const duplicateVariantSku = await checkDuplicateSku({
+          sku: variant.sku,
+          productId,
+        });
+
+        if (duplicateVariantSku) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Variant SKU already exists: ${variant.sku}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      product.variants = variants;
+      product.color_variants = variants;
+    }
+
+    product.name = body.name !== undefined ? cleanText(body.name) : product.name;
+    product.category =
+      body.category !== undefined ? cleanText(body.category) : product.category;
 
     product.sub_category =
-      body.sub_category ?? body.subcategory ?? product.sub_category;
+      body.sub_category !== undefined || body.subcategory !== undefined
+        ? cleanText(body.sub_category) || cleanText(body.subcategory)
+        : product.sub_category;
 
     product.subcategory =
-      body.subcategory ?? body.sub_category ?? product.subcategory;
+      body.subcategory !== undefined || body.sub_category !== undefined
+        ? cleanText(body.subcategory) || cleanText(body.sub_category)
+        : product.subcategory;
+
+    product.category_id =
+      body.category_id !== undefined
+        ? cleanText(body.category_id)
+        : product.category_id;
+
+    product.category_slug =
+      body.category_slug !== undefined
+        ? cleanText(body.category_slug)
+        : product.category_slug;
+
+    product.category_path =
+      body.category_path !== undefined
+        ? toArray(body.category_path)
+        : product.category_path;
+
+    product.leaf_category =
+      body.leaf_category !== undefined
+        ? cleanText(body.leaf_category)
+        : product.leaf_category;
+
+    product.attributes =
+  body.attributes !== undefined
+    ? body.attributes
+    : product.attributes;
+
+product.attributeMeta =
+  body.attributeMeta !== undefined
+    ? body.attributeMeta
+    : product.attributeMeta;
 
     product.short_description =
-      body.short_description ??
-      body.shortDescription ??
-      product.short_description;
+      body.short_description !== undefined || body.shortDescription !== undefined
+        ? cleanText(body.short_description) || cleanText(body.shortDescription)
+        : product.short_description;
 
     product.shortDescription =
-      body.shortDescription ??
-      body.short_description ??
-      product.shortDescription;
+      body.shortDescription !== undefined || body.short_description !== undefined
+        ? cleanText(body.shortDescription) || cleanText(body.short_description)
+        : product.shortDescription;
 
-    product.description = body.description ?? product.description;
-    product.brand = body.brand ?? product.brand;
+    product.description =
+      body.description !== undefined
+        ? cleanText(body.description)
+        : product.description;
 
-    product.tags =
-      body.tags !== undefined ? text(body.tags) : product.tags;
+    product.brand =
+      body.brand !== undefined ? cleanText(body.brand) : product.brand;
+
+    product.brandVerified =
+      body.brandVerified !== undefined
+        ? Boolean(body.brandVerified)
+        : product.brandVerified;
+
+    product.tags = body.tags !== undefined ? toArray(body.tags) : product.tags;
 
     product.price =
       body.price !== undefined
         ? Number(body.price)
-        : body.salePrice !== undefined
-        ? Number(body.salePrice)
+        : body.regularPrice !== undefined
+        ? Number(body.regularPrice)
         : product.price;
 
     product.regularPrice =
@@ -252,6 +450,8 @@ export async function PUT(req: Request) {
     product.salePrice =
       body.salePrice !== undefined
         ? Number(body.salePrice)
+        : body.sale_price !== undefined
+        ? Number(body.sale_price)
         : product.salePrice;
 
     product.sale_price =
@@ -262,12 +462,7 @@ export async function PUT(req: Request) {
         : product.sale_price;
 
     product.costPrice =
-      body.costPrice !== undefined
-        ? Number(body.costPrice)
-        : product.costPrice;
-
-    product.gst =
-      body.gst !== undefined ? Number(body.gst) : product.gst;
+      body.costPrice !== undefined ? Number(body.costPrice) : product.costPrice;
 
     product.stock =
       body.stock !== undefined ? Number(body.stock) : product.stock;
@@ -275,43 +470,64 @@ export async function PUT(req: Request) {
     product.lowStock =
       body.lowStock !== undefined ? Number(body.lowStock) : product.lowStock;
 
-    product.stockStatus = body.stockStatus ?? product.stockStatus;
+    product.stockStatus = product.stock > 0 ? "In Stock" : "Out of Stock";
 
-    product.image = body.image ?? product.image;
+    product.hsnCode =
+      body.hsnCode !== undefined ? cleanText(body.hsnCode) : product.hsnCode;
 
-    product.gallery_images = Array.isArray(body.gallery_images)
-      ? body.gallery_images
-      : product.gallery_images;
+    product.gst = body.gst !== undefined ? Number(body.gst) : product.gst;
+
+    product.countryOfOrigin =
+      body.countryOfOrigin !== undefined
+        ? cleanText(body.countryOfOrigin)
+        : product.countryOfOrigin;
+
+    product.image =
+      body.image !== undefined ? cleanText(body.image) : product.image;
+
+    product.images =
+      body.images !== undefined ? toArray(body.images) : product.images;
+
+    product.gallery_images =
+      body.gallery_images !== undefined
+        ? toArray(body.gallery_images)
+        : product.gallery_images;
 
     product.colors =
-      body.colors !== undefined ? text(body.colors) : product.colors;
+      body.colors !== undefined ? toArray(body.colors) : product.colors;
 
     product.sizes =
-      body.sizes !== undefined ? text(body.sizes) : product.sizes;
+      body.sizes !== undefined ? toArray(body.sizes) : product.sizes;
 
-    product.material = body.material ?? product.material;
-    product.weight = body.weight ?? product.weight;
+    product.material =
+      body.material !== undefined ? cleanText(body.material) : product.material;
 
-    product.videoUrl = body.videoUrl ?? product.videoUrl;
-    product.seo = body.seo ?? product.seo;
+    product.weight =
+      body.weight !== undefined ? cleanText(body.weight) : product.weight;
 
-    product.features =
-      body.features !== undefined ? arr(body.features) : product.features;
+    product.videoUrl =
+      body.videoUrl !== undefined ? cleanText(body.videoUrl) : product.videoUrl;
 
     product.specifications = Array.isArray(body.specifications)
       ? body.specifications
       : product.specifications;
 
-    product.shipping = body.shipping ?? product.shipping;
-    product.returnPolicy = body.returnPolicy ?? product.returnPolicy;
+    product.shipping =
+      body.shipping !== undefined ? body.shipping : product.shipping;
+
+    product.returnPolicy =
+      body.returnPolicy !== undefined ? body.returnPolicy : product.returnPolicy;
+
+    product.seo = body.seo !== undefined ? body.seo : product.seo;
+
+    product.features =
+      body.features !== undefined ? toArray(body.features) : product.features;
 
     product.featured =
       body.featured !== undefined ? Boolean(body.featured) : product.featured;
 
     product.flashSale =
-      body.flashSale !== undefined
-        ? Boolean(body.flashSale)
-        : product.flashSale;
+      body.flashSale !== undefined ? Boolean(body.flashSale) : product.flashSale;
 
     product.discount =
       body.discount !== undefined ? Number(body.discount) : product.discount;
@@ -330,7 +546,10 @@ export async function PUT(req: Request) {
     console.error("Seller product update error:", error);
 
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      {
+        success: false,
+        message: error.message || "Server error",
+      },
       { status: 500 }
     );
   }

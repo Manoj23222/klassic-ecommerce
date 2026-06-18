@@ -1,28 +1,75 @@
 import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
+import connectDB from "@/lib/mongodb";
+import Product from "@/models/Product";
 
-type Product = {
-  _id?: string;
-  id?: string;
+export const dynamic = "force-dynamic";
+
+type ProductType = {
+  _id: string;
+  id: string;
   name: string;
   description?: string;
   price: number;
-  stock?: number;
-  image?: string;
+  sale_price?: number;
+  salePrice?: number;
+  stock: number;
+  image: string;
   category?: string;
+  featured?: boolean;
+  variants?: any[];
+  color_variants?: any[];
 };
 
-async function getProducts(): Promise<Product[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/products`,
-    {
-      cache: "no-store",
-    }
-  );
+function normalize(value: string) {
+  return decodeURIComponent(value || "")
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .trim();
+}
 
-  const data = await res.json();
+async function getProducts(categoryName: string): Promise<ProductType[]> {
+  try {
+    await connectDB();
 
-  return Array.isArray(data) ? data : [];
+    const products = await Product.find({ status: "Approved" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const cleanCategory = normalize(categoryName);
+
+    return products
+      .filter((product: any) => {
+        const productCategory = normalize(product.category || "");
+        return (
+          productCategory === cleanCategory ||
+          productCategory.includes(cleanCategory) ||
+          cleanCategory.includes(productCategory)
+        );
+      })
+      .map((product: any) => ({
+        ...product,
+        _id: String(product._id),
+        id: String(product._id),
+
+        variants: Array.isArray(product.variants)
+          ? product.variants.map((v: any) => ({
+              ...v,
+              _id: v._id ? String(v._id) : undefined,
+            }))
+          : [],
+
+        color_variants: Array.isArray(product.color_variants)
+          ? product.color_variants.map((v: any) => ({
+              ...v,
+              _id: v._id ? String(v._id) : undefined,
+            }))
+          : [],
+      }));
+  } catch (error) {
+    console.error("Category products fetch error:", error);
+    return [];
+  }
 }
 
 export default async function CategoryPage({
@@ -31,28 +78,29 @@ export default async function CategoryPage({
   params: Promise<{ name: string }>;
 }) {
   const { name } = await params;
-  const categoryName = decodeURIComponent(name);
-
-  const products = await getProducts();
-
-  const filteredProducts = products.filter(
-    (item) => (item.category || "General") === categoryName
-  );
+  const products = await getProducts(name);
+  const title = decodeURIComponent(name).replace(/-/g, " ");
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-[#f7f5f1]">
       <Header />
 
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold mb-4">
-          {categoryName} Products
-        </h1>
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-8 rounded-[2rem] bg-black p-8 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
+            Klassic Category
+          </p>
 
-        <p className="mb-6 font-semibold">
-          Found {filteredProducts.length} products
-        </p>
+          <h1 className="mt-3 text-4xl font-black capitalize tracking-tight">
+            {title}
+          </h1>
 
-        <ProductSearch products={filteredProducts} />
+          <p className="mt-2 text-sm font-semibold text-white/60">
+            Explore approved products from trusted Klassic sellers.
+          </p>
+        </div>
+
+        <ProductSearch products={products} />
       </section>
     </main>
   );

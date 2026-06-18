@@ -72,7 +72,7 @@ export default function AdminCustomersTable({
                     </div>
                     <div>
                       <p className="font-bold">{c.name}</p>
-                      <p className="text-xs text-gray-500">ID: {c.id.slice(-6)}</p>
+                      <p className="text-xs text-gray-500">ID: {String(c.id || c._id || "").slice(-6)}</p>
                     </div>
                   </div>
                 </td>
