@@ -1,5 +1,6 @@
 "use client";
 
+import toast from "react-hot-toast";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -152,6 +153,135 @@ export default function ProductPageClient({
     selectedVariant?.colorName || selectedVariant?.color || "Default";
   const selectedSku = selectedVariant?.sku || product.sku || "N/A";
 
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [questionName, setQuestionName] = useState("");
+  const [questionText, setQuestionText] = useState("");
+  const [questionLoading, setQuestionLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadReviews() {
+      try {
+        const res = await fetch(`/api/reviews?productId=${productId}`);
+        const data = await res.json();
+        setReviews(Array.isArray(data) ? data : []);
+      } catch {
+        setReviews([]);
+      }
+    }
+
+    if (productId) loadReviews();
+  }, [productId]);
+
+  useEffect(() => {
+    async function loadQuestions() {
+      try {
+        const res = await fetch(`/api/questions?productId=${productId}`);
+        const data = await res.json();
+        setQuestions(Array.isArray(data) ? data : []);
+      } catch {
+        setQuestions([]);
+      }
+    }
+
+    if (productId) loadQuestions();
+  }, [productId]);
+
+  const approvedReviews = reviews.filter((r) => r.status === "Approved");
+
+  const avgRating =
+    approvedReviews.length > 0
+      ? approvedReviews.reduce(
+          (sum, r) => sum + Number(r.rating || 0),
+          0
+        ) / approvedReviews.length
+      : 0;
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!reviewName || !reviewComment) {
+      toast.error("Name and comment required");
+      return;
+    }
+
+    setReviewLoading(true);
+
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        productId,
+        name: reviewName,
+        rating: reviewRating,
+        comment: reviewComment,
+      }),
+    });
+
+    const data = await res.json();
+    setReviewLoading(false);
+
+    if (!res.ok) {
+      toast.error(data.error || "Review failed");
+      return;
+    }
+
+    toast.success("Review submitted");
+    setReviewName("");
+    setReviewComment("");
+    setReviewRating(5);
+
+    const reload = await fetch(`/api/reviews?productId=${productId}`);
+    const newData = await reload.json();
+    setReviews(Array.isArray(newData) ? newData : []);
+  }
+
+  async function submitQuestion(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!questionName || !questionText) {
+      toast.error("Name and question required");
+      return;
+    }
+
+    setQuestionLoading(true);
+
+    const res = await fetch("/api/questions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        productId,
+        name: questionName,
+        question: questionText,
+      }),
+    });
+
+    const data = await res.json();
+    setQuestionLoading(false);
+
+    if (!res.ok) {
+      toast.error(data.error || "Question failed");
+      return;
+    }
+
+    toast.success("Question submitted");
+    setQuestionName("");
+    setQuestionText("");
+
+    const reload = await fetch(`/api/questions?productId=${productId}`);
+    const newData = await reload.json();
+    setQuestions(Array.isArray(newData) ? newData : []);
+  }
+
   return (
     <main className="min-h-screen bg-[#fafafa] pb-20">
       <Header />
@@ -283,10 +413,12 @@ export default function ProductPageClient({
 
               <div className="mt-2 flex items-center gap-2">
                 <span className="rounded bg-green-600 px-2 py-1 text-[11px] font-black text-white">
-                  4.3 ★
+                  {avgRating ? avgRating.toFixed(1) : "0.0"} ★
                 </span>
                 <span className="text-xs text-gray-500">
-                  Very Good | 1,000+ ratings
+                  {approvedReviews.length > 0
+                    ? `${approvedReviews.length} ratings`
+                    : "No ratings yet"}
                 </span>
               </div>
 
@@ -320,6 +452,128 @@ export default function ProductPageClient({
               >
                 {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
               </p>
+            </Card>
+
+            <Card>
+              <h3 className="mb-3 text-lg font-black">
+                Delivery Information
+              </h3>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter Pincode"
+                  className="flex-1 rounded-xl border p-3"
+                />
+
+                <button className="rounded-xl bg-black px-5 text-white">
+                  Check
+                </button>
+              </div>
+
+              <div className="mt-3 space-y-1 text-sm">
+                <p>✓ Free Delivery Available</p>
+                <p>✓ Cash On Delivery</p>
+                <p>✓ Easy Returns</p>
+              </div>
+            </Card>
+
+            <Card>
+              <h3 className="mb-3 text-lg font-black">Sold By</h3>
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-lg font-black text-white">
+                  {(product.seller_store_name || "K").slice(0, 1)}
+                </div>
+
+                <div>
+                  <p className="font-bold">
+                    {product.seller_store_name || "Klassic Seller"}
+                  </p>
+
+                  <p className="text-xs text-gray-500">Trusted Seller</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="font-black">98%</p>
+                  <p className="text-xs">Positive</p>
+                </div>
+
+                <div>
+                  <p className="font-black">10K+</p>
+                  <p className="text-xs">Orders</p>
+                </div>
+
+                <div>
+                  <p className="font-black">4.8★</p>
+                  <p className="text-xs">Rating</p>
+                </div>
+              </div>
+            </Card>
+<Card>
+  <h3 className="mb-4 text-lg font-black">
+    Trust & Assurance
+  </h3>
+
+  <div className="grid grid-cols-2 gap-3">
+    <div className="rounded-2xl bg-green-50 p-4">
+      <p className="text-2xl">✔</p>
+      <p className="mt-2 font-black">
+        Genuine Product
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-blue-50 p-4">
+      <p className="text-2xl">🚚</p>
+      <p className="mt-2 font-black">
+        Fast Delivery
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-yellow-50 p-4">
+      <p className="text-2xl">↩</p>
+      <p className="mt-2 font-black">
+        Easy Returns
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-purple-50 p-4">
+      <p className="text-2xl">🔒</p>
+      <p className="mt-2 font-black">
+        Secure Payment
+      </p>
+    </div>
+  </div>
+</Card>
+            <Card>
+              <h3 className="mb-3 text-lg font-black">Highlights</h3>
+
+              {Array.isArray(product.features) &&
+              product.features.length > 0 ? (
+                <ul className="space-y-2 text-sm">
+                  {product.features.map((f: string, i: number) => (
+                    <li key={i}>✓ {f}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Premium quality product with trusted Klassic marketplace
+                  assurance.
+                </p>
+              )}
+            </Card>
+
+            <Card>
+              <h3 className="mb-3 text-lg font-black">Secure Shopping</h3>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>🔒 Secure Payments</div>
+                <div>↩ Easy Returns</div>
+                <div>🚚 Fast Delivery</div>
+                <div>✔ Genuine Product</div>
+              </div>
             </Card>
 
             <Card>
@@ -408,6 +662,197 @@ export default function ProductPageClient({
                   </p>
                 </div>
               )}
+            </Card>
+
+            <Card>
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+  {[5,4,3,2,1].map((star) => {
+    const count = approvedReviews.filter(
+      (r) => Number(r.rating) === star
+    ).length;
+
+    const percent =
+      approvedReviews.length > 0
+        ? (count / approvedReviews.length) * 100
+        : 0;
+
+    return (
+      <div
+        key={star}
+        className="rounded-2xl border p-3"
+      >
+        <p className="font-black">
+          {star} ★
+        </p>
+
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+          <div
+            className="h-full bg-green-600"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500">
+          {count} reviews
+        </p>
+      </div>
+    );
+  })}
+</div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black">Ratings & Reviews</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Real customer feedback for this product
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-3xl font-black">
+                    {avgRating ? avgRating.toFixed(1) : "0.0"}★
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {approvedReviews.length} Reviews
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
+                <form onSubmit={submitReview} className="rounded-2xl border p-4">
+                  <h3 className="mb-3 font-black">Write a Review</h3>
+
+                  <input
+                    value={reviewName}
+                    onChange={(e) => setReviewName(e.target.value)}
+                    placeholder="Your name"
+                    className="mb-2 w-full rounded-xl border p-3 text-sm"
+                  />
+
+                  <select
+                    value={reviewRating}
+                    onChange={(e) => setReviewRating(Number(e.target.value))}
+                    className="mb-2 w-full rounded-xl border p-3 text-sm"
+                  >
+                    <option value={5}>5 Star</option>
+                    <option value={4}>4 Star</option>
+                    <option value={3}>3 Star</option>
+                    <option value={2}>2 Star</option>
+                    <option value={1}>1 Star</option>
+                  </select>
+
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Write your review"
+                    rows={4}
+                    className="mb-3 w-full rounded-xl border p-3 text-sm"
+                  />
+
+                  <button
+                    disabled={reviewLoading}
+                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
+                  >
+                    {reviewLoading ? "Submitting..." : "Submit Review"}
+                  </button>
+                </form>
+
+                <div className="space-y-3">
+                  {approvedReviews.length === 0 ? (
+                    <div className="rounded-2xl border p-5 text-sm text-gray-500">
+                      No reviews yet. Be the first to review this product.
+                    </div>
+                  ) : (
+                    approvedReviews.slice(0, 6).map((r, i) => (
+                      <div key={r._id || i} className="rounded-2xl border p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="font-black">{r.customer_name}</p>
+                          <span className="rounded bg-green-600 px-2 py-1 text-xs font-black text-white">
+                            {r.rating} ★
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-sm leading-6 text-gray-700">
+                          {r.comment}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black">Questions & Answers</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Ask product-related questions before buying
+                  </p>
+                </div>
+
+                <div className="rounded-full bg-black px-4 py-2 text-xs font-black text-white">
+                  {questions.length} Q&A
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
+                <form
+                  onSubmit={submitQuestion}
+                  className="rounded-2xl border p-4"
+                >
+                  <h3 className="mb-3 font-black">Ask a Question</h3>
+
+                  <input
+                    value={questionName}
+                    onChange={(e) => setQuestionName(e.target.value)}
+                    placeholder="Your name"
+                    className="mb-2 w-full rounded-xl border p-3 text-sm"
+                  />
+
+                  <textarea
+                    value={questionText}
+                    onChange={(e) => setQuestionText(e.target.value)}
+                    placeholder="Ask about size, material, delivery, warranty..."
+                    rows={4}
+                    className="mb-3 w-full rounded-xl border p-3 text-sm"
+                  />
+
+                  <button
+                    disabled={questionLoading}
+                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
+                  >
+                    {questionLoading ? "Submitting..." : "Submit Question"}
+                  </button>
+                </form>
+
+                <div className="space-y-3">
+                  {questions.length === 0 ? (
+                    <div className="rounded-2xl border p-5 text-sm text-gray-500">
+                      No questions yet. Ask the first question.
+                    </div>
+                  ) : (
+                    questions.slice(0, 6).map((q, i) => (
+                      <div key={q._id || i} className="rounded-2xl border p-4">
+                        <p className="font-black">Q: {q.question}</p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          Asked by {q.customer_name}
+                        </p>
+
+                        {q.answer ? (
+                          <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm">
+                            <b>A:</b> {q.answer}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-xs font-bold text-orange-600">
+                            Awaiting seller answer
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </Card>
           </section>
         </div>

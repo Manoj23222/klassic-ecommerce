@@ -20,6 +20,7 @@
     "next": "16.2.7",
     "nodemailer": "^8.0.10",
     "papaparse": "^5.5.3",
+    "paytm-pg-node-sdk": "^1.0.6",
     "paytmchecksum": "^1.5.1",
     "razorpay": "^2.9.6",
     "react": "19.2.4",

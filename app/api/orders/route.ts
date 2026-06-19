@@ -27,11 +27,14 @@ export async function POST(request: Request) {
       state,
       landmark,
       address_type,
-      payment_method,
-      coupon_code,
+     payment_method,
+     payment_status,
+     payment_transaction_id,
+     coupon_code,
       discount,
       delivery_charge,
       gst_amount,
+      
     } = body;
 
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
@@ -129,7 +132,9 @@ export async function POST(request: Request) {
       coupon_code: coupon_code || "",
 
       payment_method: paymentMethod,
-      payment_status: paymentMethod === "COD" ? "Pending" : "Paid",
+payment_status:
+  payment_status || (paymentMethod === "COD" ? "Pending" : "Paid"),
+payment_transaction_id: payment_transaction_id || "",
 
       status: "Pending",
       order_note: "",

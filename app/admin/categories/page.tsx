@@ -1,20 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 type Category = {
   _id: string;
   name: string;
   slug: string;
   level: number;
-  parent_id: string;
-  path: string[];
-  isLeaf: boolean;
-  status: string;
+  parent_id?: string | null;
+  path?: string[];
+  isLeaf?: boolean;
+  status?: string;
   commissionRate?: number;
   image?: string;
   description?: string;
+  sortOrder?: number;
+};
+
+const emptyForm = {
+  name: "",
+  description: "",
+  image: "",
+  status: "Active",
+  commissionRate: "",
+  sortOrder: "",
 };
 
 function slugify(text: string) {
@@ -23,34 +33,34 @@ function slugify(text: string) {
     .trim()
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-+|-+$/g, "");
 }
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState("");
-  const [parentId, setParentId] = useState("");
-  const [isLeaf, setIsLeaf] = useState(false);
-  const [commissionRate, setCommissionRate] = useState("");
-  const [status, setStatus] = useState("Active");
-  const [image, setImage] = useState("");
-  const [description, setDescription] = useState("");
-
-  const sortedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => {
-      if (a.level !== b.level) return a.level - b.level;
-      return a.name.localeCompare(b.name);
-    });
-  }, [categories]);
+  const [form, setForm] = useState(emptyForm);
+  const [isRoot, setIsRoot] = useState(true);
+  const [selectedPath, setSelectedPath] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function loadCategories() {
-    const res = await fetch("/api/admin/categories");
-    const data = await res.json();
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/categories", { cache: "no-store" });
+      const data = await res.json();
 
-    if (data.success) {
-      setCategories(data.categories || []);
+      if (data.success) {
+        setCategories(data.categories || []);
+      } else {
+        toast.error(data.message || "Categories load failed");
+      }
+    } catch {
+      toast.error("Categories load failed");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -58,247 +68,447 @@ export default function AdminCategoriesPage() {
     loadCategories();
   }, []);
 
-  async function createCategory() {
-    if (!name.trim()) {
-      toast.error("Category name required");
+  const childrenMap = useMemo(() => {
+    const map: Record<string, Category[]> = {};
+
+    categories.forEach((cat) => {
+      const parentKey = cat.parent_id || "root";
+      if (!map[parentKey]) map[parentKey] = [];
+      map[parentKey].push(cat);
+    });
+
+    Object.keys(map).forEach((key) => {
+      map[key].sort((a, b) => {
+        const orderA = Number(a.sortOrder || 0);
+        const orderB = Number(b.sortOrder || 0);
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+    });
+
+    return map;
+  }, [categories]);
+
+  const selectedParent = useMemo(() => {
+    if (isRoot || selectedPath.length === 0) return null;
+    return categories.find((cat) => cat._id === selectedPath[selectedPath.length - 1]) || null;
+  }, [categories, isRoot, selectedPath]);
+
+  const parentBreadcrumb = useMemo(() => {
+    if (isRoot) return "None (This is a Root Category)";
+
+    const names = selectedPath
+      .map((id) => categories.find((cat) => cat._id === id)?.name)
+      .filter(Boolean);
+
+    return names.length ? names.join(" → ") : "Please select parent category";
+  }, [categories, isRoot, selectedPath]);
+
+  const previewSlug = slugify(form.name);
+  const previewLevel = isRoot ? 1 : selectedParent ? Number(selectedParent.level || 1) + 1 : 0;
+
+  const previewBreadcrumb = useMemo(() => {
+    if (!form.name.trim()) return parentBreadcrumb;
+    if (isRoot) return form.name.trim();
+    return selectedParent ? `${parentBreadcrumb} → ${form.name.trim()}` : parentBreadcrumb;
+  }, [form.name, isRoot, parentBreadcrumb, selectedParent]);
+
+  function resetForm() {
+    setForm(emptyForm);
+    setIsRoot(true);
+    setSelectedPath([]);
+    setEditingId(null);
+  }
+
+  function handlePathChange(levelIndex: number, value: string) {
+    const next = selectedPath.slice(0, levelIndex);
+    if (value) next[levelIndex] = value;
+    setSelectedPath(next);
+  }
+
+  function startEdit(cat: Category) {
+    setEditingId(cat._id);
+    setForm({
+      name: cat.name || "",
+      description: cat.description || "",
+      image: cat.image || "",
+      status: cat.status || "Active",
+      commissionRate: cat.commissionRate?.toString() || "",
+      sortOrder: cat.sortOrder?.toString() || "",
+    });
+
+    if (cat.parent_id) {
+      setIsRoot(false);
+      const parentChain: string[] = [];
+      let currentParentId: string | null | undefined = cat.parent_id;
+
+      while (currentParentId) {
+        const parent = categories.find((x) => x._id === currentParentId);
+        if (!parent) break;
+        parentChain.unshift(parent._id);
+        currentParentId = parent.parent_id;
+      }
+
+      setSelectedPath(parentChain);
+    } else {
+      setIsRoot(true);
+      setSelectedPath([]);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error("Category name is required");
       return;
     }
 
-    const parent = categories.find((c) => c._id === parentId);
-    const level = parent ? parent.level + 1 : 1;
-    const path = parent ? [...parent.path, name.trim()] : [name.trim()];
-
-    setLoading(true);
-
-    const res = await fetch("/api/admin/categories", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: name.trim(),
-        slug: slugify(path.join("-")),
-        level,
-        parent_id: parentId,
-        path,
-        isLeaf,
-        status,
-        image,
-        description,
-        commissionRate: Number(commissionRate || 0),
-      }),
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (data.success) {
-      toast.success("Category created");
-      setName("");
-      setParentId("");
-      setIsLeaf(false);
-      setCommissionRate("");
-      setStatus("Active");
-      setImage("");
-      setDescription("");
-      loadCategories();
-    } else {
-      toast.error(data.message || "Create failed");
+    if (!isRoot && !selectedParent) {
+      toast.error("Please select parent hierarchy");
+      return;
     }
+
+    const payload = {
+      name: form.name.trim(),
+      slug: previewSlug,
+      description: form.description.trim(),
+      image: form.image.trim(),
+      status: form.status,
+      commissionRate: Number(form.commissionRate || 0),
+      sortOrder: Number(form.sortOrder || 0),
+      parent_id: isRoot ? null : selectedParent?._id,
+      level: previewLevel,
+      path: previewBreadcrumb.split(" → "),
+      isLeaf: true,
+    };
+
+    try {
+      setSaving(true);
+
+      const res = await fetch(
+        editingId ? `/api/admin/categories/${editingId}` : "/api/admin/categories",
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!data.success) {
+        toast.error(data.message || "Save failed");
+        return;
+      }
+
+      toast.success(editingId ? "Category updated" : "Category created");
+      resetForm();
+      loadCategories();
+    } catch {
+      toast.error("Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCategory(id: string) {
+    if (!confirm("Delete this category?")) return;
+
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Category deleted");
+        loadCategories();
+      } else {
+        toast.error(data.message || "Delete failed");
+      }
+    } catch {
+      toast.error("Delete failed");
+    }
+  }
+
+  function renderTree(parentId: string | null = null, depth = 0) {
+    const list = childrenMap[parentId || "root"] || [];
+
+    return list.map((cat) => (
+      <div key={cat._id}>
+        <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div style={{ paddingLeft: depth * 20 }}>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{cat.parent_id ? "↳" : "📁"}</span>
+              <h3 className="text-sm font-bold text-gray-900">{cat.name}</h3>
+              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
+                Level {cat.level || 1}
+              </span>
+            </div>
+
+            <p className="mt-0.5 text-[11px] text-gray-500">
+              /{cat.slug} • {cat.path?.join(" → ") || cat.name}
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => startEdit(cat)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50"
+            >
+              Edit
+            </button>
+
+            <button
+              onClick={() => deleteCategory(cat._id)}
+              className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 space-y-2">{renderTree(cat._id, depth + 1)}</div>
+      </div>
+    ));
   }
 
   return (
     <main className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <Toaster position="top-center" />
-
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 rounded-3xl bg-slate-950 p-6 text-white">
-          <h1 className="text-2xl font-black md:text-4xl">
-            Category Management
-          </h1>
-          <p className="mt-2 text-sm text-gray-300">
-            Category tree, leaf category and commission rate manager.
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900">Category Management</h1>
+          <p className="text-sm text-gray-500">
+            Luxury cascading hierarchy for root, sub and nested categories.
           </p>
         </div>
 
-        <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-xl font-black">Create Category</h2>
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm md:p-7"
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-gray-900">
+                {editingId ? "Edit Category" : "Add New Category"}
+              </h2>
+              <p className="text-sm text-gray-500">
+                Parent, level, breadcrumb and slug auto update.
+              </p>
+            </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <Input label="Category Name" value={name} setValue={setName} />
-
-            <label>
-              <span className="mb-1 block text-sm font-bold">
-                Parent Category
-              </span>
-              <select
-                value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-                className="w-full rounded-2xl border p-3"
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-xl border px-4 py-2 text-sm font-bold"
               >
-                <option value="">Root Category</option>
-                {sortedCategories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {"— ".repeat(cat.level - 1)}
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Cancel Edit
+              </button>
+            )}
+          </div>
 
-            <Input
-              label="Commission Rate %"
-              value={commissionRate}
-              setValue={setCommissionRate}
-              type="number"
-            />
-
-            <label>
-              <span className="mb-1 block text-sm font-bold">Status</span>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-2xl border p-3"
-              >
-                <option>Active</option>
-                <option>Inactive</option>
-              </select>
-            </label>
-
-            <Input label="Image URL" value={image} setValue={setImage} />
-
-            <button
-              type="button"
-              onClick={() => setIsLeaf(!isLeaf)}
-              className={`rounded-2xl border p-3 text-left font-bold ${
-                isLeaf
-                  ? "border-green-500 bg-green-50 text-green-700"
-                  : "bg-gray-50 text-gray-600"
-              }`}
-            >
-              Leaf Category: {isLeaf ? "Yes" : "No"}
-            </button>
-
-            <div className="md:col-span-3">
-              <Textarea
-                label="Description"
-                value={description}
-                setValue={setDescription}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Category Name *
+              </label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Smartphones"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
               />
             </div>
 
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Category Placement *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRoot(true);
+                    setSelectedPath([]);
+                  }}
+                  className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                    isRoot
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-gray-600"
+                  }`}
+                >
+                  Root Category
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRoot(false)}
+                  className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                    !isRoot
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-gray-600"
+                  }`}
+                >
+                  Sub Category
+                </button>
+              </div>
+            </div>
+
+            {!isRoot && (
+              <div className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <label className="mb-3 block text-sm font-bold text-gray-700">
+                  Select Parent Hierarchy
+                </label>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  {[0, 1, 2].map((index) => {
+                    const parentId = index === 0 ? "root" : selectedPath[index - 1];
+                    const options = childrenMap[parentId] || [];
+                    const disabled = index > 0 && !selectedPath[index - 1];
+
+                    return (
+                      <select
+                        key={index}
+                        value={selectedPath[index] || ""}
+                        disabled={disabled}
+                        onChange={(e) => handlePathChange(index, e.target.value)}
+                        className={`w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black ${
+                          disabled ? "cursor-not-allowed opacity-50" : ""
+                        }`}
+                      >
+                        <option value="">
+                          {index === 0
+                            ? "1. Select Main Category"
+                            : index === 1
+                            ? "2. Select Sub Category"
+                            : "3. Select Nested Category"}
+                        </option>
+
+                        {options.map((cat) => (
+                          <option key={cat._id} value={cat._id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Category Level Info
+              </label>
+              <div className="min-h-[72px] rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <p className="font-black text-gray-900">
+                  {previewLevel ? `Level ${previewLevel}` : "Pending..."}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">{previewBreadcrumb}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Auto Slug
+              </label>
+              <input
+                value={previewSlug}
+                readOnly
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-600 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Commission Rate %
+              </label>
+              <input
+                type="number"
+                value={form.commissionRate}
+                onChange={(e) => setForm({ ...form, commissionRate: e.target.value })}
+                placeholder="0"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Sort Order
+              </label>
+              <input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+                placeholder="0"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Image URL
+              </label>
+              <input
+                value={form.image}
+                onChange={(e) => setForm({ ...form, image: e.target.value })}
+                placeholder="/uploads/category.png"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Status
+              </label>
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <label className="mb-2 block text-sm font-bold text-gray-700">
+                Description
+              </label>
+              <textarea
+                rows={4}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Category description..."
+                className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black focus:ring-2 focus:ring-black"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
             <button
-              onClick={createCategory}
-              disabled={loading}
-              className="rounded-2xl bg-blue-600 p-3 font-black text-white md:col-span-3"
+              disabled={saving}
+              className="rounded-2xl bg-black px-7 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:opacity-60"
             >
-              {loading ? "Creating..." : "Create Category"}
+              {saving ? "Saving..." : editingId ? "Update Category" : "Create Category"}
             </button>
           </div>
-        </section>
+        </form>
 
-        <section className="rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-xl font-black">Category Tree</h2>
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm md:p-7">
+          <h2 className="mb-5 text-xl font-black text-gray-900">Category Hierarchy</h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] border-collapse">
-              <thead>
-                <tr className="bg-gray-100 text-left text-sm">
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Slug</th>
-                  <th className="p-3">Level</th>
-                  <th className="p-3">Leaf</th>
-                  <th className="p-3">Commission</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Path</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sortedCategories.map((cat) => (
-                  <tr key={cat._id} className="border-b text-sm">
-                    <td className="p-3 font-bold">
-                      {"— ".repeat(cat.level - 1)}
-                      {cat.name}
-                    </td>
-
-                    <td className="p-3 text-gray-500">{cat.slug}</td>
-                    <td className="p-3">{cat.level}</td>
-
-                    <td className="p-3">
-                      {cat.isLeaf ? (
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                          Yes
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
-                          No
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="p-3 font-black text-blue-700">
-                      {Number(cat.commissionRate || 0)}%
-                    </td>
-
-                    <td className="p-3">{cat.status}</td>
-
-                    <td className="p-3 text-gray-500">
-                      {cat.path?.join(" → ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <p className="text-sm text-gray-500">Loading categories...</p>
+          ) : categories.length === 0 ? (
+            <p className="text-sm text-gray-500">No categories found.</p>
+          ) : (
+            <div className="space-y-3">{renderTree()}</div>
+          )}
         </section>
       </div>
     </main>
-  );
-}
-
-function Input({
-  label,
-  value,
-  setValue,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  setValue: (v: string) => void;
-  type?: string;
-}) {
-  return (
-    <label>
-      <span className="mb-1 block text-sm font-bold">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-2xl border p-3"
-      />
-    </label>
-  );
-}
-
-function Textarea({
-  label,
-  value,
-  setValue,
-}: {
-  label: string;
-  value: string;
-  setValue: (v: string) => void;
-}) {
-  return (
-    <label>
-      <span className="mb-1 block text-sm font-bold">{label}</span>
-      <textarea
-        value={value}
-        rows={3}
-        onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-2xl border p-3"
-      />
-    </label>
   );
 }

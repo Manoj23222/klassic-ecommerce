@@ -46,6 +46,7 @@ const menus = [
       { name: "Approved Products", href: "/admin/products/approved" },
       { name: "Rejected Products", href: "/admin/products/rejected" },
       { name: "Reviews Moderation", href: "/admin/reviews" },
+      { name: "Questions Center", href: "/admin/questions", icon: "❓",}
     ],
   },
   {

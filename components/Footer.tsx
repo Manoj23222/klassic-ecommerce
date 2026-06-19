@@ -2,73 +2,143 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-white mt-12 mb-16 md:mb-0">
-      <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
-        
-        <div>
-          <h3 className="text-gray-400 font-bold mb-4">ABOUT</h3>
+    <footer className="mt-12 bg-[#151515] text-white mb-16 md:mb-0">
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-12 text-sm md:grid-cols-[1fr_1fr_1fr_1fr_1.3fr]">
+        <FooterGroup
+          title="ABOUT"
+          links={[
+            ["Contact Us", "/contact"],
+            ["About Us", "/about"],
+            ["Careers", "/careers"],
+            ["Klassic Stories", "/stories"],
+            ["Corporate Information", "/corporate"],
+          ]}
+        />
 
-          <div className="space-y-2">
-            <Link href="/contact" className="block hover:text-blue-400">Contact Us</Link>
-            <Link href="/about" className="block hover:text-blue-400">About Us</Link>
-            <Link href="/careers" className="block hover:text-blue-400">Careers</Link>
-            <Link href="/stories" className="block hover:text-blue-400">Klassic Stories</Link>
+        <FooterGroup
+          title="HELP"
+          links={[
+            ["Payments", "/payments"],
+            ["Shipping", "/shipping"],
+            ["Cancellation & Returns", "/returns"],
+            ["FAQ", "/faq"],
+            ["Help Center", "/help-center"],
+          ]}
+        />
+
+        <FooterGroup
+          title="CONSUMER POLICY"
+          links={[
+            ["Terms Of Use", "/terms"],
+            ["Security", "/security"],
+            ["Privacy", "/privacy"],
+            ["Sitemap", "/sitemap"],
+            ["Grievance Redressal", "/grievance"],
+          ]}
+        />
+
+        <FooterGroup
+          title="SELLER"
+          links={[
+            ["Become a Seller", "/seller/register"],
+            ["Seller Login", "/seller/login"],
+            ["Seller Dashboard", "/seller"],
+            ["Advertise", "/advertise"],
+            ["Gift Cards", "/gift-cards"],
+          ]}
+        />
+
+        <div className="border-white/10 md:border-l md:pl-8">
+          <h3 className="mb-4 text-xs font-black uppercase tracking-widest text-white/40">
+            MAIL US
+          </h3>
+
+          <div className="space-y-1 font-semibold leading-6 text-white/80">
+            <p>Klassic Ecommerce Private Limited,</p>
+            <p>Jaipur, Rajasthan, India</p>
+            <p>Email: support@klassic.com</p>
+            <p>Phone: +91 00000 00000</p>
           </div>
-        </div>
 
-        <div>
-          <h3 className="text-gray-400 font-bold mb-4">HELP</h3>
+          <h3 className="mb-3 mt-6 text-xs font-black uppercase tracking-widest text-white/40">
+            SOCIAL
+          </h3>
 
-          <div className="space-y-2">
-            <Link href="/payments" className="block hover:text-blue-400">Payments</Link>
-            <Link href="/shipping" className="block hover:text-blue-400">Shipping</Link>
-            <Link href="/returns" className="block hover:text-blue-400">Cancellation & Returns</Link>
-            <Link href="/faq" className="block hover:text-blue-400">FAQ</Link>
+          <div className="flex gap-3">
+            {["f", "𝕏", "▶", "◎"].map((item) => (
+              <span
+                key={item}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-sm font-black"
+              >
+                {item}
+              </span>
+            ))}
           </div>
-        </div>
-
-        <div>
-          <h3 className="text-gray-400 font-bold mb-4">POLICY</h3>
-
-          <div className="space-y-2">
-            <Link href="/terms" className="block hover:text-blue-400">Terms Of Use</Link>
-            <Link href="/security" className="block hover:text-blue-400">Security</Link>
-            <Link href="/privacy" className="block hover:text-blue-400">Privacy</Link>
-            <Link href="/sitemap" className="block hover:text-blue-400">Sitemap</Link>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-gray-400 font-bold mb-4">SOCIAL</h3>
-
-          <div className="space-y-2">
-            <a href="#" className="block hover:text-blue-400">Facebook</a>
-            <a href="#" className="block hover:text-blue-400">Instagram</a>
-            <a href="#" className="block hover:text-blue-400">YouTube</a>
-            <a href="#" className="block hover:text-blue-400">X / Twitter</a>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-gray-400 font-bold mb-4">MAIL US</h3>
-
-          <p>Klassic Ecommerce</p>
-          <p>Jaipur, Rajasthan</p>
-          <p>India</p>
-          <p className="mt-2 text-gray-400">
-            support@klassic.com
-          </p>
         </div>
       </div>
 
-      <div className="border-t border-slate-700 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-wrap justify-between gap-4 text-sm">
-          <Link href="/admin/product">🛍️ Become a Seller</Link>
-          <Link href="/gift-cards">🎁 Gift Cards</Link>
-          <Link href="/help-center">❓ Help Center</Link>
+      <div className="border-t border-white/10 px-6 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 text-sm font-semibold text-white/80">
+          <div className="flex flex-wrap gap-6">
+            <Link href="/seller/register" className="hover:text-white">
+              🛍️ Become a Seller
+            </Link>
+
+            <Link href="/advertise" className="hover:text-white">
+              ✨ Advertise
+            </Link>
+
+            <Link href="/gift-cards" className="hover:text-white">
+              🎁 Gift Cards
+            </Link>
+
+            <Link href="/help-center" className="hover:text-white">
+              ❓ Help Center
+            </Link>
+          </div>
+
           <span>© 2026 Klassic.com</span>
+
+          <div className="flex flex-wrap gap-2">
+            {["VISA", "MC", "UPI", "COD"].map((item) => (
+              <span
+                key={item}
+                className="rounded bg-white px-2 py-1 text-[10px] font-black text-black"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterGroup({
+  title,
+  links,
+}: {
+  title: string;
+  links: [string, string][];
+}) {
+  return (
+    <div>
+      <h3 className="mb-4 text-xs font-black uppercase tracking-widest text-white/40">
+        {title}
+      </h3>
+
+      <div className="space-y-2">
+        {links.map(([label, href]) => (
+          <Link
+            key={label}
+            href={href}
+            className="block font-bold text-white/85 transition hover:text-orange-300"
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

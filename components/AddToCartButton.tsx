@@ -1,6 +1,7 @@
 "use client";
 
 import toast from "react-hot-toast";
+import { ShoppingBag } from "lucide-react";
 
 type Props = {
   product: {
@@ -17,14 +18,21 @@ type Props = {
 };
 
 export default function AddToCartButton({ product }: Props) {
+  const stock = Number(product.stock || 0);
+
   const handleAddToCart = () => {
     try {
+      if (stock <= 0) {
+        toast.error("Product is out of stock");
+        return;
+      }
+
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
       const productId = String(product._id || product.id || "");
 
       const existingIndex = cart.findIndex(
         (item: any) =>
-          String(item.id) === productId &&
+          String(item.id || item._id) === productId &&
           item.color === product.color &&
           item.size === product.size &&
           item.sku === product.sku
@@ -36,19 +44,22 @@ export default function AddToCartButton({ product }: Props) {
       } else {
         cart.push({
           id: productId,
+          _id: productId,
           name: product.name,
-          image: product.image,
+          image: product.image || "/placeholder.png",
           price: Number(product.price || 0),
           sku: product.sku || "",
           color: product.color || "",
           size: product.size || "",
-          stock: Number(product.stock || 0),
+          stock,
           quantity: 1,
         });
       }
 
       localStorage.setItem("cart", JSON.stringify(cart));
+
       window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("cart-updated"));
 
       toast.success("Added to cart");
     } catch (error) {
@@ -60,9 +71,15 @@ export default function AddToCartButton({ product }: Props) {
   return (
     <button
       onClick={handleAddToCart}
-      className="w-full rounded-full bg-black py-4 text-sm font-black text-white shadow-lg transition hover:bg-gray-800 sm:text-base"
+      disabled={stock <= 0}
+      className={`flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-black shadow-lg transition sm:text-base ${
+        stock > 0
+          ? "bg-black text-white hover:bg-gray-800"
+          : "bg-gray-300 text-gray-500"
+      }`}
     >
-      Add To Cart
+      <ShoppingBag size={18} />
+      {stock > 0 ? "Add To Cart" : "Out Of Stock"}
     </button>
   );
 }

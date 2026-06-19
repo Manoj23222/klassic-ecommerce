@@ -18,6 +18,7 @@ const menu = [
   title: "Products",
   icon: "📦",
   links: [
+    
     { name: "All Products", href: "/seller/products" },
     { name: "Add Product", href: "/seller/products/add" },
     { name: "Bulk Upload", href: "/seller/bulk-upload" },
@@ -25,7 +26,9 @@ const menu = [
     { name: "Draft Products", href: "/seller/products?status=Draft" },
     { name: "Low Stock", href: "/seller/products?stock=low" },
     { name: "Reviews", href: "/seller/products/reviews" },
+    { name: "Product Questions", href: "/seller/questions" },
   ],
+  
 },
 
    

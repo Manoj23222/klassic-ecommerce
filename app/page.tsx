@@ -1,4 +1,3 @@
-
 import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
 import connectDB from "@/lib/mongodb";
@@ -17,7 +16,10 @@ type ProductType = {
   stock: number;
   image: string;
   category?: string;
+  brand?: string;
   featured?: boolean;
+  flashSale?: boolean;
+  sales_count?: number;
   variants?: any[];
   color_variants?: any[];
 };
@@ -36,14 +38,12 @@ async function getProducts(): Promise<ProductType[]> {
       ...product,
       _id: String(product._id),
       id: String(product._id),
-
       variants: Array.isArray(product.variants)
         ? product.variants.map((v: any) => ({
             ...v,
             _id: v._id ? String(v._id) : undefined,
           }))
         : [],
-
       color_variants: Array.isArray(product.color_variants)
         ? product.color_variants.map((v: any) => ({
             ...v,
@@ -62,79 +62,99 @@ const categories = [
   { name: "Electronics", href: "/category/electronics", icon: "🎧" },
   { name: "Home & Decor", href: "/category/home", icon: "🛋️" },
   { name: "Groceries", href: "/category/grocery", icon: "🥦" },
+  { name: "Beauty", href: "/category/beauty", icon: "✨" },
+  { name: "Lifestyle", href: "/category/lifestyle", icon: "👜" },
 ];
+
+const brandCards = ["Klassic", "Urban Luxe", "Prime Craft", "Elite Home"];
+
+function getPrice(product: ProductType) {
+  return Number(product.sale_price || product.salePrice || product.price || 0);
+}
 
 export default async function Home() {
   const products = await getProducts();
-  const trendingProducts = products.slice(0, 6);
+
+  const latestProducts = products.slice(0, 6);
+  const flashProducts = products.filter((p) => p.flashSale).slice(0, 6);
+  const bestSellers = [...products]
+    .sort((a, b) => Number(b.sales_count || 0) - Number(a.sales_count || 0))
+    .slice(0, 6);
 
   return (
     <main className="min-h-screen bg-[#f7f5f1] text-[#111]">
       <Header />
 
-      <section className="border-b border-white/10 bg-black px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.25em] text-white">
-        Free express delivery on orders above ₹5000
+      <section className="bg-black px-4 py-2 text-center text-xs font-black uppercase tracking-[0.25em] text-white">
+        Luxury deals • Fast delivery • Trusted sellers • Secure checkout
       </section>
 
-      <section className="relative overflow-hidden bg-[#f7f5f1]">
-        <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
-          <div className="relative overflow-hidden rounded-[2.5rem] bg-black text-white shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_32%),linear-gradient(120deg,rgba(0,0,0,0.95),rgba(0,0,0,0.55))]" />
+      <section className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-black text-white shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_32%),linear-gradient(120deg,rgba(0,0,0,0.98),rgba(0,0,0,0.55))]" />
 
-            <div className="relative grid min-h-[360px] items-center gap-6 px-6 py-8 md:px-10 lg:grid-cols-[1fr_340px]">
-              <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-white/60">
-                  Klassic Curated Collection
-                </p>
+          <div className="relative grid min-h-[380px] items-center gap-8 px-6 py-10 md:px-10 lg:grid-cols-[1fr_360px]">
+            <div className="max-w-2xl">
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-white/60">
+                Klassic Luxury Marketplace
+              </p>
 
-                <h1 className="mt-4 text-4xl font-black leading-[1] tracking-tight md:text-5xl">
-                  Elevate your lifestyle.
-                </h1>
+              <h1 className="mt-4 text-4xl font-black leading-[1] tracking-tight md:text-6xl">
+                Premium shopping, redesigned.
+              </h1>
 
-                <p className="mt-6 max-w-xl text-base font-medium leading-7 text-white/70 md:text-lg">
-                  Discover premium products, trusted sellers, exclusive rewards
-                  and a smoother shopping experience built for modern India.
-                </p>
+              <p className="mt-6 max-w-xl text-base font-medium leading-7 text-white/70 md:text-lg">
+                Shop curated products, trusted sellers, luxury collections,
+                fast delivery and secure payments in one Klassic experience.
+              </p>
 
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <a
-                    href="#products"
-                    className="rounded-full bg-white px-8 py-3 text-sm font-black text-black transition hover:bg-[#e8ded0]"
-                  >
-                    Explore Now
-                  </a>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="#products"
+                  className="rounded-full bg-white px-8 py-3 text-sm font-black text-black transition hover:bg-[#e8ded0]"
+                >
+                  Explore Products
+                </a>
 
-                  <a
-                    href="#rewards"
-                    className="rounded-full border border-white/25 px-8 py-3 text-sm font-black text-white transition hover:bg-white/10"
-                  >
-                    Member Rewards
-                  </a>
-                </div>
+                <a
+                  href="#flash-sale"
+                  className="rounded-full border border-white/25 px-8 py-3 text-sm font-black text-white transition hover:bg-white/10"
+                >
+                  Flash Sale
+                </a>
               </div>
+            </div>
 
-              <div className="hidden lg:block">
-                <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
-                  <div className="aspect-[4/5] rounded-[1.5rem] bg-[linear-gradient(145deg,#2b2b2b,#0a0a0a)] p-6 shadow-2xl">
-                    <div className="flex h-full flex-col justify-between rounded-[1.2rem] border border-white/10 p-6">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
-                          Premium Drop
-                        </p>
-                        <h2 className="mt-3 text-3xl font-black">
-                          New Luxury Deals
-                        </h2>
-                      </div>
+            <div className="hidden lg:block">
+              <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
+                <div className="aspect-[4/5] rounded-[1.5rem] bg-[linear-gradient(145deg,#2b2b2b,#0a0a0a)] p-6 shadow-2xl">
+                  <div className="flex h-full flex-col justify-between rounded-[1.2rem] border border-white/10 p-6">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
+                        Today Special
+                      </p>
+                      <h2 className="mt-3 text-3xl font-black">
+                        Up to 60% Off
+                      </h2>
+                    </div>
 
-                      <div className="space-y-3">
-                        <div className="h-3 w-28 rounded-full bg-white/20" />
-                        <div className="h-3 w-44 rounded-full bg-white/10" />
-                        <div className="h-3 w-36 rounded-full bg-white/10" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-2xl bg-white/10 p-3 text-center">
+                        <p className="text-xl font-black">12</p>
+                        <p className="text-[10px] text-white/50">Hours</p>
                       </div>
+                      <div className="rounded-2xl bg-white/10 p-3 text-center">
+                        <p className="text-xl font-black">45</p>
+                        <p className="text-[10px] text-white/50">Minutes</p>
+                      </div>
+                      <div className="rounded-2xl bg-white/10 p-3 text-center">
+                        <p className="text-xl font-black">30</p>
+                        <p className="text-[10px] text-white/50">Seconds</p>
+                      </div>
+                    </div>
 
-                      <div className="rounded-full bg-white px-5 py-3 text-center text-sm font-black text-black">
-                        Shop Collection
-                      </div>
+                    <div className="rounded-full bg-white px-5 py-3 text-center text-sm font-black text-black">
+                      Shop Now
                     </div>
                   </div>
                 </div>
@@ -144,99 +164,280 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
-              Curated For You
-            </p>
-            <h2 className="mt-2 text-3xl font-black">Shop by Category</h2>
-          </div>
-        </div>
+      <TrustBadges />
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        <SectionTitle label="Curated For You" title="Shop by Category" />
+
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {categories.map((category) => (
             <a
               key={category.name}
               href={category.href}
               className="group rounded-[2rem] border border-black/5 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
             >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3eee7] text-3xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3eee7] text-3xl">
                 {category.icon}
               </div>
 
-              <h3 className="mt-5 text-lg font-black">{category.name}</h3>
+              <h3 className="mt-5 text-base font-black">{category.name}</h3>
 
-              <p className="mt-1 text-sm font-semibold text-gray-500">
-                Explore premium picks
+              <p className="mt-1 text-xs font-semibold text-gray-500">
+                Premium picks
               </p>
             </a>
           ))}
         </div>
       </section>
 
-      {trendingProducts.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-8">
-          <div className="mb-5 flex items-end justify-between gap-4">
+      <section id="flash-sale" className="mx-auto max-w-7xl px-4 py-8">
+        <div className="rounded-[2rem] bg-black p-5 text-white shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
-                Trending Exclusives
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
+                Limited Time
               </p>
-              <h2 className="mt-2 text-3xl font-black">Latest Arrivals</h2>
+              <h2 className="mt-2 text-3xl font-black">Flash Sale</h2>
             </div>
 
-            <a
-              href="#products"
-              className="hidden rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-black md:inline-block"
-            >
-              View All
-            </a>
+            <div className="rounded-full bg-white px-5 py-3 text-sm font-black text-black">
+              Ending Soon
+            </div>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {trendingProducts.map((product) => (
-              <a
-                key={product.id}
-                href={`/product/${product.id}`}
-                className="group rounded-[2rem] bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
-              >
-                <div className="aspect-square overflow-hidden rounded-[1.5rem] bg-[#f4f1ec]">
-                  <img
-                    src={product.image || "/placeholder.png"}
-                    alt={product.name}
-                    className="h-full w-full object-contain p-6 transition duration-500 group-hover:scale-105"
-                  />
-                </div>
-
-                <h3 className="mt-4 line-clamp-2 text-base font-black">
-                  {product.name}
-                </h3>
-
-                <p className="mt-2 text-lg font-black">
-                  ₹
-                  {Number(
-                    product.sale_price || product.salePrice || product.price || 0
-                  ).toLocaleString("en-IN")}
-                </p>
-              </a>
-            ))}
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(flashProducts.length ? flashProducts : latestProducts)
+              .slice(0, 6)
+              .map((product) => (
+                <ProductCard key={product.id} product={product} dark />
+              ))}
           </div>
+        </div>
+      </section>
+
+      {latestProducts.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-8">
+          <SectionTitle label="Trending Exclusives" title="Latest Arrivals" />
+          <ProductGrid products={latestProducts} />
         </section>
       )}
 
-    
+      {bestSellers.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-8">
+          <SectionTitle label="Popular Now" title="Best Sellers" />
+          <ProductGrid products={bestSellers} />
+        </section>
+      )}
+
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        <SectionTitle label="Premium Brands" title="Top Brands Showcase" />
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {brandCards.map((brand) => (
+            <div
+              key={brand}
+              className="rounded-[2rem] bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-xl font-black text-white">
+                {brand.slice(0, 1)}
+              </div>
+              <h3 className="mt-5 text-xl font-black">{brand}</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Premium quality collection
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        <div className="rounded-[2.5rem] bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
+                Seller Spotlight
+              </p>
+              <h2 className="mt-2 text-3xl font-black">
+                Trusted sellers, premium service.
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-500">
+                Klassic supports seller trust score, payouts, returns, Q&A,
+                reviews and product moderation for safer shopping.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <MiniStat value="98%" label="Positive" />
+              <MiniStat value="24h" label="Support" />
+              <MiniStat value="4.8★" label="Rating" />
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section id="products" className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-6">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
-            Complete Collection
+        <SectionTitle label="Complete Collection" title="Explore Products" />
+
+        {products.length > 0 ? (
+          <ProductSearch products={products} />
+        ) : (
+          <div className="rounded-[2rem] bg-white p-10 text-center shadow-sm">
+            <h2 className="text-2xl font-black">No products found</h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Approved products will appear here.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-12 pt-8">
+        <div className="rounded-[2.5rem] bg-black p-8 text-center text-white">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-white/50">
+            Klassic Newsletter
+          </p>
+          <h2 className="mt-3 text-3xl font-black">
+            Get luxury deals first.
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-white/60">
+            Stay updated with new arrivals, seller drops, flash sales and
+            Klassic rewards.
           </p>
 
-          <h2 className="mt-2 text-3xl font-black">Explore Products</h2>
+          <div className="mx-auto mt-6 flex max-w-md gap-2 rounded-full bg-white p-2">
+            <input
+              placeholder="Enter email"
+              className="flex-1 rounded-full px-4 text-sm text-black outline-none"
+            />
+            <button className="rounded-full bg-black px-5 py-3 text-sm font-black text-white">
+              Join
+            </button>
+          </div>
         </div>
-
-        <ProductSearch products={products} />
       </section>
     </main>
+  );
+}
+
+function SectionTitle({ label, title }: { label: string; title: string }) {
+  return (
+    <div className="mb-5">
+      <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
+        {label}
+      </p>
+      <h2 className="mt-2 text-3xl font-black">{title}</h2>
+    </div>
+  );
+}
+
+function ProductGrid({ products }: { products: ProductType[] }) {
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+function ProductCard({
+  product,
+  dark = false,
+}: {
+  product: ProductType;
+  dark?: boolean;
+}) {
+  return (
+    <a
+      href={`/product/${product.id}`}
+      className={`group rounded-[2rem] p-4 transition hover:-translate-y-1 ${
+        dark
+          ? "bg-white/10 text-white hover:bg-white/15"
+          : "bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+      }`}
+    >
+      <div
+        className={`aspect-square overflow-hidden rounded-[1.5rem] ${
+          dark ? "bg-white/10" : "bg-[#f4f1ec]"
+        }`}
+      >
+        <img
+          src={product.image || "/placeholder.png"}
+          alt={product.name}
+          className="h-full w-full object-contain p-6 transition duration-500 group-hover:scale-105"
+        />
+      </div>
+
+      <p
+        className={`mt-4 text-xs font-black uppercase tracking-widest ${
+          dark ? "text-white/50" : "text-gray-400"
+        }`}
+      >
+        {product.brand || product.category || "Klassic"}
+      </p>
+
+      <h3 className="mt-2 line-clamp-2 text-base font-black">
+        {product.name}
+      </h3>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-lg font-black">
+          ₹{getPrice(product).toLocaleString("en-IN")}
+        </p>
+
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-black ${
+            product.stock > 0
+              ? dark
+                ? "bg-green-400 text-black"
+                : "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {product.stock > 0 ? "In Stock" : "Out"}
+        </span>
+      </div>
+    </a>
+  );
+}
+
+function TrustBadges() {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-4">
+      <div className="grid gap-3 rounded-[2rem] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+        <MiniBadge icon="🔒" title="Secure Payments" text="Safe checkout" />
+        <MiniBadge icon="🚚" title="Fast Delivery" text="Quick shipping" />
+        <MiniBadge icon="↩" title="Easy Returns" text="Simple return flow" />
+        <MiniBadge icon="✅" title="Trusted Sellers" text="Verified quality" />
+      </div>
+    </section>
+  );
+}
+
+function MiniBadge({
+  icon,
+  title,
+  text,
+}: {
+  icon: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-[#f7f5f1] p-4">
+      <div className="text-2xl">{icon}</div>
+      <div>
+        <p className="font-black">{title}</p>
+        <p className="text-xs text-gray-500">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-2xl bg-[#f7f5f1] p-4">
+      <p className="text-2xl font-black">{value}</p>
+      <p className="text-xs font-bold text-gray-500">{label}</p>
+    </div>
   );
 }

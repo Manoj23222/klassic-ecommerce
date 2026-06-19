@@ -105,6 +105,56 @@ function CheckoutContent() {
   useEffect(() => {
     if (couponFromUrl) setCoupon(couponFromUrl);
   }, [couponFromUrl]);
+  useEffect(() => {
+  async function createOrderAfterPaytmSuccess() {
+    const paytmStatus = searchParams.get("paytm_status");
+    const paytmTxnId = searchParams.get("paytm_txn_id");
+
+    if (paytmStatus !== "success") return;
+
+    const pendingOrder = localStorage.getItem("pending_paytm_order");
+
+    if (!pendingOrder) {
+      toast.error("Payment success, but order data missing");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const payload = JSON.parse(pendingOrder);
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...payload,
+          payment_method: "Paytm",
+          payment_status: "Paid",
+          payment_transaction_id: paytmTxnId || "",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.removeItem("pending_paytm_order");
+        if (!productId) localStorage.removeItem("cart");
+
+        toast.success("Payment successful. Order placed.");
+        window.location.href = `/order-success?orderId=${data.orderId}`;
+      } else {
+        toast.error(data.message || "Order create failed after payment");
+      }
+    } catch {
+      toast.error("Order create failed after payment");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  createOrderAfterPaytmSuccess();
+}, [searchParams, productId]);
 
   const subtotal = useMemo(
     () =>
@@ -156,7 +206,65 @@ function CheckoutContent() {
 
     return true;
   }
+async function startPaytmPayment() {
+  if (!validateCheckout()) return;
 
+  try {
+    setLoading(true);
+
+    const res = await fetch("/api/payment/paytm-initiate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: total }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success || !data.txnToken) {
+      toast.error(data.message || "Paytm payment start failed");
+      setLoading(false);
+      return;
+    }
+
+    localStorage.setItem(
+      "pending_paytm_order",
+      JSON.stringify({
+        customer_name: name,
+        phone,
+        address,
+        pincode,
+        city,
+        state,
+        landmark,
+        address_type: addressType,
+        subtotal,
+        delivery_charge: deliveryCharge,
+        gst_amount: gstAmount,
+        total,
+        cart,
+        payment_method: "Paytm",
+        coupon_code: coupon,
+        discount,
+      })
+    );
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `https://securegw-stage.paytm.in/theia/api/v1/showPaymentPage?mid=${data.mid}&orderId=${data.orderId}`;
+
+    const tokenInput = document.createElement("input");
+    tokenInput.type = "hidden";
+    tokenInput.name = "txnToken";
+    tokenInput.value = data.txnToken;
+
+    form.appendChild(tokenInput);
+    document.body.appendChild(form);
+    form.submit();
+  } catch {
+    toast.error("Paytm payment failed");
+    setLoading(false);
+  }
+}
   async function placeOrder() {
     if (!validateCheckout()) return;
 
@@ -362,7 +470,7 @@ function CheckoutContent() {
 
             <button
               disabled={loading}
-              onClick={placeOrder}
+              onClick={paymentMethod === "COD" ? placeOrder : startPaytmPayment}
               className="mt-6 w-full rounded-full bg-black py-4 text-base font-black text-white transition hover:bg-gray-800 disabled:opacity-60"
             >
               {loading ? "Processing..." : `Place Order ₹${total.toLocaleString("en-IN")}`}
