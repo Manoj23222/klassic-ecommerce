@@ -38,7 +38,16 @@ function CheckoutContent() {
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [openContact, setOpenContact] = useState(true);
+  const [openShipping, setOpenShipping] = useState(true);
+  const [openPayment, setOpenPayment] = useState(true);
   const [showAddressForm, setShowAddressForm] = useState(true);
+
+  const [upiId, setUpiId] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
 
   useEffect(() => {
     async function loadAddress() {
@@ -78,7 +87,9 @@ function CheckoutContent() {
         }
 
         const product = data.product;
-        const basePrice = Number(product.sale_price || product.salePrice || product.price);
+        const basePrice = Number(
+          product.sale_price || product.salePrice || product.price
+        );
         const finalPrice = getSizePrice(basePrice, sizeFromUrl);
 
         setCart([
@@ -105,56 +116,57 @@ function CheckoutContent() {
   useEffect(() => {
     if (couponFromUrl) setCoupon(couponFromUrl);
   }, [couponFromUrl]);
+
   useEffect(() => {
-  async function createOrderAfterPaytmSuccess() {
-    const paytmStatus = searchParams.get("paytm_status");
-    const paytmTxnId = searchParams.get("paytm_txn_id");
+    async function createOrderAfterPaytmSuccess() {
+      const paytmStatus = searchParams.get("paytm_status");
+      const paytmTxnId = searchParams.get("paytm_txn_id");
 
-    if (paytmStatus !== "success") return;
+      if (paytmStatus !== "success") return;
 
-    const pendingOrder = localStorage.getItem("pending_paytm_order");
+      const pendingOrder = localStorage.getItem("pending_paytm_order");
 
-    if (!pendingOrder) {
-      toast.error("Payment success, but order data missing");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const payload = JSON.parse(pendingOrder);
-
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...payload,
-          payment_method: "Paytm",
-          payment_status: "Paid",
-          payment_transaction_id: paytmTxnId || "",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        localStorage.removeItem("pending_paytm_order");
-        if (!productId) localStorage.removeItem("cart");
-
-        toast.success("Payment successful. Order placed.");
-        window.location.href = `/order-success?orderId=${data.orderId}`;
-      } else {
-        toast.error(data.message || "Order create failed after payment");
+      if (!pendingOrder) {
+        toast.error("Payment success, but order data missing");
+        return;
       }
-    } catch {
-      toast.error("Order create failed after payment");
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  createOrderAfterPaytmSuccess();
-}, [searchParams, productId]);
+      try {
+        setLoading(true);
+
+        const payload = JSON.parse(pendingOrder);
+
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            payment_method: "Paytm",
+            payment_status: "Paid",
+            payment_transaction_id: paytmTxnId || "",
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.removeItem("pending_paytm_order");
+          if (!productId) localStorage.removeItem("cart");
+
+          toast.success("Payment successful. Order placed.");
+          window.location.href = `/order-success?orderId=${data.orderId}`;
+        } else {
+          toast.error(data.message || "Order create failed after payment");
+        }
+      } catch {
+        toast.error("Order create failed after payment");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    createOrderAfterPaytmSuccess();
+  }, [searchParams, productId]);
 
   const subtotal = useMemo(
     () =>
@@ -196,6 +208,8 @@ function CheckoutContent() {
   function validateCheckout() {
     if (!name || !phone || !address || !city || !state || !pincode) {
       toast.error("Please complete shipping details");
+      setOpenContact(true);
+      setOpenShipping(true);
       return false;
     }
 
@@ -206,65 +220,67 @@ function CheckoutContent() {
 
     return true;
   }
-async function startPaytmPayment() {
-  if (!validateCheckout()) return;
 
-  try {
-    setLoading(true);
+  async function startPaytmPayment(method = paymentMethod) {
+    if (!validateCheckout()) return;
 
-    const res = await fetch("/api/payment/paytm-initiate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: total }),
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
+      const res = await fetch("/api/payment/paytm-initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: total }),
+      });
 
-    if (!data.success || !data.txnToken) {
-      toast.error(data.message || "Paytm payment start failed");
+      const data = await res.json();
+
+      if (!data.success || !data.txnToken) {
+        toast.error(data.message || "Paytm payment start failed");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem(
+        "pending_paytm_order",
+        JSON.stringify({
+          customer_name: name,
+          phone,
+          address,
+          pincode,
+          city,
+          state,
+          landmark,
+          address_type: addressType,
+          subtotal,
+          delivery_charge: deliveryCharge,
+          gst_amount: gstAmount,
+          total,
+          cart,
+          payment_method: method === "Card" ? "Card" : "Paytm",
+          coupon_code: coupon,
+          discount,
+        })
+      );
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = `https://securegw-stage.paytm.in/theia/api/v1/showPaymentPage?mid=${data.mid}&orderId=${data.orderId}`;
+
+      const tokenInput = document.createElement("input");
+      tokenInput.type = "hidden";
+      tokenInput.name = "txnToken";
+      tokenInput.value = data.txnToken;
+
+      form.appendChild(tokenInput);
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      toast.error("Paytm payment failed");
       setLoading(false);
-      return;
     }
-
-    localStorage.setItem(
-      "pending_paytm_order",
-      JSON.stringify({
-        customer_name: name,
-        phone,
-        address,
-        pincode,
-        city,
-        state,
-        landmark,
-        address_type: addressType,
-        subtotal,
-        delivery_charge: deliveryCharge,
-        gst_amount: gstAmount,
-        total,
-        cart,
-        payment_method: "Paytm",
-        coupon_code: coupon,
-        discount,
-      })
-    );
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = `https://securegw-stage.paytm.in/theia/api/v1/showPaymentPage?mid=${data.mid}&orderId=${data.orderId}`;
-
-    const tokenInput = document.createElement("input");
-    tokenInput.type = "hidden";
-    tokenInput.name = "txnToken";
-    tokenInput.value = data.txnToken;
-
-    form.appendChild(tokenInput);
-    document.body.appendChild(form);
-    form.submit();
-  } catch {
-    toast.error("Paytm payment failed");
-    setLoading(false);
   }
-}
+
   async function placeOrder() {
     if (!validateCheckout()) return;
 
@@ -305,6 +321,15 @@ async function startPaytmPayment() {
     }
   }
 
+  function handlePaymentSubmit() {
+    if (paymentMethod === "COD") {
+      placeOrder();
+      return;
+    }
+
+    startPaytmPayment(paymentMethod);
+  }
+
   return (
     <main className="min-h-screen bg-[#fafafa] text-gray-900">
       <header className="border-b bg-white">
@@ -326,9 +351,27 @@ async function startPaytmPayment() {
 
           <LuxuryCard title="Express Checkout">
             <div className="grid gap-3 sm:grid-cols-3">
-              <ExpressButton text="GPay" />
-              <ExpressButton text="UPI" />
-              <ExpressButton text="Wallet" />
+              <ExpressButton
+                text="GPay"
+                onClick={() => {
+                  setPaymentMethod("UPI");
+                  startPaytmPayment("UPI");
+                }}
+              />
+              <ExpressButton
+                text="UPI"
+                onClick={() => {
+                  setPaymentMethod("UPI");
+                  startPaytmPayment("UPI");
+                }}
+              />
+              <ExpressButton
+                text="Wallet"
+                onClick={() => {
+                  setPaymentMethod("Paytm");
+                  startPaytmPayment("Paytm");
+                }}
+              />
             </div>
 
             <div className="my-5 flex items-center gap-3">
@@ -340,141 +383,235 @@ async function startPaytmPayment() {
             </div>
           </LuxuryCard>
 
-          <LuxuryCard title="1. Contact Information">
-            <div className="grid gap-4 md:grid-cols-2">
-              <FloatingInput label="Full Name" value={name} setValue={setName} />
-              <FloatingInput label="Mobile Number" value={phone} setValue={setPhone} />
-              <FloatingInput
-                label="Email Address"
-                value={email}
-                setValue={setEmail}
-                type="email"
+          <LuxuryCard
+            title="1. Contact Information"
+            action={
+              <ToggleSectionButton
+                open={openContact}
+                onClick={() => setOpenContact(!openContact)}
               />
-            </div>
+            }
+          >
+            {openContact && (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FloatingInput label="Full Name" value={name} setValue={setName} />
+                  <FloatingInput
+                    label="Mobile Number"
+                    value={phone}
+                    setValue={setPhone}
+                  />
+                  <FloatingInput
+                    label="Email Address"
+                    value={email}
+                    setValue={setEmail}
+                    type="email"
+                  />
+                </div>
 
-            <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-gray-600">
-              <input type="checkbox" className="h-4 w-4 accent-black" />
-              Email me with updates and offers
-            </label>
+                <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-gray-600">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="h-4 w-4 accent-black"
+                  />
+                  Email me with updates and offers
+                </label>
+              </>
+            )}
           </LuxuryCard>
 
-          <LuxuryCard title="2. Shipping Address">
-  {address && city && state && pincode && !showAddressForm ? (
-    <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-lg font-black">{name}</p>
-          <p className="mt-1 text-sm font-bold text-gray-600">{phone}</p>
-          <p className="mt-2 text-sm font-semibold text-gray-600">
-            {address}, {city}, {state} - {pincode}
-          </p>
-
-          {landmark && (
-            <p className="mt-1 text-sm text-gray-500">
-              Landmark: {landmark}
-            </p>
-          )}
-
-          <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-xs font-black">
-            {addressType}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowAddressForm(true)}
-          className="rounded-full border border-gray-300 px-5 py-2 text-sm font-black hover:border-black"
-        >
-          Change
-        </button>
-      </div>
-    </div>
-  ) : (
-    <div className="grid gap-4 md:grid-cols-2">
-      <FloatingInput label="Complete Address" value={address} setValue={setAddress} />
-      <FloatingInput label="Pincode" value={pincode} setValue={setPincode} />
-      <FloatingInput label="City" value={city} setValue={setCity} />
-      <FloatingInput label="State" value={state} setValue={setState} />
-      <FloatingInput label="Landmark" value={landmark} setValue={setLandmark} />
-
-      <label className="block">
-        <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-gray-400">
-          Address Type
-        </span>
-        <select
-          value={addressType}
-          onChange={(e) => setAddressType(e.target.value)}
-          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold outline-none focus:border-black"
-        >
-          <option>Home</option>
-          <option>Work</option>
-          <option>Other</option>
-        </select>
-      </label>
-
-      <button
-        type="button"
-        onClick={() => setShowAddressForm(false)}
-        className="md:col-span-2 rounded-full bg-black py-4 font-black text-white"
-      >
-        Save Address
-      </button>
-    </div>
-  )}
-</LuxuryCard>
-
-          <LuxuryCard title="3. Payment">
-            <p className="mb-4 text-sm font-semibold text-gray-500">
-              All transactions are secure and encrypted.
-            </p>
-
-            <div className="space-y-3">
-              <PaymentOption
-                value="Card"
-                selected={paymentMethod}
-                setSelected={setPaymentMethod}
-                title="Credit / Debit Card"
-                text="Visa, Mastercard, RuPay"
+          <LuxuryCard
+            title="2. Shipping Address"
+            action={
+              <ToggleSectionButton
+                open={openShipping}
+                onClick={() => setOpenShipping(!openShipping)}
               />
+            }
+          >
+            {openShipping && (
+              <>
+                {address && city && state && pincode && !showAddressForm ? (
+                  <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-black">{name}</p>
+                        <p className="mt-1 text-sm font-bold text-gray-600">
+                          {phone}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-gray-600">
+                          {address}, {city}, {state} - {pincode}
+                        </p>
 
-              {paymentMethod === "Card" && (
-                <div className="grid gap-3 rounded-3xl bg-gray-50 p-4 md:grid-cols-2">
-                  <FloatingInput label="Card Number" value="" setValue={() => {}} />
-                  <FloatingInput label="MM / YY" value="" setValue={() => {}} />
-                  <FloatingInput label="CVV" value="" setValue={() => {}} />
+                        {landmark && (
+                          <p className="mt-1 text-sm text-gray-500">
+                            Landmark: {landmark}
+                          </p>
+                        )}
+
+                        <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-xs font-black">
+                          {addressType}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAddressForm(true)}
+                        className="rounded-full border border-gray-300 px-5 py-2 text-sm font-black hover:border-black"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FloatingInput
+                      label="Complete Address"
+                      value={address}
+                      setValue={setAddress}
+                    />
+                    <FloatingInput
+                      label="Pincode"
+                      value={pincode}
+                      setValue={setPincode}
+                    />
+                    <FloatingInput label="City" value={city} setValue={setCity} />
+                    <FloatingInput label="State" value={state} setValue={setState} />
+                    <FloatingInput
+                      label="Landmark"
+                      value={landmark}
+                      setValue={setLandmark}
+                    />
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-gray-400">
+                        Address Type
+                      </span>
+                      <select
+                        value={addressType}
+                        onChange={(e) => setAddressType(e.target.value)}
+                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold outline-none focus:border-black"
+                      >
+                        <option>Home</option>
+                        <option>Work</option>
+                        <option>Other</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!address || !city || !state || !pincode) {
+                          toast.error("Please complete address");
+                          return;
+                        }
+
+                        setShowAddressForm(false);
+                        setOpenShipping(false);
+                        setOpenPayment(true);
+                      }}
+                      className="md:col-span-2 rounded-full bg-black py-4 font-black text-white"
+                    >
+                      Save Address
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </LuxuryCard>
+
+          <LuxuryCard
+            title="3. Payment"
+            action={
+              <ToggleSectionButton
+                open={openPayment}
+                onClick={() => setOpenPayment(!openPayment)}
+              />
+            }
+          >
+            {openPayment && (
+              <>
+                <p className="mb-4 text-sm font-semibold text-gray-500">
+                  All transactions are secure and encrypted.
+                </p>
+
+                <div className="space-y-3">
+                  <PaymentOption
+                    value="Card"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Credit / Debit Card"
+                    text="Visa, Mastercard, RuPay"
+                  />
+
+                  {paymentMethod === "Card" && (
+                    <div className="grid gap-3 rounded-3xl bg-gray-50 p-4 md:grid-cols-3">
+                      <FloatingInput
+                        label="Card Number"
+                        value={cardNumber}
+                        setValue={setCardNumber}
+                      />
+                      <FloatingInput
+                        label="MM / YY"
+                        value={cardExpiry}
+                        setValue={setCardExpiry}
+                      />
+                      <FloatingInput label="CVV" value={cardCvv} setValue={setCardCvv} />
+                      <p className="md:col-span-3 text-xs font-bold text-gray-500">
+                        Card payment Paytm gateway se process hoga.
+                      </p>
+                    </div>
+                  )}
+
+                  <PaymentOption
+                    value="UPI"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="UPI"
+                    text="PhonePe, Google Pay, Paytm"
+                  />
+
+                  {paymentMethod === "UPI" && (
+                    <div className="rounded-3xl bg-gray-50 p-4">
+                      <FloatingInput label="UPI ID" value={upiId} setValue={setUpiId} />
+                      <p className="mt-2 text-xs font-bold text-gray-500">
+                        UPI payment Paytm gateway par complete hoga.
+                      </p>
+                    </div>
+                  )}
+
+                  <PaymentOption
+                    value="Paytm"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Paytm Wallet"
+                    text="Pay using Paytm Wallet / Paytm App"
+                  />
+
+                  <PaymentOption
+                    value="COD"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Cash on Delivery"
+                    text="Pay when your order is delivered"
+                  />
                 </div>
-              )}
 
-              <PaymentOption
-                value="UPI"
-                selected={paymentMethod}
-                setSelected={setPaymentMethod}
-                title="UPI"
-                text="PhonePe, Google Pay, Paytm"
-              />
-
-              {paymentMethod === "UPI" && (
-                <div className="rounded-3xl bg-gray-50 p-4">
-                  <FloatingInput label="UPI ID" value="" setValue={() => {}} />
-                </div>
-              )}
-
-              <PaymentOption
-                value="COD"
-                selected={paymentMethod}
-                setSelected={setPaymentMethod}
-                title="Cash on Delivery"
-                text="Pay when your order is delivered"
-              />
-            </div>
-
-            <button
-              disabled={loading}
-              onClick={paymentMethod === "COD" ? placeOrder : startPaytmPayment}
-              className="mt-6 w-full rounded-full bg-black py-4 text-base font-black text-white transition hover:bg-gray-800 disabled:opacity-60"
-            >
-              {loading ? "Processing..." : `Place Order ₹${total.toLocaleString("en-IN")}`}
-            </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handlePaymentSubmit}
+                  className="mt-6 w-full rounded-full bg-black py-4 text-base font-black text-white transition hover:bg-gray-800 disabled:opacity-60"
+                >
+                  {loading
+                    ? "Processing..."
+                    : paymentMethod === "COD"
+                    ? `Place COD Order ₹${total.toLocaleString("en-IN")}`
+                    : `Pay Now ₹${total.toLocaleString("en-IN")}`}
+                </button>
+              </>
+            )}
           </LuxuryCard>
         </div>
 
@@ -556,16 +693,39 @@ async function startPaytmPayment() {
 
 function LuxuryCard({
   title,
+  action,
   children,
 }: {
   title: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-7">
-      <h2 className="mb-5 text-xl font-black tracking-tight">{title}</h2>
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-xl font-black tracking-tight">{title}</h2>
+        {action}
+      </div>
       {children}
     </section>
+  );
+}
+
+function ToggleSectionButton({
+  open,
+  onClick,
+}: {
+  open: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border border-gray-200 px-4 py-2 text-sm font-black hover:border-black"
+    >
+      {open ? "⌃" : "⌄"}
+    </button>
   );
 }
 
@@ -596,9 +756,19 @@ function FloatingInput({
   );
 }
 
-function ExpressButton({ text }: { text: string }) {
+function ExpressButton({
+  text,
+  onClick,
+}: {
+  text: string;
+  onClick?: () => void;
+}) {
   return (
-    <button className="rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-black transition hover:border-black">
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-black transition hover:border-black"
+    >
       {text}
     </button>
   );
