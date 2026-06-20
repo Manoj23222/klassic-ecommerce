@@ -291,7 +291,7 @@ export default function ProductPageClient({
           Home / {product.category} / {product.name}
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[48%_52%]">
+        <div className="grid gap-5 lg:grid-cols-[55%_45%]">
           <section className="rounded-[2rem] bg-white p-3 shadow-[0_10px_40px_rgba(0,0,0,0.05)] sm:p-4 lg:sticky lg:top-24 lg:self-start">
             <div className="grid gap-2 sm:grid-cols-[72px_1fr]">
               <div className="flex gap-2 overflow-x-auto sm:max-h-[430px] sm:flex-col">
@@ -401,7 +401,7 @@ export default function ProductPageClient({
             </div>
           </section>
 
-          <section className="max-h-none space-y-3 lg:max-h-[calc(100vh-110px)] lg:overflow-y-auto lg:pr-2">
+          <section className="max-h-none space-y-3 lg:max-h-[calc(135vh-180px)] lg:overflow-y-auto lg:pr-2">
             <Card>
               <p className="text-xs font-bold text-gray-500">
                 {product.brand || product.category}

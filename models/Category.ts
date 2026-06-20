@@ -89,6 +89,40 @@ const CategorySchema = new Schema(
       type: String,
       default: "Admin",
     },
+    showInMenu: {
+  type: Boolean,
+  default: true,
+},
+
+featured: {
+  type: Boolean,
+  default: false,
+},
+
+sellerAllowed: {
+  type: Boolean,
+  default: true,
+},
+
+defaultGst: {
+  type: Number,
+  default: 0,
+},
+
+hsnCode: {
+  type: String,
+  default: "",
+},
+
+seoKeywords: {
+  type: String,
+  default: "",
+},
+
+dynamicAttributes: {
+  type: [String],
+  default: [],
+},
   },
   {
     timestamps: true,

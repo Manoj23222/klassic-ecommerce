@@ -7,13 +7,17 @@ import Order from "@/models/Order";
 
 export const dynamic = "force-dynamic";
 
-const steps = ["Pending", "Processing", "Shipped", "Delivered"];
+const steps = [
+  "Pending",
+  "Processing",
+  "Packed",
+  "Shipped",
+  "Out For Delivery",
+  "Delivered",
+];
 
 function getStatusIndex(status: string) {
   if (status === "Cancelled") return -1;
-  if (status === "Packed") return 1;
-  if (status === "Out For Delivery") return 2;
-
   const index = steps.indexOf(status || "Pending");
   return index >= 0 ? index : 0;
 }
@@ -23,7 +27,6 @@ function canReturn(order: any) {
 
   const deliveredDate = new Date(order.updatedAt);
   const now = new Date();
-
   const diffDays =
     (now.getTime() - deliveredDate.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -112,8 +115,6 @@ export default async function MyOrderDetailsPage({
               <Badge text={order.payment_status || "Pending"} light />
             </div>
           </div>
-
-         
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -172,11 +173,11 @@ export default async function MyOrderDetailsPage({
                   );
                 })}
               </div>
-              
-               <TrackingBar
-            status={order.status || "Pending"}
-            activeIndex={currentStep}
-          />
+
+              <TrackingBar
+                status={order.status || "Pending"}
+                activeIndex={currentStep}
+              />
             </LuxuryCard>
 
             <LuxuryCard title="Shipping Address">
@@ -202,6 +203,8 @@ export default async function MyOrderDetailsPage({
           <aside className="space-y-5 lg:sticky lg:top-8 lg:h-fit">
             <LuxuryCard title="Order Actions">
               <div className="grid gap-3">
+                <ShipmentDetails order={order} />
+
                 <Link
                   href={`/my-orders/${orderId}`}
                   className="rounded-full bg-black px-5 py-3 text-center text-sm font-black text-white"
@@ -246,7 +249,7 @@ export default async function MyOrderDetailsPage({
                 )}
 
                 <Link
-                  href="/"
+                  href={items?.[0]?.product_id ? `/product/${items[0].product_id}` : "/"}
                   className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-black text-black hover:border-black"
                 >
                   Buy Again
@@ -299,6 +302,33 @@ export default async function MyOrderDetailsPage({
   );
 }
 
+function ShipmentDetails({ order }: { order: any }) {
+  return (
+    <div className="rounded-3xl border border-gray-100 bg-gray-50 p-4">
+      <h3 className="mb-4 text-lg font-black">Shipment Details</h3>
+
+      <div className="grid gap-4">
+        <div>
+          <p className="text-xs font-bold text-gray-500">Courier</p>
+          <p className="font-black">{order.courier_name || "Not Assigned"}</p>
+        </div>
+
+        <div>
+          <p className="text-xs font-bold text-gray-500">Tracking Number</p>
+          <p className="break-all font-black">
+            {order.tracking_number || "Pending"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-bold text-gray-500">Estimated Delivery</p>
+          <p className="font-black">{order.delivery_estimate || "TBA"}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TrackingBar({
   status,
   activeIndex,
@@ -316,7 +346,7 @@ function TrackingBar({
 
   return (
     <div className="mt-7">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {steps.map((step, index) => {
           const done = index <= activeIndex;
 
@@ -328,7 +358,7 @@ function TrackingBar({
                 }`}
               />
               <p
-                className={`mt-2 text-xs font-black ${
+                className={`mt-2 text-[10px] font-black md:text-xs ${
                   done ? "text-black" : "text-gray-400"
                 }`}
               >

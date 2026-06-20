@@ -7,10 +7,17 @@ export const dynamic = "force-dynamic";
 const allowedStatus = [
   "Pending",
   "Processing",
+  "Packed",
   "Shipped",
+  "Out For Delivery",
   "Delivered",
   "Cancelled",
 ];
+
+function clean(value: any) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+}
 
 export async function POST(req: Request) {
   try {
@@ -18,13 +25,17 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const orderId = body.order_id;
-    const sellerId = body.seller_id;
-    const status = body.status;
+    const orderId = clean(body.order_id);
+    const itemIndex = Number(body.item_index);
+    const status = clean(body.status);
 
-    if (!orderId || !sellerId || !status) {
+    const courierName = clean(body.courier_name);
+    const trackingNumber = clean(body.tracking_number);
+    const deliveryEstimate = clean(body.delivery_estimate);
+
+    if (!orderId || Number.isNaN(itemIndex) || !status) {
       return NextResponse.json(
-        { success: false, message: "order_id, seller_id and status required" },
+        { success: false, message: "order_id, item_index and status required" },
         { status: 400 }
       );
     }
@@ -36,46 +47,54 @@ export async function POST(req: Request) {
       );
     }
 
-    const order: any = await Order.findOne({
-      _id: orderId,
-      "items.seller_id": sellerId,
-    });
+    const order: any = await Order.findById(orderId);
 
     if (!order) {
       return NextResponse.json(
-        { success: false, message: "Order not found or access denied" },
+        { success: false, message: "Order not found" },
         { status: 404 }
       );
     }
 
-    order.items = (order.items || []).map((item: any) => {
-      if (String(item.seller_id) === String(sellerId)) {
-        return {
-          ...item.toObject?.() ?? item,
-          item_status: status,
-        };
-      }
+    if (!order.items || !order.items[itemIndex]) {
+      return NextResponse.json(
+        { success: false, message: "Order item not found" },
+        { status: 404 }
+      );
+    }
 
-      return item;
-    });
+    order.items[itemIndex].item_status = status;
+    order.items[itemIndex].courier_name = courierName;
+    order.items[itemIndex].tracking_number = trackingNumber;
+    order.items[itemIndex].delivery_estimate = deliveryEstimate;
 
-    const sellerItems = order.items.filter(
-      (item: any) => String(item.seller_id) === String(sellerId)
-    );
+    const itemStatuses = order.items.map((item: any) => item.item_status || "Pending");
 
-    const allSellerItemsSameStatus = sellerItems.every(
-      (item: any) => item.item_status === status
-    );
-
-    if (allSellerItemsSameStatus) {
+    if (itemStatuses.every((s: string) => s === "Delivered")) {
+      order.status = "Delivered";
+    } else if (itemStatuses.every((s: string) => s === "Cancelled")) {
+      order.status = "Cancelled";
+    } else if (itemStatuses.some((s: string) => s === "Out For Delivery")) {
+      order.status = "Out For Delivery";
+    } else if (itemStatuses.some((s: string) => s === "Shipped")) {
+      order.status = "Shipped";
+    } else if (itemStatuses.some((s: string) => s === "Packed")) {
+      order.status = "Packed";
+    } else if (itemStatuses.some((s: string) => s === "Processing")) {
+      order.status = "Processing";
+    } else {
       order.status = status;
     }
+
+    order.courier_name = courierName || order.courier_name || "";
+    order.tracking_number = trackingNumber || order.tracking_number || "";
+    order.delivery_estimate = deliveryEstimate || order.delivery_estimate || "";
 
     await order.save();
 
     return NextResponse.json({
       success: true,
-      message: "Order status updated",
+      message: "Shipment updated",
       order,
     });
   } catch (error: any) {

@@ -240,10 +240,14 @@ export default async function SellerOrderDetailsPage({
 
                   <div className="rounded-2xl bg-white p-4 shadow-sm">
                     <SellerOrderStatusUpdate
-                      orderId={String(safeOrder._id)}
-                      itemIndex={item.item_index}
-                      currentStatus={item.item_status || "Pending"}
-                    />
+  orderId={String(safeOrder._id)}
+  itemIndex={item.item_index}
+  currentStatus={item.item_status || "Pending"}
+  courierName={item.courier_name || safeOrder.courier_name || ""}
+  trackingNumber={item.tracking_number || safeOrder.tracking_number || ""}
+  deliveryEstimate={item.delivery_estimate || safeOrder.delivery_estimate || ""}
+/>
+                    
                   </div>
                 </div>
               </div>
