@@ -117,61 +117,11 @@ function CheckoutContent() {
     if (couponFromUrl) setCoupon(couponFromUrl);
   }, [couponFromUrl]);
 
-  useEffect(() => {
-    async function createOrderAfterPaytmSuccess() {
-      const paytmStatus = searchParams.get("paytm_status");
-      const paytmTxnId = searchParams.get("paytm_txn_id");
-
-      if (paytmStatus !== "success") return;
-
-      const pendingOrder = localStorage.getItem("pending_paytm_order");
-
-      if (!pendingOrder) {
-        toast.error("Payment success, but order data missing");
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        const payload = JSON.parse(pendingOrder);
-
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            payment_method: "Paytm",
-            payment_status: "Paid",
-            payment_transaction_id: paytmTxnId || "",
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          localStorage.removeItem("pending_paytm_order");
-          if (!productId) localStorage.removeItem("cart");
-
-          toast.success("Payment successful. Order placed.");
-          window.location.href = `/order-success?orderId=${data.orderId}`;
-        } else {
-          toast.error(data.message || "Order create failed after payment");
-        }
-      } catch {
-        toast.error("Order create failed after payment");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    createOrderAfterPaytmSuccess();
-  }, [searchParams, productId]);
-
   const subtotal = useMemo(
     () =>
       cart.reduce(
-        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+        (sum, item) =>
+          sum + Number(item.price || 0) * Number(item.quantity || 1),
         0
       ),
     [cart]
@@ -331,26 +281,28 @@ function CheckoutContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafafa] text-gray-900">
+    <main className="min-h-screen bg-[#f1f3f6] pb-28 text-gray-900 md:pb-8">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-center px-5 py-5">
-          <Link href="/" className="text-3xl font-black tracking-tight">
+        <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-3 md:py-5">
+          <Link href="/" className="text-2xl font-black tracking-tight md:text-3xl">
             Klassic
           </Link>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1fr_420px]">
-        <div className="space-y-6">
+      <section className="mx-auto grid max-w-7xl gap-4 px-3 py-4 md:gap-8 md:px-4 md:py-8 lg:grid-cols-[1fr_400px]">
+        <div className="space-y-4 md:space-y-6">
           <div>
-            <h1 className="text-3xl font-black tracking-tight">Checkout</h1>
-            <p className="mt-1 text-sm font-semibold text-gray-500">
+            <h1 className="text-2xl font-black tracking-tight md:text-3xl">
+              Checkout
+            </h1>
+            <p className="mt-1 text-xs font-semibold text-gray-500 md:text-sm">
               Secure, simple and distraction-free checkout.
             </p>
           </div>
 
           <LuxuryCard title="Express Checkout">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
               <ExpressButton
                 text="GPay"
                 onClick={() => {
@@ -373,14 +325,6 @@ function CheckoutContent() {
                 }}
               />
             </div>
-
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">
-                Or continue below
-              </span>
-              <div className="h-px flex-1 bg-gray-200" />
-            </div>
           </LuxuryCard>
 
           <LuxuryCard
@@ -394,27 +338,14 @@ function CheckoutContent() {
           >
             {openContact && (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
                   <FloatingInput label="Full Name" value={name} setValue={setName} />
-                  <FloatingInput
-                    label="Mobile Number"
-                    value={phone}
-                    setValue={setPhone}
-                  />
-                  <FloatingInput
-                    label="Email Address"
-                    value={email}
-                    setValue={setEmail}
-                    type="email"
-                  />
+                  <FloatingInput label="Mobile Number" value={phone} setValue={setPhone} />
+                  <FloatingInput label="Email Address" value={email} setValue={setEmail} type="email" />
                 </div>
 
-                <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-gray-600">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="h-4 w-4 accent-black"
-                  />
+                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-gray-600 md:text-sm">
+                  <input type="checkbox" defaultChecked className="h-4 w-4 accent-black" />
                   Email me with updates and offers
                 </label>
               </>
@@ -433,24 +364,22 @@ function CheckoutContent() {
             {openShipping && (
               <>
                 {address && city && state && pincode && !showAddressForm ? (
-                  <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                    <div className="flex items-start justify-between gap-4">
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 md:rounded-3xl md:p-5">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-lg font-black">{name}</p>
-                        <p className="mt-1 text-sm font-bold text-gray-600">
+                        <p className="text-base font-black md:text-lg">{name}</p>
+                        <p className="mt-1 text-xs font-bold text-gray-600 md:text-sm">
                           {phone}
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-gray-600">
+                        <p className="mt-2 text-xs font-semibold text-gray-600 md:text-sm">
                           {address}, {city}, {state} - {pincode}
                         </p>
-
                         {landmark && (
-                          <p className="mt-1 text-sm text-gray-500">
+                          <p className="mt-1 text-xs text-gray-500 md:text-sm">
                             Landmark: {landmark}
                           </p>
                         )}
-
-                        <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-xs font-black">
+                        <span className="mt-2 inline-block rounded-full bg-white px-3 py-1.5 text-[10px] font-black md:text-xs">
                           {addressType}
                         </span>
                       </div>
@@ -458,40 +387,28 @@ function CheckoutContent() {
                       <button
                         type="button"
                         onClick={() => setShowAddressForm(true)}
-                        className="rounded-full border border-gray-300 px-5 py-2 text-sm font-black hover:border-black"
+                        className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-black hover:border-black md:px-5 md:py-2 md:text-sm"
                       >
                         Change
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FloatingInput
-                      label="Complete Address"
-                      value={address}
-                      setValue={setAddress}
-                    />
-                    <FloatingInput
-                      label="Pincode"
-                      value={pincode}
-                      setValue={setPincode}
-                    />
+                  <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                    <FloatingInput label="Complete Address" value={address} setValue={setAddress} />
+                    <FloatingInput label="Pincode" value={pincode} setValue={setPincode} />
                     <FloatingInput label="City" value={city} setValue={setCity} />
-                    <FloatingInput label="State" value={state} setValue={setState} />
-                    <FloatingInput
-                      label="Landmark"
-                      value={landmark}
-                      setValue={setLandmark}
-                    />
+                    <StateSelect value={state} setValue={setState} />
+                    <FloatingInput label="Landmark" value={landmark} setValue={setLandmark} />
 
                     <label className="block">
-                      <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-gray-400">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 md:text-xs">
                         Address Type
                       </span>
                       <select
                         value={addressType}
                         onChange={(e) => setAddressType(e.target.value)}
-                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold outline-none focus:border-black"
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
                       >
                         <option>Home</option>
                         <option>Work</option>
@@ -506,12 +423,11 @@ function CheckoutContent() {
                           toast.error("Please complete address");
                           return;
                         }
-
                         setShowAddressForm(false);
                         setOpenShipping(false);
                         setOpenPayment(true);
                       }}
-                      className="md:col-span-2 rounded-full bg-black py-4 font-black text-white"
+                      className="rounded-xl bg-black py-3 text-sm font-black text-white md:col-span-2 md:rounded-full md:py-4"
                     >
                       Save Address
                     </button>
@@ -532,77 +448,38 @@ function CheckoutContent() {
           >
             {openPayment && (
               <>
-                <p className="mb-4 text-sm font-semibold text-gray-500">
+                <p className="mb-3 text-xs font-semibold text-gray-500 md:text-sm">
                   All transactions are secure and encrypted.
                 </p>
 
-                <div className="space-y-3">
-                  <PaymentOption
-                    value="Card"
-                    selected={paymentMethod}
-                    setSelected={setPaymentMethod}
-                    title="Credit / Debit Card"
-                    text="Visa, Mastercard, RuPay"
-                  />
+                <div className="space-y-2 md:space-y-3">
+                  <PaymentOption value="Card" selected={paymentMethod} setSelected={setPaymentMethod} title="Credit / Debit Card" text="Visa, Mastercard, RuPay" />
 
                   {paymentMethod === "Card" && (
-                    <div className="grid gap-3 rounded-3xl bg-gray-50 p-4 md:grid-cols-3">
-                      <FloatingInput
-                        label="Card Number"
-                        value={cardNumber}
-                        setValue={setCardNumber}
-                      />
-                      <FloatingInput
-                        label="MM / YY"
-                        value={cardExpiry}
-                        setValue={setCardExpiry}
-                      />
+                    <div className="grid gap-3 rounded-2xl bg-gray-50 p-3 md:grid-cols-3 md:rounded-3xl md:p-4">
+                      <FloatingInput label="Card Number" value={cardNumber} setValue={setCardNumber} />
+                      <FloatingInput label="MM / YY" value={cardExpiry} setValue={setCardExpiry} />
                       <FloatingInput label="CVV" value={cardCvv} setValue={setCardCvv} />
-                      <p className="md:col-span-3 text-xs font-bold text-gray-500">
-                        Card payment Paytm gateway se process hoga.
-                      </p>
                     </div>
                   )}
 
-                  <PaymentOption
-                    value="UPI"
-                    selected={paymentMethod}
-                    setSelected={setPaymentMethod}
-                    title="UPI"
-                    text="PhonePe, Google Pay, Paytm"
-                  />
+                  <PaymentOption value="UPI" selected={paymentMethod} setSelected={setPaymentMethod} title="UPI" text="PhonePe, Google Pay, Paytm" />
 
                   {paymentMethod === "UPI" && (
-                    <div className="rounded-3xl bg-gray-50 p-4">
+                    <div className="rounded-2xl bg-gray-50 p-3 md:rounded-3xl md:p-4">
                       <FloatingInput label="UPI ID" value={upiId} setValue={setUpiId} />
-                      <p className="mt-2 text-xs font-bold text-gray-500">
-                        UPI payment Paytm gateway par complete hoga.
-                      </p>
                     </div>
                   )}
 
-                  <PaymentOption
-                    value="Paytm"
-                    selected={paymentMethod}
-                    setSelected={setPaymentMethod}
-                    title="Paytm Wallet"
-                    text="Pay using Paytm Wallet / Paytm App"
-                  />
-
-                  <PaymentOption
-                    value="COD"
-                    selected={paymentMethod}
-                    setSelected={setPaymentMethod}
-                    title="Cash on Delivery"
-                    text="Pay when your order is delivered"
-                  />
+                  <PaymentOption value="Paytm" selected={paymentMethod} setSelected={setPaymentMethod} title="Paytm Wallet" text="Pay using Paytm Wallet / Paytm App" />
+                  <PaymentOption value="COD" selected={paymentMethod} setSelected={setPaymentMethod} title="Cash on Delivery" text="Pay when delivered" />
                 </div>
 
                 <button
                   type="button"
                   disabled={loading}
                   onClick={handlePaymentSubmit}
-                  className="mt-6 w-full rounded-full bg-black py-4 text-base font-black text-white transition hover:bg-gray-800 disabled:opacity-60"
+                  className="mt-5 hidden w-full rounded-full bg-black py-4 text-base font-black text-white transition hover:bg-gray-800 disabled:opacity-60 md:block"
                 >
                   {loading
                     ? "Processing..."
@@ -615,33 +492,39 @@ function CheckoutContent() {
           </LuxuryCard>
         </div>
 
-        <aside className="h-fit rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.05)] lg:sticky lg:top-8">
-          <h2 className="text-xl font-black tracking-tight">Order Summary</h2>
+        <aside className="h-fit rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.05)] md:rounded-[2rem] md:p-5 lg:sticky lg:top-8">
+          <h2 className="text-lg font-black tracking-tight md:text-xl">
+            Order Summary
+          </h2>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-4 space-y-3 md:mt-5 md:space-y-4">
             {cart.length === 0 ? (
-              <p className="text-sm font-semibold text-gray-500">Cart is empty</p>
+              <p className="text-xs font-semibold text-gray-500 md:text-sm">
+                Cart is empty
+              </p>
             ) : (
               cart.map((item, index) => (
-                <div key={`${item.id}-${index}`} className="flex gap-4">
+                <div key={`${item.id}-${index}`} className="flex gap-3 md:gap-4">
                   <img
                     src={item.image || "/placeholder.png"}
                     alt={item.name}
-                    className="h-20 w-20 rounded-2xl bg-gray-50 object-contain p-2"
+                    className="h-16 w-16 rounded-xl bg-gray-50 object-contain p-2 md:h-20 md:w-20 md:rounded-2xl"
                   />
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 text-sm font-black">{item.name}</h3>
-                    <p className="mt-1 text-xs font-semibold text-gray-500">
+                    <h3 className="line-clamp-2 text-xs font-black md:text-sm">
+                      {item.name}
+                    </h3>
+                    <p className="mt-1 text-[10px] font-semibold text-gray-500 md:text-xs">
                       {item.color ? `${item.color}` : ""}
                       {item.size ? ` / ${item.size}` : ""}
                     </p>
-                    <p className="text-xs font-semibold text-gray-500">
+                    <p className="text-[10px] font-semibold text-gray-500 md:text-xs">
                       Qty: {item.quantity || 1}
                     </p>
                   </div>
 
-                  <p className="text-sm font-black">
+                  <p className="text-xs font-black md:text-sm">
                     ₹{Number(item.price || 0).toLocaleString("en-IN")}
                   </p>
                 </div>
@@ -649,44 +532,59 @@ function CheckoutContent() {
             )}
           </div>
 
-          <div className="mt-6 flex gap-2">
+          <div className="mt-4 flex gap-2 md:mt-6">
             <input
               value={coupon}
               onChange={(e) => setCoupon(e.target.value.toUpperCase())}
               placeholder="Promo code"
-              className="min-w-0 flex-1 rounded-full border border-gray-200 px-4 py-3 text-sm font-bold outline-none focus:border-black"
+              className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-3 text-xs font-bold outline-none focus:border-black md:rounded-full md:px-4 md:text-sm"
             />
 
             <button
               type="button"
               onClick={() => applyCouponCode(coupon)}
-              className="rounded-full bg-gray-900 px-5 text-sm font-black text-white"
+              className="rounded-xl bg-gray-900 px-4 text-xs font-black text-white md:rounded-full md:px-5 md:text-sm"
             >
               Apply
             </button>
           </div>
 
-          <div className="mt-6 space-y-3 text-sm">
+          <div className="mt-4 space-y-2 text-xs md:mt-6 md:space-y-3 md:text-sm">
             <SummaryRow label="Subtotal" value={subtotal} />
             <SummaryRow label="Discount" value={-discount} green />
             <SummaryRow label="Shipping" text="Free" green />
             <SummaryRow label="Estimated Taxes" text="Included" />
 
-            <div className="border-t pt-4">
-              <div className="flex justify-between text-xl font-black">
+            <div className="border-t pt-3 md:pt-4">
+              <div className="flex justify-between text-lg font-black md:text-xl">
                 <span>Total</span>
                 <span>₹{total.toLocaleString("en-IN")}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 space-y-2 rounded-3xl bg-gray-50 p-4 text-xs font-bold text-gray-600">
-            <p>🔒 Secure 256-bit SSL Encryption</p>
+          <div className="mt-4 space-y-1 rounded-2xl bg-gray-50 p-3 text-[10px] font-bold text-gray-600 md:mt-6 md:rounded-3xl md:p-4 md:text-xs">
+            <p>🔒 Secure SSL Encryption</p>
             <p>🛡️ 7-Day Free Returns</p>
             <p>✅ Trusted Klassic Checkout</p>
           </div>
         </aside>
       </section>
+
+      <div className="fixed bottom-16 left-0 right-0 z-40 border-t bg-white/95 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl md:hidden">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handlePaymentSubmit}
+          className="w-full rounded-xl bg-black py-3 text-sm font-black text-white disabled:opacity-60"
+        >
+          {loading
+            ? "Processing..."
+            : paymentMethod === "COD"
+            ? `Place Order ₹${total.toLocaleString("en-IN")}`
+            : `Pay ₹${total.toLocaleString("en-IN")}`}
+        </button>
+      </div>
     </main>
   );
 }
@@ -701,9 +599,11 @@ function LuxuryCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-7">
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-black tracking-tight">{title}</h2>
+    <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_8px_25px_rgba(0,0,0,0.04)] md:rounded-[2rem] md:p-7">
+      <div className="mb-4 flex items-center justify-between md:mb-5">
+        <h2 className="text-base font-black tracking-tight md:text-xl">
+          {title}
+        </h2>
         {action}
       </div>
       {children}
@@ -722,7 +622,7 @@ function ToggleSectionButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border border-gray-200 px-4 py-2 text-sm font-black hover:border-black"
+      className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-black hover:border-black md:px-4 md:py-2 md:text-sm"
     >
       {open ? "⌃" : "⌄"}
     </button>
@@ -742,7 +642,7 @@ function FloatingInput({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-gray-400">
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 md:text-xs">
         {label}
       </span>
 
@@ -750,12 +650,79 @@ function FloatingInput({
         type={type}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold outline-none transition focus:border-black"
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none transition focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
       />
     </label>
   );
 }
+function StateSelect({
+  value,
+  setValue,
+}: {
+  value: string;
+  setValue: (v: string) => void;
+}) {
+  const states = [
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry",
+  ];
 
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 md:text-xs">
+        State
+      </span>
+
+      <select
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none transition focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
+      >
+        <option value="">Select State</option>
+
+        {states.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 function ExpressButton({
   text,
   onClick,
@@ -767,7 +734,7 @@ function ExpressButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-black transition hover:border-black"
+      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-black transition hover:border-black md:rounded-full md:px-5 md:py-3 md:text-sm"
     >
       {text}
     </button>
@@ -789,7 +756,7 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`block cursor-pointer rounded-3xl border p-4 transition ${
+      className={`block cursor-pointer rounded-2xl border p-3 transition md:rounded-3xl md:p-4 ${
         selected === value
           ? "border-black bg-gray-50"
           : "border-gray-200 bg-white hover:border-gray-400"
@@ -804,8 +771,10 @@ function PaymentOption({
         />
 
         <div>
-          <p className="font-black">{title}</p>
-          <p className="mt-1 text-sm font-semibold text-gray-500">{text}</p>
+          <p className="text-sm font-black md:text-base">{title}</p>
+          <p className="mt-0.5 text-xs font-semibold text-gray-500 md:mt-1 md:text-sm">
+            {text}
+          </p>
         </div>
       </div>
     </label>

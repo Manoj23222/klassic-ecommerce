@@ -82,24 +82,24 @@ export default async function Home() {
     .slice(0, 6);
 
   return (
-    <main className="min-h-screen bg-[#f7f5f1] text-[#111]">
+    <main className="min-h-screen bg-[#f1f3f6] pb-20 text-[#111]">
       <Header />
 
       <section className="bg-black px-4 py-2 text-center text-xs font-black uppercase tracking-[0.25em] text-white">
         Luxury deals • Fast delivery • Trusted sellers • Secure checkout
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+      <section className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-8">
         <div className="relative overflow-hidden rounded-[2.5rem] bg-black text-white shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_32%),linear-gradient(120deg,rgba(0,0,0,0.98),rgba(0,0,0,0.55))]" />
 
-          <div className="relative grid min-h-[380px] items-center gap-8 px-6 py-10 md:px-10 lg:grid-cols-[1fr_360px]">
+          <div className="relative grid min-h-[190px] items-center gap-4 px-4 py-5 md:min-h-[360px] md:px-10 md:py-10 lg:grid-cols-[1fr_360px]">
             <div className="max-w-2xl">
               <p className="text-xs font-black uppercase tracking-[0.35em] text-white/60">
                 Klassic Luxury Marketplace
               </p>
 
-              <h1 className="mt-4 text-4xl font-black leading-[1] tracking-tight md:text-6xl">
+              <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight md:text-6xl">
                 Premium shopping, redesigned.
               </h1>
 
@@ -169,12 +169,12 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 py-8">
         <SectionTitle label="Curated For You" title="Shop by Category" />
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-3 lg:grid-cols-6">
           {categories.map((category) => (
             <a
               key={category.name}
               href={category.href}
-              className="group rounded-[2rem] border border-black/5 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+              className="group rounded-2xl border border-black/5 bg-white p-3shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3eee7] text-3xl">
                 {category.icon}

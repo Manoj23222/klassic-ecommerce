@@ -34,6 +34,8 @@ export default function ProductPageClient({
   const [selectedQuantity, setSelectedQuantity] = useState("");
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>("delivery");
+  const [pincode, setPincode] = useState("");
+const [pincodeMessage, setPincodeMessage] = useState("");
 
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
@@ -191,6 +193,8 @@ useEffect(() => {
 }, [showQuantitySelector, quantityOptions, selectedQuantity]);
 
 const hasRealColor =
+
+
   variants.length > 0 &&
   selectedColor &&
   selectedColor !== "Default" &&
@@ -206,6 +210,16 @@ const hasRealColor =
   const [questionName, setQuestionName] = useState("");
   const [questionText, setQuestionText] = useState("");
   const [questionLoading, setQuestionLoading] = useState(false);
+  function checkPincode() {
+  const clean = pincode.trim();
+
+  if (!/^[1-9][0-9]{5}$/.test(clean)) {
+    setPincodeMessage("❌ Enter valid 6 digit Indian pincode");
+    return;
+  }
+
+  setPincodeMessage("✅ Delivery available • COD available • Easy returns");
+}
 
   useEffect(() => {
     async function loadReviews() {
@@ -366,6 +380,7 @@ const hasRealColor =
             </div>
 
             {hasRealColor && (
+              
               <div className="mt-3 rounded-xl border bg-white p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <p className="text-sm font-bold">
@@ -506,6 +521,7 @@ const hasRealColor =
                   SKU: <b>{selectedSku}</b>
                 </p>
                 {hasRealColor && (
+                  
   <p>
     Color: <b>{selectedColor}</b>
   </p>
@@ -535,16 +551,37 @@ const hasRealColor =
                 <>
                   <div className="flex gap-2">
                     <input
-                      type="text"
-                      placeholder="Enter Pincode"
-                      className="flex-1 rounded-xl border p-3"
-                    />
+  type="text"
+  inputMode="numeric"
+  maxLength={6}
+  placeholder="Enter Pincode"
+  value={pincode}
+  onChange={(e) => {
+    setPincode(e.target.value.replace(/\D/g, ""));
+    setPincodeMessage("");
+  }}
+  className="flex-1 rounded-xl border p-3 text-sm font-bold outline-none focus:border-black"
+/>
 
-                    <button className="rounded-xl bg-black px-5 text-white">
-                      Check
-                    </button>
+<button
+  type="button"
+  onClick={checkPincode}
+  className="rounded-xl bg-black px-5 text-sm font-black text-white"
+>
+  Check
+</button>
                   </div>
-
+{pincodeMessage && (
+  <p
+    className={`mt-2 text-sm font-bold ${
+      pincodeMessage.includes("✅")
+        ? "text-green-600"
+        : "text-red-600"
+    }`}
+  >
+    {pincodeMessage}
+  </p>
+)}
                   <div className="mt-3 space-y-1 text-sm">
                     <p>✓ Free Delivery Available</p>
                     <p>✓ Cash On Delivery</p>

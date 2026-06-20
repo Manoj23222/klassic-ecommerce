@@ -94,7 +94,7 @@ export default function ProductSearch({
   }
 
   return (
-    <section className="mx-auto max-w-7xl py-6">
+   <section className="mx-auto max-w-7xl py-3">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
@@ -118,7 +118,7 @@ export default function ProductSearch({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredProducts.map((item) => {
             const productId = String(item._id || item.id || "");
             if (!productId) return null;
@@ -132,10 +132,10 @@ export default function ProductSearch({
             return (
               <div
                 key={productId}
-                className="group overflow-hidden rounded-[1.5rem] bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-xl"
+                className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-xl"
               >
                 <Link href={`/product/${productId}`} className="block">
-                  <div className="relative aspect-square bg-[#f7f5f1] p-4">
+                  <div className="relative aspect-square bg-[#f7f5f1] p-2">
                     <img
                       src={item.image || "/placeholder.png"}
                       alt={item.name}
@@ -156,7 +156,7 @@ export default function ProductSearch({
                   </div>
                 </Link>
 
-                <div className="p-3">
+                <div className="p-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-black text-gray-600">
                       {item.category || "General"}
@@ -173,7 +173,7 @@ export default function ProductSearch({
                   </div>
 
                   <Link href={`/product/${productId}`}>
-                    <h4 className="mt-3 line-clamp-2 min-h-[40px] text-sm font-black leading-5 md:text-base">
+                    <h4 className="mt-2 line-clamp-2 min-h-[34px] text-xs font-black leading-4 md:text-base">
                       {item.name}
                     </h4>
                   </Link>

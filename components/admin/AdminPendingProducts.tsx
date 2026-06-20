@@ -13,7 +13,10 @@ export default function AdminPendingProducts() {
   async function loadProducts() {
     setLoading(true);
 
-    const res = await fetch("/api/admin/products/pending");
+    const res = await fetch("/api/admin/products/pending", {
+      cache: "no-store",
+    });
+
     const data = await res.json();
 
     if (data.success) {
@@ -32,6 +35,14 @@ export default function AdminPendingProducts() {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === products.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(products.map((p) => p._id));
+    }
   }
 
   async function bulkApprove() {
@@ -82,6 +93,117 @@ export default function AdminPendingProducts() {
     }
   }
 
+  async function quickReject(productId: string) {
+    const reason = prompt("Reject reason likho:", "Product details not valid");
+
+    if (!reason) return;
+
+    const res = await fetch("/api/admin/products/reject", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        product_id: productId,
+        reason,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success("Product rejected");
+      loadProducts();
+    } else {
+      toast.error(data.message || "Reject failed");
+    }
+  }
+
+  async function deleteProduct(productId: string) {
+    const ok = confirm("Is product ko permanently delete karna hai?");
+
+    if (!ok) return;
+
+    const res = await fetch(`/api/admin/products/${productId}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success("Product deleted");
+      loadProducts();
+    } else {
+      toast.error(data.message || "Delete failed");
+    }
+  }
+
+  async function bulkReject() {
+    if (selectedIds.length === 0) {
+      toast.error("Select products first");
+      return;
+    }
+
+    const reason = prompt(
+      "Selected products reject reason:",
+      "Bulk rejected by admin"
+    );
+
+    if (!reason) return;
+
+    const res = await fetch("/api/admin/products/bulk-reject", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        product_ids: selectedIds,
+        reason,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success(`${data.rejectedCount || 0} products rejected`);
+      loadProducts();
+    } else {
+      toast.error(data.message || "Bulk reject failed");
+    }
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.length === 0) {
+      toast.error("Select products first");
+      return;
+    }
+
+    const ok = confirm(
+      `${selectedIds.length} selected products permanently delete karna hai?`
+    );
+
+    if (!ok) return;
+
+    const res = await fetch("/api/admin/products/bulk-delete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        product_ids: selectedIds,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success(`${data.deletedCount || 0} products deleted`);
+      loadProducts();
+    } else {
+      toast.error(data.message || "Bulk delete failed");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="mx-auto max-w-7xl">
@@ -103,6 +225,16 @@ export default function AdminPendingProducts() {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="rounded-xl border px-4 py-2 text-sm font-black"
+              >
+                {selectedIds.length === products.length
+                  ? "Unselect All"
+                  : "Select All"}
+              </button>
+
               <span className="rounded-full bg-yellow-100 px-4 py-2 text-sm font-black text-yellow-700">
                 {products.length} Pending
               </span>
@@ -112,6 +244,20 @@ export default function AdminPendingProducts() {
                 className="rounded-xl bg-green-600 px-4 py-2 text-sm font-black text-white"
               >
                 Bulk Approve
+              </button>
+
+              <button
+                onClick={bulkReject}
+                className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-black text-white"
+              >
+                Bulk Reject
+              </button>
+
+              <button
+                onClick={bulkDelete}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white"
+              >
+                Bulk Delete
               </button>
             </div>
           </div>
@@ -153,7 +299,10 @@ export default function AdminPendingProducts() {
                   <img
                     src={product.image || "/placeholder.png"}
                     alt={product.name}
-                    className="h-48 w-full rounded-2xl object-contain"
+                    className="h-44 w-full rounded-2xl bg-gray-50 object-contain p-2"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.png";
+                    }}
                   />
 
                   <h3 className="mt-3 line-clamp-2 font-black">
@@ -191,6 +340,20 @@ export default function AdminPendingProducts() {
                       className="rounded-xl bg-green-600 px-4 py-2 text-sm font-black text-white"
                     >
                       Approve
+                    </button>
+
+                    <button
+                      onClick={() => quickReject(product._id)}
+                      className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-black text-white"
+                    >
+                      Reject
+                    </button>
+
+                    <button
+                      onClick={() => deleteProduct(product._id)}
+                      className="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>

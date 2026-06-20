@@ -1,7 +1,8 @@
 "use client";
 
 import toast from "react-hot-toast";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, CheckCircle } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
   product: {
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export default function AddToCartButton({ product }: Props) {
+  const [added, setAdded] = useState(false);
   const stock = Number(product.stock || 0);
 
   const handleAddToCart = () => {
@@ -61,7 +63,10 @@ export default function AddToCartButton({ product }: Props) {
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new Event("cart-updated"));
 
+      setAdded(true);
       toast.success("Added to cart");
+
+      setTimeout(() => setAdded(false), 1200);
     } catch (error) {
       console.error(error);
       toast.error("Unable to add product");
@@ -70,16 +75,19 @@ export default function AddToCartButton({ product }: Props) {
 
   return (
     <button
+      type="button"
       onClick={handleAddToCart}
       disabled={stock <= 0}
-      className={`flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-black shadow-lg transition sm:text-base ${
+      className={`flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black shadow-md transition sm:rounded-full sm:py-3 sm:text-sm ${
         stock > 0
-          ? "bg-black text-white hover:bg-gray-800"
+          ? added
+            ? "bg-green-600 text-white"
+            : "bg-slate-950 text-white hover:bg-black"
           : "bg-gray-300 text-gray-500"
       }`}
     >
-      <ShoppingBag size={18} />
-      {stock > 0 ? "Add To Cart" : "Out Of Stock"}
+      {added ? <CheckCircle size={16} /> : <ShoppingBag size={16} />}
+      {stock > 0 ? (added ? "Added" : "Add Cart") : "Out Stock"}
     </button>
   );
 }

@@ -76,13 +76,14 @@ export default function AccountProfileForm({
   };
 
   return (
-    <div className="bg-white p-5 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-      <div className="flex items-start justify-between mb-6">
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-gray-900">
+          <h1 className="text-lg font-black text-gray-900 md:text-2xl">
             Personal Information
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+
+          <p className="mt-1 text-xs text-gray-500 md:text-sm">
             Manage your Klassic account details.
           </p>
         </div>
@@ -91,7 +92,7 @@ export default function AccountProfileForm({
           <button
             type="button"
             onClick={() => setEdit(true)}
-            className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-bold hover:bg-blue-100 transition"
+            className="rounded-xl bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 transition hover:bg-blue-100 md:text-sm"
           >
             Edit
           </button>
@@ -99,70 +100,60 @@ export default function AccountProfileForm({
       </div>
 
       {!edit ? (
-        <div className="rounded-2xl border bg-gradient-to-br from-gray-50 to-blue-50 p-5 space-y-4">
-          <div>
-            <p className="text-xs text-gray-500 font-bold">Name</p>
-            <p className="text-lg font-extrabold text-gray-900">{name}</p>
-          </div>
+        <div className="grid gap-3 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50 p-3 md:grid-cols-2 md:p-5">
+          <InfoBox label="Name" value={name || "Not added"} />
+          <InfoBox label="Phone" value={phone || "Not added"} />
+          <InfoBox label="Email" value={user.email || "Not added"} />
 
-          <div>
-            <p className="text-xs text-gray-500 font-bold">Phone</p>
-            <p className="font-bold text-gray-800">{phone || "Not added"}</p>
-          </div>
+          <div className="rounded-xl bg-white p-3 shadow-sm">
+            <p className="text-[10px] font-black uppercase text-gray-400">
+              Role
+            </p>
 
-          <div>
-            <p className="text-xs text-gray-500 font-bold">Email</p>
-            <p className="font-bold text-gray-800">{user.email}</p>
-          </div>
-
-          <div>
-            <p className="text-xs text-gray-500 font-bold">Role</p>
-            <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-extrabold">
+            <span className="mt-2 inline-block rounded-full bg-green-100 px-3 py-1 text-[10px] font-black text-green-700">
               {user.role}
             </span>
           </div>
         </div>
       ) : (
         <>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Name"
             />
 
-            <input
-              className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+            <Input
               value={phone}
               maxLength={10}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
               placeholder="Phone Number"
             />
 
-            <div className="border p-3 rounded-xl bg-gray-100 font-bold text-gray-700">
+            <div className="rounded-xl border bg-gray-100 p-3 text-xs font-bold text-gray-700 md:text-sm">
               {user.email}
             </div>
 
-            <div className="border p-3 rounded-xl bg-gray-100 font-bold text-gray-700">
+            <div className="rounded-xl border bg-gray-100 p-3 text-xs font-bold text-gray-700 md:text-sm">
               {user.role}
             </div>
           </div>
 
-          <div className="flex gap-3 mt-5">
+          <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:gap-3">
             <button
               type="button"
               onClick={saveProfile}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition disabled:bg-gray-400"
+              className="rounded-xl bg-black px-5 py-3 text-xs font-black text-white transition disabled:bg-gray-400 md:text-sm"
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? "Saving..." : "Save"}
             </button>
 
             <button
               type="button"
               onClick={() => setEdit(false)}
-              className="bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-xl font-bold transition"
+              className="rounded-xl bg-gray-200 px-5 py-3 text-xs font-black transition hover:bg-gray-300 md:text-sm"
             >
               Cancel
             </button>
@@ -170,5 +161,28 @@ export default function AccountProfileForm({
         </>
       )}
     </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white p-3 shadow-sm">
+      <p className="text-[10px] font-black uppercase text-gray-400">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-black text-gray-900 md:text-base">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className="rounded-xl border p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-100 md:text-sm"
+    />
   );
 }
