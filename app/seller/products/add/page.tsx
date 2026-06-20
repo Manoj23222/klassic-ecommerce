@@ -97,6 +97,20 @@ export default function AddSellerProductPage() {
   const [notCoveredWarranty, setNotCoveredWarranty] = useState("");
   const [warrantyServiceType, setWarrantyServiceType] = useState("");
   const [returnDays, setReturnDays] = useState("7");
+  const isGroceryProduct = useMemo(() => {
+  const text = `${selectedCategory?.name || ""} ${
+    selectedCategory?.path?.join(" ") || ""
+  }`.toLowerCase();
+
+  return (
+    text.includes("grocery") ||
+    text.includes("food") ||
+    text.includes("spice") ||
+    text.includes("masala")
+  );
+}, [selectedCategory]);
+
+const finalStep = isGroceryProduct ? 7 : 8;
 
   const generatedSku = useMemo(() => {
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase();
@@ -153,9 +167,9 @@ export default function AddSellerProductPage() {
       fullPath.includes("masala")
     ) {
       setRules([
-        { fieldName: "FSSAI License Number", fieldKey: "fssai", fieldType: "text", required: true, placeholder: "Enter 14-digit FSSAI number", showOnProductPage: true },
+        { fieldName: "FSSAI License Number", fieldKey: "fssai", fieldType: "text", required: false, placeholder: "Enter 14-digit FSSAI number", showOnProductPage: true },
         { fieldName: "Maximum Shelf Life", fieldKey: "shelf_life", fieldType: "text", required: true, placeholder: "e.g. 12 Months", showOnProductPage: true },
-        { fieldName: "Diet Type", fieldKey: "diet_type", fieldType: "dropdown", required: true, options: ["Select...", "Vegetarian", "Non-Vegetarian", "Vegan", "Eggitarian"], filterable: true, showOnProductPage: true },
+        { fieldName: "Diet Type", fieldKey: "diet_type", fieldType: "dropdown", required: false, options: ["Select...", "Vegetarian", "Non-Vegetarian", "Vegan", "Eggitarian"], filterable: true, showOnProductPage: true },
         { fieldName: "Food Type", fieldKey: "food_type", fieldType: "dropdown", required: false, options: ["Select...", "Whole Spices", "Powder Spices", "Blended Masala", "Ready Mix"], filterable: true, showOnProductPage: true },
       ]);
     } else if (
@@ -283,7 +297,7 @@ export default function AddSellerProductPage() {
 
   function nextStep() {
     if (!validateStep()) return;
-    setActiveStep((prev) => Math.min(prev + 1, 8));
+    setActiveStep((prev) => Math.min(prev + 1, finalStep));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -500,7 +514,9 @@ export default function AddSellerProductPage() {
           </p>
 
           <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto pb-1">
-            {steps.map((item, index) => {
+            {steps
+  .filter((item) => !(isGroceryProduct && item === "Warranty"))
+  .map((item, index) => {
               const stepNo = index + 1;
               const active = activeStep === stepNo;
               const done = activeStep > stepNo;
@@ -713,7 +729,7 @@ export default function AddSellerProductPage() {
             </Step>
           )}
 
-          {activeStep === 8 && (
+          {activeStep === finalStep&& (
             <Step title="Warranty & Support" subtitle="Return and support policy.">
               <div className="mb-5 grid gap-5 md:grid-cols-2">
                 <Input label="Warranty Summary" placeholder="e.g. 1 Year Brand Warranty" value={warranty} setValue={setWarranty} />
@@ -741,7 +757,7 @@ export default function AddSellerProductPage() {
               </button>
             )}
 
-            {activeStep < 8 ? (
+            {activeStep < finalStep ? (
               <button type="button" onClick={nextStep} className="rounded-full bg-black px-7 py-2.5 text-sm font-black text-white shadow-md hover:bg-neutral-800">
                 Save & Continue →
               </button>

@@ -28,7 +28,9 @@ const categories = [
   "Sports",
 ];
 
-function normalizeGallery(value: unknown) {
+const statuses = ["Pending Approval", "Approved", "Rejected", "Draft"];
+
+function normalizeArray(value: unknown) {
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "string") return value;
   return "";
@@ -40,27 +42,28 @@ export default function EditProductForm({ product }: { product: any }) {
   const [name, setName] = useState(product.name || "");
   const [description, setDescription] = useState(product.description || "");
   const [price, setPrice] = useState(String(product.price || ""));
+  const [salePrice, setSalePrice] = useState(String(product.sale_price || product.salePrice || ""));
   const [stock, setStock] = useState(String(product.stock ?? 0));
   const [category, setCategory] = useState(product.category || "General");
+  const [status, setStatus] = useState(product.status || "Pending Approval");
   const [featured, setFeatured] = useState(Boolean(product.featured));
   const [image, setImage] = useState(product.image || "");
-  const [galleryImages, setGalleryImages] = useState(
-    normalizeGallery(product.gallery_images)
+  const [galleryImages, setGalleryImages] = useState(normalizeArray(product.gallery_images));
+  const [colors, setColors] = useState(normalizeArray(product.colors));
+  const [sizes, setSizes] = useState(normalizeArray(product.sizes));
+  const [quantityOptions, setQuantityOptions] = useState(
+    normalizeArray(product.quantityOptions || product.quantities || product.weightOptions)
   );
-  const [colors, setColors] = useState(product.colors || "");
-  const [sizes, setSizes] = useState(product.sizes || "");
+
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const uploadImage = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a valid image file");
-      return;
-    }
+    if (!file.type.startsWith("image/")) return toast.error("Upload valid image");
 
     try {
       setUploading(true);
-
       const formData = new FormData();
       formData.append("image", file);
 
@@ -70,162 +73,175 @@ export default function EditProductForm({ product }: { product: any }) {
       });
 
       const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Image upload failed");
-        return;
-      }
+      if (!res.ok || !data.success) return toast.error(data.message || "Upload failed");
 
       setImage(data.imageUrl);
-      toast.success("Product image uploaded");
+      toast.success("Image uploaded");
     } catch {
       toast.error("Image upload failed");
     } finally {
       setUploading(false);
     }
   };
+  const uploadGalleryImage = async (file: File) => {
+  if (!file.type.startsWith("image/")) {
+    toast.error("Upload valid image");
+    return;
+  }
+
+  try {
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await fetch("/api/admin/upload-image", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      toast.error(data.message || "Gallery upload failed");
+      return;
+    }
+
+    setGalleryImages((prev) =>
+      prev ? `${prev}, ${data.imageUrl}` : data.imageUrl
+    );
+
+    toast.success("Gallery image added");
+  } catch {
+    toast.error("Gallery upload failed");
+  } finally {
+    setUploading(false);
+  }
+};
 
   const updateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const cleanName = name.trim();
-    const cleanDescription = description.trim();
-    const cleanImage = image.trim();
-    const cleanPrice = Number(price);
-    const cleanStock = Number(stock);
+    const galleryArray = galleryImages.split(",").map((x) => x.trim()).filter(Boolean);
+    const quantityArray = quantityOptions.split(",").map((x) => x.trim()).filter(Boolean);
+    const colorsArray = colors.split(",").map((x) => x.trim()).filter(Boolean);
+    const sizesArray = sizes.split(",").map((x) => x.trim()).filter(Boolean);
 
-    if (!productId) return toast.error("Invalid product ID");
-    if (cleanName.length < 2) return toast.error("Enter product name");
-    if (cleanDescription.length < 5) return toast.error("Enter product description");
-    if (!cleanPrice || cleanPrice <= 0) return toast.error("Enter valid product price");
-    if (Number.isNaN(cleanStock) || cleanStock < 0) return toast.error("Enter valid stock");
-    if (!cleanImage) return toast.error("Please upload or enter main image");
-
-    const galleryArray = galleryImages
-      .split(",")
-      .map((img) => img.trim())
-      .filter(Boolean);
+    if (!name.trim()) return toast.error("Product name required");
+    if (!description.trim()) return toast.error("Description required");
+    if (Number(price) <= 0) return toast.error("Valid price required");
+    if (Number(stock) < 0) return toast.error("Valid stock required");
 
     try {
       setSaving(true);
 
-      const res = await fetch("/api/admin/update-product", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const res = await fetch(`/api/admin/products/${productId}`, {
+  method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: productId,
-          name: cleanName,
-          description: cleanDescription,
-          price: cleanPrice,
-          stock: cleanStock,
+          name,
+          description,
+          price: Number(price),
+          sale_price: salePrice ? Number(salePrice) : undefined,
+          salePrice: salePrice ? Number(salePrice) : undefined,
+          stock: Number(stock),
           category,
-          image: cleanImage,
+          status,
           featured,
+          image,
           gallery_images: galleryArray,
-          colors,
-          sizes,
+          images: galleryArray,
+          colors: colorsArray,
+          sizes: sizesArray,
+          quantityOptions: quantityArray,
+          quantities: quantityArray,
+          weightOptions: quantityArray,
         }),
       });
 
       const data = await res.json();
+      if (!res.ok || !data.success) return toast.error(data.message || "Update failed");
 
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Update failed");
-        return;
-      }
-
-      toast.success("Product updated successfully");
-
-      setTimeout(() => {
-        window.location.href = "/admin/product";
-      }, 800);
+      toast.success("Product updated");
+      setTimeout(() => (window.location.href = "/admin/products"), 800);
     } catch {
-      toast.error("Server error. Please try again.");
+      toast.error("Server error");
     } finally {
       setSaving(false);
     }
   };
 
-  const galleryList = galleryImages
-    .split(",")
-    .map((img: string) => img.trim())
-    .filter(Boolean);
+  const deleteProduct = async () => {
+    const ok = confirm("Delete this product permanently?");
+    if (!ok) return;
+
+    try {
+      setDeleting(true);
+
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) return toast.error(data.message || "Delete failed");
+
+      toast.success("Product deleted");
+      setTimeout(() => (window.location.href = "/admin/products"), 800);
+    } catch {
+      toast.error("Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const galleryList = galleryImages.split(",").map((x) => x.trim()).filter(Boolean);
 
   return (
     <form onSubmit={updateProduct} className="grid gap-5">
-      <div className="rounded-2xl border bg-gradient-to-r from-indigo-50 to-blue-50 p-5">
-        <h2 className="text-xl font-extrabold text-gray-900">
-          Edit Product
-        </h2>
-        <p className="text-sm text-gray-600 mt-1">
-          Update product details, inventory, variants and gallery images.
+      <div className="rounded-3xl bg-gradient-to-r from-slate-950 to-indigo-700 p-5 text-white">
+        <h2 className="text-2xl font-black">Luxury Product Control</h2>
+        <p className="mt-1 text-sm text-blue-100">
+          Edit product, price, stock, status, quantity, images and variants.
         </p>
       </div>
 
-      <input
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Product Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
+      <input className="rounded-xl border p-3" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} />
 
-      <textarea
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Description"
-        rows={4}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        required
-      />
+      <textarea className="rounded-xl border p-3" placeholder="Description" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} />
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <input
-          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Price"
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-        />
-
-        <input
-          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Stock"
-          type="number"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          required
-        />
-
-        <select
-          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          required
-        >
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
+      <div className="grid gap-4 md:grid-cols-4">
+        <input className="rounded-xl border p-3" type="number" placeholder="MRP / Price" value={price} onChange={(e) => setPrice(e.target.value)} />
+        <input className="rounded-xl border p-3" type="number" placeholder="Sale Price" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
+        <input className="rounded-xl border p-3" type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} />
+        <select className="rounded-xl border p-3" value={status} onChange={(e) => setStatus(e.target.value)}>
+          {statuses.map((s) => <option key={s}>{s}</option>)}
         </select>
       </div>
 
-      <label className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 p-4 rounded-xl cursor-pointer">
-        <input
-          type="checkbox"
-          checked={featured}
-          onChange={(e) => setFeatured(e.target.checked)}
-          className="w-5 h-5"
-        />
-        <span className="font-bold">⭐ Featured Product</span>
+      <select className="rounded-xl border p-3" value={category} onChange={(e) => setCategory(e.target.value)}>
+        {categories.map((cat) => <option key={cat}>{cat}</option>)}
+      </select>
+
+      <input
+        className="rounded-xl border p-3"
+        placeholder="Quantity options: 44 g, 100 g, 500 g, 1 kg"
+        value={quantityOptions}
+        onChange={(e) => setQuantityOptions(e.target.value)}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <input className="rounded-xl border p-3" placeholder="Colors comma separated" value={colors} onChange={(e) => setColors(e.target.value)} />
+        <input className="rounded-xl border p-3" placeholder="Sizes comma separated" value={sizes} onChange={(e) => setSizes(e.target.value)} />
+      </div>
+
+      <label className="flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 p-4 font-bold">
+        <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
+        ⭐ Featured Product
       </label>
 
       <div
-        className="border-2 border-dashed border-blue-300 p-8 rounded-2xl text-center cursor-pointer bg-blue-50 hover:bg-blue-100 transition"
+        className="rounded-3xl border-2 border-dashed border-blue-300 bg-blue-50 p-8 text-center"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -233,98 +249,107 @@ export default function EditProductForm({ product }: { product: any }) {
           if (file) uploadImage(file);
         }}
       >
-        <p className="font-extrabold text-lg text-gray-900">
-          Drag & Drop Product Image Here
-        </p>
-        <p className="text-sm text-gray-500 mb-3">
-          Or choose file below
-        </p>
-
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) uploadImage(file);
-          }}
-        />
+        <p className="font-black">Drag & Drop Main Image</p>
+        <input className="mt-3" type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
       </div>
 
-      {uploading && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-xl font-bold text-sm">
-          Uploading image...
-        </div>
-      )}
+      {uploading && <p className="rounded-xl bg-blue-50 p-3 font-bold text-blue-700">Uploading...</p>}
 
-      <input
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Image URL"
-        value={image}
-        onChange={(e) => setImage(e.target.value)}
-        required
-      />
+      <input className="rounded-xl border p-3" placeholder="Main Image URL" value={image} onChange={(e) => setImage(e.target.value)} />
 
       {image && (
-        <div className="rounded-2xl border bg-white p-4 w-fit">
-          <p className="text-xs font-bold text-gray-500 mb-2">
-            Main Preview
-          </p>
-          <img
-            src={image}
-            alt="Preview"
-            className="w-40 h-40 object-contain rounded-xl bg-gray-50"
-          />
-        </div>
-      )}
+  <div className="w-fit rounded-2xl border bg-white p-3">
+    <img
+      src={image}
+      alt="Preview"
+      className="h-40 w-40 rounded-xl bg-white object-contain"
+    />
 
+    <button
+      type="button"
+      onClick={() => setImage("")}
+      className="mt-3 w-full rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white"
+    >
+      Delete Main Image
+    </button>
+  </div>
+)}
+<div
+  className="rounded-3xl border-2 border-dashed border-purple-300 bg-purple-50 p-8 text-center"
+  onDragOver={(e) => e.preventDefault()}
+  onDrop={(e) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files || []);
+    files.forEach((file) => uploadGalleryImage(file));
+  }}
+>
+  <p className="font-black">Drag & Drop Gallery Images</p>
+
+  <input
+    className="mt-3"
+    type="file"
+    accept="image/*"
+    multiple
+    onChange={(e) => {
+      const files = Array.from(e.target.files || []);
+      files.forEach((file) => uploadGalleryImage(file));
+    }}
+  />
+</div>
       <textarea
-        className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Gallery Images URLs comma separated"
+        className="rounded-xl border p-3"
+        placeholder="Gallery URLs comma separated"
         rows={4}
         value={galleryImages}
         onChange={(e) => setGalleryImages(e.target.value)}
       />
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <input
-          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Colors comma separated e.g. Black, Brown, Blue"
-          value={colors}
-          onChange={(e) => setColors(e.target.value)}
-        />
-
-        <input
-          className="border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Sizes comma separated e.g. S, M, L, XL"
-          value={sizes}
-          onChange={(e) => setSizes(e.target.value)}
-        />
-      </div>
-
       {galleryList.length > 0 && (
-        <div className="rounded-2xl border bg-gray-50 p-4">
-          <h3 className="font-extrabold mb-3">Gallery Preview</h3>
+        <div className="rounded-2xl border bg-slate-50 p-4">
+          <h3 className="mb-3 font-black">Gallery Preview</h3>
+          <div className="flex flex-wrap gap-3">
+            {galleryList.map((img, i) => (
+  <div key={`${img}-${i}`} className="rounded-xl border bg-white p-2">
+    <img
+      src={img}
+      alt=""
+      className="h-24 w-24 rounded-lg object-contain"
+    />
 
-          <div className="flex gap-3 flex-wrap">
-            {galleryList.map((img: string, index: number) => (
-              <img
-                key={`${img}-${index}`}
-                src={img}
-                alt={`Gallery ${index + 1}`}
-                className="w-24 h-24 object-contain border rounded-xl bg-white p-2"
-              />
-            ))}
+    <button
+      type="button"
+      onClick={() => {
+        const updated = galleryList.filter((_, index) => index !== i);
+        setGalleryImages(updated.join(", "));
+      }}
+      className="mt-2 w-full rounded-lg bg-red-600 px-2 py-1 text-xs font-black text-white"
+    >
+      Delete
+    </button>
+  </div>
+))}
           </div>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={saving || uploading}
-        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white p-4 rounded-xl font-extrabold transition disabled:from-gray-400 disabled:to-gray-400"
-      >
-        {saving ? "Updating Product..." : "Update Product"}
-      </button>
+      <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+        <button
+          type="submit"
+          disabled={saving || uploading}
+          className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-4 font-black text-white disabled:bg-gray-400"
+        >
+          {saving ? "Updating..." : "Update Product"}
+        </button>
+
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={deleteProduct}
+          className="rounded-xl bg-red-600 p-4 font-black text-white disabled:bg-gray-400"
+        >
+          {deleting ? "Deleting..." : "Delete"}
+        </button>
+      </div>
     </form>
   );
 }

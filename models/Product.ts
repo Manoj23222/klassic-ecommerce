@@ -103,6 +103,9 @@ const ProductSchema = new Schema(
     sizes: { type: [String], default: [] },
     material: { type: String, default: "" },
     weight: { type: String, default: "" },
+    quantityOptions: { type: [String], default: [] },
+quantities: { type: [String], default: [] },
+weightOptions: { type: [String], default: [] },
 
     variants: { type: [VariantSchema], default: [] },
     color_variants: { type: [VariantSchema], default: [] },

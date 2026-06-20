@@ -31,6 +31,14 @@ export default function ProductPageClient({
   relatedProducts: any[];
 }) {
   const [activeTab, setActiveTab] = useState("specifications");
+  const [selectedQuantity, setSelectedQuantity] = useState("");
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
+  const [openSection, setOpenSection] = useState<string | null>("delivery");
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
   const productId = String(product.id || product._id || "");
 
   const variants: Variant[] = useMemo(() => {
@@ -152,6 +160,41 @@ export default function ProductPageClient({
   const selectedColor =
     selectedVariant?.colorName || selectedVariant?.color || "Default";
   const selectedSku = selectedVariant?.sku || product.sku || "N/A";
+  const nameQuantityMatch = String(product.name || "").match(
+  /\((\d+\s*(g|gm|kg|ml|l|ltr))\)/i
+);
+
+const singleProductQuantity = nameQuantityMatch
+  ? [nameQuantityMatch[1].replace(/\s+/g, " ")]
+  : [];
+
+const quantityOptions =
+
+  Array.isArray(product.quantityOptions) && product.quantityOptions.length > 0
+    ? product.quantityOptions
+    : Array.isArray(product.quantities) && product.quantities.length > 0
+    ? product.quantities
+    : Array.isArray(product.weightOptions) && product.weightOptions.length > 0
+    ? product.weightOptions
+    : singleProductQuantity;
+
+const isGroceryProduct =
+  String(product.category || "").toLowerCase().includes("grocery") ||
+  String(product.category_path || "").toLowerCase().includes("grocery");
+
+const showQuantitySelector = quantityOptions.length > 0;
+
+useEffect(() => {
+  if (showQuantitySelector && !selectedQuantity) {
+    setSelectedQuantity(String(quantityOptions[0]));
+  }
+}, [showQuantitySelector, quantityOptions, selectedQuantity]);
+
+const hasRealColor =
+  variants.length > 0 &&
+  selectedColor &&
+  selectedColor !== "Default" &&
+  selectedColor !== "Color";
 
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewName, setReviewName] = useState("");
@@ -196,10 +239,8 @@ export default function ProductPageClient({
 
   const avgRating =
     approvedReviews.length > 0
-      ? approvedReviews.reduce(
-          (sum, r) => sum + Number(r.rating || 0),
-          0
-        ) / approvedReviews.length
+      ? approvedReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) /
+        approvedReviews.length
       : 0;
 
   async function submitReview(e: React.FormEvent) {
@@ -324,7 +365,7 @@ export default function ProductPageClient({
               </div>
             </div>
 
-            {variants.length > 0 && (
+            {hasRealColor && (
               <div className="mt-3 rounded-xl border bg-white p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <p className="text-sm font-bold">
@@ -422,6 +463,8 @@ export default function ProductPageClient({
                 </span>
               </div>
 
+              
+
               <div className="mt-3 flex flex-wrap items-end gap-2">
                 <p className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
                   ₹{price.toFixed(2)}
@@ -433,14 +476,40 @@ export default function ProductPageClient({
                   {discount}% off
                 </p>
               </div>
+{showQuantitySelector && (
+  <div className="mt-4">
+    <p className="mb-2 text-sm font-bold">
+      Selected Quantity:
+      <span className="ml-2 text-gray-700">{selectedQuantity}</span>
+    </p>
 
+    <div className="flex gap-2 overflow-x-auto">
+      {quantityOptions.map((qty: string) => (
+        <button
+          key={qty}
+          type="button"
+          onClick={() => setSelectedQuantity(qty)}
+          className={`shrink-0 rounded-lg border px-4 py-2 text-sm font-bold ${
+            selectedQuantity === qty
+              ? "border-black bg-black text-white"
+              : "border-gray-300 bg-white text-black"
+          }`}
+        >
+          {qty}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
               <div className="mt-2 text-xs text-gray-600 sm:text-sm">
                 <p>
                   SKU: <b>{selectedSku}</b>
                 </p>
-                <p>
-                  Color: <b>{selectedColor}</b>
-                </p>
+                {hasRealColor && (
+  <p>
+    Color: <b>{selectedColor}</b>
+  </p>
+)}
               </div>
 
               <p
@@ -455,330 +524,329 @@ export default function ProductPageClient({
             </Card>
 
             <Card>
-              <h3 className="mb-3 text-lg font-black">
-                Delivery Information
-              </h3>
+              <SectionButton
+                title="Delivery Information"
+                section="delivery"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter Pincode"
-                  className="flex-1 rounded-xl border p-3"
-                />
+              {openSection === "delivery" && (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Pincode"
+                      className="flex-1 rounded-xl border p-3"
+                    />
 
-                <button className="rounded-xl bg-black px-5 text-white">
-                  Check
-                </button>
-              </div>
-
-              <div className="mt-3 space-y-1 text-sm">
-                <p>✓ Free Delivery Available</p>
-                <p>✓ Cash On Delivery</p>
-                <p>✓ Easy Returns</p>
-              </div>
-            </Card>
-
-            <Card>
-              <h3 className="mb-3 text-lg font-black">Sold By</h3>
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-lg font-black text-white">
-                  {(product.seller_store_name || "K").slice(0, 1)}
-                </div>
-
-                <div>
-                  <p className="font-bold">
-                    {product.seller_store_name || "Klassic Seller"}
-                  </p>
-
-                  <p className="text-xs text-gray-500">Trusted Seller</p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="font-black">98%</p>
-                  <p className="text-xs">Positive</p>
-                </div>
-
-                <div>
-                  <p className="font-black">10K+</p>
-                  <p className="text-xs">Orders</p>
-                </div>
-
-                <div>
-                  <p className="font-black">4.8★</p>
-                  <p className="text-xs">Rating</p>
-                </div>
-              </div>
-            </Card>
-<Card>
-  <h3 className="mb-4 text-lg font-black">
-    Trust & Assurance
-  </h3>
-
-  <div className="grid grid-cols-2 gap-3">
-    <div className="rounded-2xl bg-green-50 p-4">
-      <p className="text-2xl">✔</p>
-      <p className="mt-2 font-black">
-        Genuine Product
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-blue-50 p-4">
-      <p className="text-2xl">🚚</p>
-      <p className="mt-2 font-black">
-        Fast Delivery
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-yellow-50 p-4">
-      <p className="text-2xl">↩</p>
-      <p className="mt-2 font-black">
-        Easy Returns
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-purple-50 p-4">
-      <p className="text-2xl">🔒</p>
-      <p className="mt-2 font-black">
-        Secure Payment
-      </p>
-    </div>
-  </div>
-</Card>
-            <Card>
-              <h3 className="mb-3 text-lg font-black">Highlights</h3>
-
-              {Array.isArray(product.features) &&
-              product.features.length > 0 ? (
-                <ul className="space-y-2 text-sm">
-                  {product.features.map((f: string, i: number) => (
-                    <li key={i}>✓ {f}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Premium quality product with trusted Klassic marketplace
-                  assurance.
-                </p>
-              )}
-            </Card>
-
-            <Card>
-              <h3 className="mb-3 text-lg font-black">Secure Shopping</h3>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>🔒 Secure Payments</div>
-                <div>↩ Easy Returns</div>
-                <div>🚚 Fast Delivery</div>
-                <div>✔ Genuine Product</div>
-              </div>
-            </Card>
-
-            <Card>
-              <h2 className="mb-3 text-xl font-black">All Details</h2>
-
-              <div className="overflow-x-auto border-b border-gray-300">
-                <div className="flex min-w-max gap-8 text-sm font-semibold tracking-tight">
-                  {[
-                    "specifications",
-                    "warranty",
-                    "description",
-                    "manufacturer",
-                  ].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`pb-2 text-sm capitalize transition ${
-                        activeTab === tab
-                          ? "border-b-2 border-black text-black"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {tab === "manufacturer" ? "Manufacturer Info" : tab}
+                    <button className="rounded-xl bg-black px-5 text-white">
+                      Check
                     </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {activeTab === "description" && (
-                <div className="mt-3 text-sm leading-7">
-                  {product.description || "No description available"}
-                </div>
+                  <div className="mt-3 space-y-1 text-sm">
+                    <p>✓ Free Delivery Available</p>
+                    <p>✓ Cash On Delivery</p>
+                    <p>✓ Easy Returns</p>
+                  </div>
+                </>
               )}
+            </Card>
 
-              {activeTab === "specifications" && (
-                <div className="mt-4">
-                  <ProductSpecifications
-                    product={{
-                      ...product,
-                      sku: selectedSku,
-                      default_variant_sku: selectedSku,
-                      color: selectedColor,
-                    }}
-                  />
-                </div>
-              )}
+            <Card>
+              <SectionButton
+                title="Trust & Assurance"
+                section="trust"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
-              {activeTab === "warranty" && (
-                <div className="mt-3 space-y-3 text-sm">
-                  <p>
-                    <strong>Warranty:</strong>{" "}
-                    {product.returnPolicy?.warranty || "1 Year Warranty"}
-                  </p>
-                  <p>
-                    <strong>Return:</strong>{" "}
-                    {product.returnPolicy?.returnDays || 7} Days
-                  </p>
-                  <p>
-                    <strong>Cash On Delivery:</strong> Available
-                  </p>
-                  <p>
-                    <strong>Replacement:</strong> Available
-                  </p>
-                </div>
-              )}
+              {openSection === "trust" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-2xl">✔</p>
+                    <p className="mt-2 font-black">Genuine Product</p>
+                  </div>
 
-              {activeTab === "manufacturer" && (
-                <div className="mt-3 space-y-3 text-sm">
-                  <p>
-                    <strong>Brand:</strong> {product.brand || "-"}
-                  </p>
-                  <p>
-                    <strong>Seller:</strong> {product.seller_store_name || "-"}
-                  </p>
-                  <p>
-                    <strong>Country:</strong>{" "}
-                    {product.countryOfOrigin ||
-                      product.returnPolicy?.countryOfOrigin ||
-                      "India"}
-                  </p>
-                  <p>
-                    <strong>Manufacturer:</strong>{" "}
-                    {product.returnPolicy?.importerNameAddress ||
-                      product.brand ||
-                      "Klassic"}
-                  </p>
+                  <div className="rounded-2xl bg-blue-50 p-4">
+                    <p className="text-2xl">🚚</p>
+                    <p className="mt-2 font-black">Fast Delivery</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-yellow-50 p-4">
+                    <p className="text-2xl">↩</p>
+                    <p className="mt-2 font-black">Easy Returns</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-purple-50 p-4">
+                    <p className="text-2xl">🔒</p>
+                    <p className="mt-2 font-black">Secure Payment</p>
+                  </div>
                 </div>
               )}
             </Card>
 
             <Card>
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-  {[5,4,3,2,1].map((star) => {
-    const count = approvedReviews.filter(
-      (r) => Number(r.rating) === star
-    ).length;
+              <SectionButton
+                title="Highlights"
+                section="highlights"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
-    const percent =
-      approvedReviews.length > 0
-        ? (count / approvedReviews.length) * 100
-        : 0;
-
-    return (
-      <div
-        key={star}
-        className="rounded-2xl border p-3"
-      >
-        <p className="font-black">
-          {star} ★
-        </p>
-
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
-          <div
-            className="h-full bg-green-600"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500">
-          {count} reviews
-        </p>
-      </div>
-    );
-  })}
-</div>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-black">Ratings & Reviews</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Real customer feedback for this product
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-3xl font-black">
-                    {avgRating ? avgRating.toFixed(1) : "0.0"}★
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {approvedReviews.length} Reviews
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
-                <form onSubmit={submitReview} className="rounded-2xl border p-4">
-                  <h3 className="mb-3 font-black">Write a Review</h3>
-
-                  <input
-                    value={reviewName}
-                    onChange={(e) => setReviewName(e.target.value)}
-                    placeholder="Your name"
-                    className="mb-2 w-full rounded-xl border p-3 text-sm"
-                  />
-
-                  <select
-                    value={reviewRating}
-                    onChange={(e) => setReviewRating(Number(e.target.value))}
-                    className="mb-2 w-full rounded-xl border p-3 text-sm"
-                  >
-                    <option value={5}>5 Star</option>
-                    <option value={4}>4 Star</option>
-                    <option value={3}>3 Star</option>
-                    <option value={2}>2 Star</option>
-                    <option value={1}>1 Star</option>
-                  </select>
-
-                  <textarea
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                    placeholder="Write your review"
-                    rows={4}
-                    className="mb-3 w-full rounded-xl border p-3 text-sm"
-                  />
-
-                  <button
-                    disabled={reviewLoading}
-                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
-                  >
-                    {reviewLoading ? "Submitting..." : "Submit Review"}
-                  </button>
-                </form>
-
-                <div className="space-y-3">
-                  {approvedReviews.length === 0 ? (
-                    <div className="rounded-2xl border p-5 text-sm text-gray-500">
-                      No reviews yet. Be the first to review this product.
-                    </div>
+              {openSection === "highlights" && (
+                <>
+                  {Array.isArray(product.features) &&
+                  product.features.length > 0 ? (
+                    <ul className="space-y-2 text-sm">
+                      {product.features.map((f: string, i: number) => (
+                        <li key={i}>✓ {f}</li>
+                      ))}
+                    </ul>
                   ) : (
-                    approvedReviews.slice(0, 6).map((r, i) => (
-                      <div key={r._id || i} className="rounded-2xl border p-4">
-                        <div className="flex items-center justify-between">
-                          <p className="font-black">{r.customer_name}</p>
-                          <span className="rounded bg-green-600 px-2 py-1 text-xs font-black text-white">
-                            {r.rating} ★
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-sm leading-6 text-gray-700">
-                          {r.comment}
-                        </p>
-                      </div>
-                    ))
+                    <p className="text-sm text-gray-500">
+                      Premium quality product with trusted Klassic marketplace
+                      assurance.
+                    </p>
                   )}
+                </>
+              )}
+            </Card>
+
+            <Card>
+              <SectionButton
+                title="Secure Shopping"
+                section="secure"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
+
+              {openSection === "secure" && (
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>🔒 Secure Payments</div>
+                  <div>↩ Easy Returns</div>
+                  <div>🚚 Fast Delivery</div>
+                  <div>✔ Genuine Product</div>
                 </div>
-              </div>
+              )}
+            </Card>
+
+            <Card>
+              <SectionButton
+                title="All Details"
+                section="details"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
+
+              {openSection === "details" && (
+                <>
+                  <div className="overflow-x-auto border-b border-gray-300">
+                    <div className="flex min-w-max gap-8 text-sm font-semibold tracking-tight">
+                      {[
+                        "showcase",
+                        "specifications",
+                        "description",
+                        "manufacturer",
+                      ].map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => {
+                            if (tab === "showcase") {
+                              setShowcaseOpen(true);
+                              return;
+                            }
+
+                            setActiveTab(tab);
+                          }}
+                          className={`pb-2 text-sm capitalize transition ${
+                            activeTab === tab
+                              ? "border-b-2 border-black text-black"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {tab === "manufacturer"
+                            ? "Manufacturer Info"
+                            : tab}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {activeTab === "description" && (
+                    <div className="mt-3 text-sm leading-7">
+                      {product.description || "No description available"}
+                    </div>
+                  )}
+
+                  {activeTab === "specifications" && (
+                    <div className="mt-4">
+                      <ProductSpecifications
+                        product={{
+                          ...product,
+                          sku: selectedSku,
+                          default_variant_sku: selectedSku,
+                          color: selectedColor,
+                          stock,
+                          size: selectedQuantity,
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {activeTab === "manufacturer" && (
+                    <div className="mt-3 space-y-3 text-sm">
+                      <p>
+                        <strong>Brand:</strong> {product.brand || "-"}
+                      </p>
+                      <p>
+                        <strong>Country:</strong>{" "}
+                        {product.countryOfOrigin ||
+                          product.returnPolicy?.countryOfOrigin ||
+                          "India"}
+                      </p>
+                      <p>
+                        <strong>Manufacturer:</strong>{" "}
+                        {product.returnPolicy?.importerNameAddress ||
+                          product.brand ||
+                          "Klassic"}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+
+            <Card>
+              <SectionButton
+                title="Ratings & Reviews"
+                section="reviews"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
+
+              {openSection === "reviews" && (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Real customer feedback for this product
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-3xl font-black">
+                        {avgRating ? avgRating.toFixed(1) : "0.0"}★
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {approvedReviews.length} Reviews
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const count = approvedReviews.filter(
+                        (r) => Number(r.rating) === star
+                      ).length;
+
+                      const percent =
+                        approvedReviews.length > 0
+                          ? (count / approvedReviews.length) * 100
+                          : 0;
+
+                      return (
+                        <div key={star} className="rounded-2xl border p-3">
+                          <p className="font-black">{star} ★</p>
+
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                            <div
+                              className="h-full bg-green-600"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+
+                          <p className="mt-2 text-xs text-gray-500">
+                            {count} reviews
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
+                    <form
+                      onSubmit={submitReview}
+                      className="rounded-2xl border p-4"
+                    >
+                      <h3 className="mb-3 font-black">Write a Review</h3>
+
+                      <input
+                        value={reviewName}
+                        onChange={(e) => setReviewName(e.target.value)}
+                        placeholder="Your name"
+                        className="mb-2 w-full rounded-xl border p-3 text-sm"
+                      />
+
+                      <select
+                        value={reviewRating}
+                        onChange={(e) =>
+                          setReviewRating(Number(e.target.value))
+                        }
+                        className="mb-2 w-full rounded-xl border p-3 text-sm"
+                      >
+                        <option value={5}>5 Star</option>
+                        <option value={4}>4 Star</option>
+                        <option value={3}>3 Star</option>
+                        <option value={2}>2 Star</option>
+                        <option value={1}>1 Star</option>
+                      </select>
+
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Write your review"
+                        rows={4}
+                        className="mb-3 w-full rounded-xl border p-3 text-sm"
+                      />
+
+                      <button
+                        disabled={reviewLoading}
+                        className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
+                      >
+                        {reviewLoading ? "Submitting..." : "Submit Review"}
+                      </button>
+                    </form>
+
+                    <div className="space-y-3">
+                      {approvedReviews.length === 0 ? (
+                        <div className="rounded-2xl border p-5 text-sm text-gray-500">
+                          No reviews yet. Be the first to review this product.
+                        </div>
+                      ) : (
+                        approvedReviews.slice(0, 6).map((r, i) => (
+                          <div
+                            key={r._id || i}
+                            className="rounded-2xl border p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <p className="font-black">{r.customer_name}</p>
+                              <span className="rounded bg-green-600 px-2 py-1 text-xs font-black text-white">
+                                {r.rating} ★
+                              </span>
+                            </div>
+
+                            <p className="mt-2 text-sm leading-6 text-gray-700">
+                              {r.comment}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </Card>
 
             <Card>
@@ -892,7 +960,71 @@ export default function ProductPageClient({
           Buy ₹{price.toFixed(0)}
         </Link>
       </div>
+
+      {showcaseOpen && (
+        <div className="fixed inset-0 z-[9999] flex bg-black/60">
+          <button
+            type="button"
+            onClick={() => setShowcaseOpen(false)}
+            className="hidden flex-1 md:block"
+          />
+
+          <div className="h-full w-full max-w-[520px] overflow-y-auto bg-white shadow-2xl md:ml-auto">
+            <div className="sticky top-0 z-10 flex items-center gap-4 bg-blue-600 px-4 py-4 text-white">
+              <button
+                type="button"
+                onClick={() => setShowcaseOpen(false)}
+                className="text-3xl font-black leading-none"
+              >
+                ×
+              </button>
+
+              <h2 className="text-lg font-black">Product Details</h2>
+            </div>
+
+            <div className="p-4">
+              <p className="mb-3 text-sm font-bold">Description</p>
+
+              {images.map((img, index) => (
+                <img
+                  key={`${img}-${index}`}
+                  src={img}
+                  alt={product.name}
+                  className="mb-4 w-full rounded-xl object-contain"
+                />
+              ))}
+
+              <p className="text-sm leading-7 text-gray-700">
+                {product.description || "No description available."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function SectionButton({
+  title,
+  section,
+  openSection,
+  toggleSection,
+}: {
+  title: string;
+  section: string;
+  openSection: string | null;
+  toggleSection: (section: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => toggleSection(section)}
+      className="flex w-full items-center justify-between text-left text-lg font-black"
+    >
+      <span>{title}</span>
+      <span className="text-xl">{openSection === section ? "⌃" : "⌄"}</span>
+    </button>
   );
 }
 

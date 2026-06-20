@@ -26,7 +26,10 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const orderId = clean(body.order_id);
-    const itemIndex = Number(body.item_index);
+    const itemIndex =
+  body.item_index === undefined || body.item_index === null || body.item_index === ""
+    ? 0
+    : Number(body.item_index);
     const status = clean(body.status);
 
     const courierName = clean(body.courier_name);

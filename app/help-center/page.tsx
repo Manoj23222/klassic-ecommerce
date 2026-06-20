@@ -8,7 +8,7 @@ const helpCards = [
     title: "Track Order",
     desc: "Check live order status, shipment and delivery updates.",
     icon: "📦",
-    href: "/account/orders",
+    href: "/my-orders",
   },
   {
     title: "Returns & Refunds",

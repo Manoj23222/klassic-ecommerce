@@ -141,7 +141,7 @@ export default async function OrderSuccessPage({
 
               <div className="grid gap-3">
                 <Link
-                  href={`/account/orders`}
+                  href={`/my-orders`}
                   className="rounded-2xl bg-green-600 px-6 py-3 text-center font-black text-white"
                 >
                   Track Order
