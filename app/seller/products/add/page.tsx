@@ -79,7 +79,23 @@ export default function AddSellerProductPage() {
   { label: "1 kg", price: "" },
   { label: "5 kg", price: "" },
 ]);
+const [showQuantityPricing, setShowQuantityPricing] = useState(true);
+const [showSpecifications, setShowSpecifications] = useState(true);
 
+const [productSpecs, setProductSpecs] = useState([
+  { key: "Brand", value: "" },
+  { key: "Type", value: "" },
+  { key: "Sleeve", value: "" },
+  { key: "Fit", value: "" },
+  { key: "Fabric", value: "" },
+  { key: "Pack of", value: "" },
+  { key: "Style Code", value: "" },
+  { key: "Neck Type", value: "" },
+  { key: "Ideal For", value: "" },
+  { key: "Size", value: "" },
+  { key: "Pattern", value: "" },
+  { key: "Suitable For", value: "" },
+]);
   const [mainImage, setMainImage] = useState("");
   const [gallery, setGallery] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
@@ -253,7 +269,11 @@ const finalStep = isGroceryProduct ? 7 : 8;
 
     if (activeStep === 2) {
       for (const rule of rules) {
-        const value = attributes[rule.fieldKey];
+        const key =
+  rule.fieldKey ||
+  rule.fieldName?.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+
+const value = attributes[key];
 
         if (
           rule.required &&
@@ -351,6 +371,22 @@ const finalStep = isGroceryProduct ? 7 : 8;
     setNotCoveredWarranty("");
     setWarrantyServiceType("");
     setReturnDays("7");
+    setShowQuantityPricing(true);
+    setShowSpecifications(true);
+setProductSpecs([
+  { key: "Brand", value: "" },
+  { key: "Type", value: "" },
+  { key: "Sleeve", value: "" },
+  { key: "Fit", value: "" },
+  { key: "Fabric", value: "" },
+  { key: "Pack of", value: "" },
+  { key: "Style Code", value: "" },
+  { key: "Neck Type", value: "" },
+  { key: "Ideal For", value: "" },
+  { key: "Size", value: "" },
+  { key: "Pattern", value: "" },
+  { key: "Suitable For", value: "" },
+]);
   }
 
   async function submitProduct(status: "Draft" | "Pending Approval") {
@@ -411,7 +447,17 @@ const finalStep = isGroceryProduct ? 7 : 8;
       category_path: selectedCategory?.path || [],
 
       attributes,
-      specifications: attributes,
+      showSpecifications,
+
+specifications: showSpecifications
+  ? [
+      ...Object.entries(attributes || {}).map(([key, value]) => ({
+        key,
+        value,
+      })),
+      ...productSpecs.filter((x) => x.key && x.value),
+    ]
+  : [],
       attributeMeta: rules.map((rule) => ({
         fieldName: rule.fieldName,
         fieldKey: rule.fieldKey,
@@ -442,10 +488,15 @@ const finalStep = isGroceryProduct ? 7 : 8;
 
       quantityOptions: quantityOptions.map((x) => x.label),
 
-quantityPrices: quantityOptions.map((x) => ({
-  label: x.label,
-  price: Number(x.price || 0),
-})),
+showQuantityPricing,
+
+quantityPrices: isGroceryProduct
+  ? quantityOptions.map((x) => ({
+      label: x.label,
+      price: Number(x.price || 0),
+    }))
+  : [],
+
 
       hsnCode,
       gst: Number(gst || 0),
@@ -614,6 +665,20 @@ quantityPrices: quantityOptions.map((x) => ({
                 <Input label="Stock Quantity *" value={stock} setValue={setStock} type="number" />
                 <Input label="Low Stock Alert" value={lowStock} setValue={setLowStock} type="number" />
               </div>
+<div className="mb-6 rounded-2xl border p-4">
+  <label className="flex items-center gap-3 font-bold">
+    <input
+      type="checkbox"
+      checked={showQuantityPricing}
+      onChange={(e) =>
+        setShowQuantityPricing(e.target.checked)
+      }
+      
+    />
+
+    Show Size / Weight Options On Product Page
+  </label>
+</div>
 
 {isGroceryProduct && (
   <div className="mb-6 rounded-2xl border p-5">
@@ -653,6 +718,7 @@ quantityPrices: quantityOptions.map((x) => ({
     </div>
   </div>
 )}
+
               <ColorVariantManager variants={variants} setVariants={setVariants} uploadImage={uploadFile} />
             </Step>
           )}
@@ -746,7 +812,49 @@ quantityPrices: quantityOptions.map((x) => ({
                   </button>
                 )}
               </div>
+<div className="mb-6 rounded-2xl border p-4">
+  <label className="flex items-center gap-3 font-bold">
+    <input
+      type="checkbox"
+      checked={showSpecifications}
+      onChange={(e) => setShowSpecifications(e.target.checked)}
+    />
+    Show Specifications On Product Page
+  </label>
+</div>
 
+{showSpecifications && (
+  <div className="mb-6 rounded-2xl border p-5">
+    <h3 className="mb-4 font-bold">Product Specifications</h3>
+
+    <div className="space-y-3">
+      {productSpecs.map((item, index) => (
+        <div key={index} className="grid grid-cols-2 gap-3">
+          <input
+            value={item.key}
+            onChange={(e) => {
+              const copy = [...productSpecs];
+              copy[index].key = e.target.value;
+              setProductSpecs(copy);
+            }}
+            className="rounded-xl border p-3"
+          />
+
+          <input
+            value={item.value}
+            placeholder="Value"
+            onChange={(e) => {
+              const copy = [...productSpecs];
+              copy[index].value = e.target.value;
+              setProductSpecs(copy);
+            }}
+            className="rounded-xl border p-3"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
               <div className="space-y-5">
                 <Textarea label="Detailed Description" value={description} setValue={setDescription} rows={5} />
                 <Input label="Search Keywords / Tags" placeholder="wireless, headphones, premium..." value={searchTags} setValue={setSearchTags} />
@@ -868,7 +976,7 @@ function Select({ label, value, setValue, options, suffix = "%" }: { label: stri
   return (
     <label className="block">
       <span className="mb-2 block text-xs font-black uppercase tracking-widest text-gray-500">{label}</span>
-      <select value={value} onChange={(e) => setValue(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-1 focus:ring-black">
+      <select value={value || "Select..."} onChange={(e) => setValue(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-1 focus:ring-black">
         {options.map((item) => (
           <option key={item} value={item} disabled={item === "Select..."}>
             {item}
@@ -910,10 +1018,10 @@ function CategoryDynamicFields({ rules, values, setValues }: { rules: Rule[]; va
     <div className="grid gap-5 md:grid-cols-2">
       {rules.map((rule, index) => {
         const safeKey =
-          rule.fieldKey ||
-          rule._id ||
-          rule.fieldName?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ||
-          `rule_${index}`;
+  rule.fieldKey ||
+  rule.fieldName?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ||
+  rule._id ||
+  `rule_${index}`;
 
         const type = String(rule.fieldType || "text").toLowerCase();
         const label = `${rule.fieldName || "Specification"}${rule.required ? " *" : ""}`;

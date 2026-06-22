@@ -175,6 +175,7 @@ const selectedQtyPrice =
 
 const price =
   selectedQtyPrice !== null && selectedQtyPrice > 0
+  
     ? selectedQtyPrice
     : basePrice;
 
@@ -303,13 +304,14 @@ const price =
     localStorage.setItem("buyNowItem", JSON.stringify(cartItem));
 
     if (!user) {
-     router.push(
+   router.push(
   `/login?redirect=${encodeURIComponent(
     `/checkout?buyNow=1` +
       `&productId=${productId}` +
       `&color=${selectedColor || ""}` +
       `&quantity=${selectedQuantity || ""}` +
-      `&price=${price}`
+      `&price=${price}` +
+      `&qty=${buyQty}`
   )}`
 );
       return;
@@ -320,7 +322,8 @@ const price =
     `&productId=${productId}` +
     `&color=${encodeURIComponent(selectedColor || "")}` +
     `&quantity=${encodeURIComponent(selectedQuantity || "")}` +
-    `&price=${price}`
+    `&price=${price}` +
+    `&qty=${buyQty}`
 );
   }
 
@@ -481,18 +484,18 @@ const price =
                     key={`${img}-${i}`}
                     type="button"
                     onClick={() => setSelectedImage(img)}
-                    className={`h-16 w-16 shrink-0 rounded-lg border bg-white p-1 sm:h-20 sm:w-20 ${
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-white p-1 sm:h-20 sm:w-20 ${
                       selectedImage === img
                         ? "border-black ring-1 ring-black ring-offset-2"
                         : "border-gray-100 opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full object-contain" />
+                    <img src={img} alt="" className="h-full w-full rounded-md object-contain" />
                   </button>
                 ))}
               </div>
 
-              <div className="flex min-h-[260px] items-center justify-center rounded-3xl bg-[#f8f9fa] p-4 sm:min-h-[520px]">
+              <div className="flex min-h-[260px] items-center justify-center overflow-hidden rounded-3xl bg-[#f8f9fa] p-4 sm:min-h-[520px]">
                 <img
                   src={selectedImage || product.image || "/placeholder.png"}
                   alt={product.name}
@@ -639,7 +642,7 @@ const price =
                             setSelectedVariant(v);
                             setSelectedImage(img);
                           }}
-                          className={`relative h-16 w-16 shrink-0 rounded-lg border-2 p-1 transition-all bg-white ${
+                          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-white p-1 transition-all ${
                             active
                               ? "border-blue-600 ring-1 ring-blue-600 shadow-sm"
                               : "border-gray-200 hover:border-gray-400"
@@ -722,11 +725,12 @@ const price =
 
             <Card>
               <SectionButton
-                title="Delivery Information"
-                section="delivery"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
+  title="Delivery Information"
+  subtitle="Delivery options, COD and returns"
+  section="delivery"
+  openSection={openSection}
+  toggleSection={toggleSection}
+/>
 
               {openSection === "delivery" && (
                 <>
@@ -776,11 +780,12 @@ const price =
 
             <Card>
               <SectionButton
-                title="Trust & Assurance"
-                section="trust"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
+  title="Trust & Assurance"
+  subtitle="Secure shopping and buyer protection"
+  section="trust"
+  openSection={openSection}
+  toggleSection={toggleSection}
+/>
 
               {openSection === "trust" && (
                 <div className="grid grid-cols-2 gap-3">
@@ -806,11 +811,12 @@ const price =
 
             <Card>
               <SectionButton
-                title="Highlights"
-                section="highlights"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
+  title="Product Highlights"
+  subtitle="Key features, specifications and more"
+  section="highlights"
+  openSection={openSection}
+  toggleSection={toggleSection}
+/>
 
               {openSection === "highlights" && (
                 <>
@@ -832,11 +838,12 @@ const price =
 
             <Card>
               <SectionButton
-                title="All Details"
-                section="details"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
+  title="All Details"
+  subtitle="Features, description and more"
+  section="details"
+  openSection={openSection}
+  toggleSection={toggleSection}
+/>
 
               {openSection === "details" && (
                 <>
@@ -916,11 +923,12 @@ const price =
 
             <Card>
               <SectionButton
-                title="Ratings & Reviews"
-                section="reviews"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
+  title="Ratings & Reviews"
+  subtitle={`${approvedReviews.length} customer reviews`}
+  section="reviews"
+  openSection={openSection}
+  toggleSection={toggleSection}
+/>
 
               {openSection === "reviews" && (
                 <>
@@ -1041,7 +1049,19 @@ const price =
             <Card>
               <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
-                  <h2 className="text-xl font-black text-gray-900">Questions & Answers</h2>
+                  <div className="flex items-center justify-between">
+  <div>
+    <h2 className="text-2xl font-black">
+      Questions & Answers
+    </h2>
+
+    <p className="mt-1 text-sm text-gray-500">
+      Ask product-related questions before buying
+    </p>
+  </div>
+
+
+</div>
                   <p className="mt-1 text-sm font-medium text-gray-500">
                     Ask product-related questions before buying
                   </p>
@@ -1186,11 +1206,13 @@ const price =
 
 function SectionButton({
   title,
+  subtitle,
   section,
   openSection,
   toggleSection,
 }: {
   title: string;
+  subtitle?: string;
   section: string;
   openSection: string | null;
   toggleSection: (section: string) => void;
@@ -1199,10 +1221,29 @@ function SectionButton({
     <button
       type="button"
       onClick={() => toggleSection(section)}
-      className="flex w-full items-center justify-between text-left text-lg font-black py-1"
+      className="flex w-full items-center justify-between text-left py-2"
     >
-      <span className="text-gray-900">{title}</span>
-      <span className={`text-xl transition-transform duration-300 ${openSection === section ? "rotate-180 text-black" : "text-gray-400"}`}>⌄</span>
+      <div>
+        <h3 className="text-2xl font-black text-gray-900">
+          {title}
+        </h3>
+
+        {subtitle && (
+          <p className="mt-1 text-sm text-gray-500">
+            {subtitle}
+          </p>
+        )}
+      </div>
+
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100">
+        <span
+          className={`text-xl transition-transform ${
+            openSection === section ? "rotate-180" : ""
+          }`}
+        >
+          ⌄
+        </span>
+      </div>
     </button>
   );
 }

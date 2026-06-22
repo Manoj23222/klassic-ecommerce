@@ -38,17 +38,6 @@ const groceryCategories = [
   "Frozen Food",
 ];
 
-const categoryTiles = [
-  { name: "Fruits & Vegetables", icon: "🥦", href: "#products" },
-  { name: "Atta Rice & Dal", icon: "🌾", href: "#products" },
-  { name: "Masala & Spices", icon: "🌶️", href: "#products" },
-  { name: "Oil & Ghee", icon: "🫙", href: "#products" },
-  { name: "Snacks & Namkeen", icon: "🍿", href: "#products" },
-  { name: "Milk & Dairy", icon: "🥛", href: "#products" },
-  { name: "Cleaning", icon: "🧼", href: "#products" },
-  { name: "Baby Care", icon: "🍼", href: "#products" },
-];
-
 async function getGroceryProducts(): Promise<ProductType[]> {
   try {
     await connectDB();
@@ -63,7 +52,7 @@ async function getGroceryProducts(): Promise<ProductType[]> {
       .sort({ createdAt: -1 })
       .lean();
 
-    return products.map((product: any) => ({
+    return JSON.parse(JSON.stringify(products)).map((product: any) => ({
       ...product,
       id: String(product._id),
       _id: String(product._id),
@@ -82,6 +71,7 @@ export default async function GroceryPage() {
   const products = await getGroceryProducts();
 
   const latest = products.slice(0, 8);
+
   const essentials = products
     .filter((p) =>
       ["Atta Rice & Dal", "Masala & Spices", "Oil & Ghee", "Grocery"].includes(
@@ -156,33 +146,28 @@ export default async function GroceryPage() {
         </div>
       </section>
 
+      <section id="categories" className="mx-auto max-w-7xl px-4 py-6">
+        <div className="rounded-[2rem] bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <SectionTitle label="Grocery Store" title="Shop by Category" />
+
+            <select className="hidden rounded-full border px-5 py-2 text-sm font-black outline-none sm:block">
+              <option>Newest</option>
+              <option>Popular</option>
+              <option>Price Low to High</option>
+            </select>
+          </div>
+
+          <GroceryProductSection products={products} />
+        </div>
+      </section>
+
       <section className="mx-auto max-w-7xl px-4 py-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <TrustCard icon="⚡" title="Fast Delivery" text="Fresh items at doorstep" />
           <TrustCard icon="🔥" title="Smart Deals" text="Daily grocery savings" />
           <TrustCard icon="✅" title="Fresh Assured" text="Quality checked items" />
           <TrustCard icon="↩" title="Easy Returns" text="Simple support flow" />
-        </div>
-      </section>
-
-      <section id="categories" className="mx-auto max-w-7xl px-4 py-5">
-        <SectionTitle label="Shop Fast" title="Grocery Categories" />
-
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {categoryTiles.map((cat) => (
-            <a
-              key={cat.name}
-              href={cat.href}
-              className="min-w-[130px] rounded-[1.5rem] bg-white p-4 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eef8df] text-3xl">
-                {cat.icon}
-              </div>
-              <p className="mt-3 line-clamp-2 text-sm font-black">
-                {cat.name}
-              </p>
-            </a>
-          ))}
         </div>
       </section>
 
@@ -233,7 +218,7 @@ export default async function GroceryPage() {
 
 function SectionTitle({ label, title }: { label: string; title: string }) {
   return (
-    <div className="mb-4">
+    <div>
       <p className="text-xs font-black uppercase tracking-[0.25em] text-green-700/60">
         {label}
       </p>

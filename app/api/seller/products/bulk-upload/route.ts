@@ -20,6 +20,28 @@ function list(value: any) {
     .map((x) => x.trim())
     .filter(Boolean);
 }
+function normalizeImageUrl(value: any) {
+  const url = clean(value).replace(/^"|"$/g, "");
+
+  if (!url) return "/placeholder.png";
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  if (url.startsWith("/")) {
+    return url;
+  }
+
+  return `/${url}`;
+}
+
+function imageList(value: any) {
+  return clean(value)
+    .split("|")
+    .map((x) => normalizeImageUrl(x))
+    .filter(Boolean);
+}
 
 function parseQuantityPrices(value: any) {
   return clean(value)
@@ -78,10 +100,14 @@ export async function POST(req: Request) {
         const sku = clean(row.sku).toUpperCase();
         const price = num(row.price);
 
-        const image = clean(row.image) || "/placeholder.png";
-        const galleryImages = list(row.gallery_images);
-        const finalGalleryImages =
-          galleryImages.length > 0 ? galleryImages : [image];
+        const image = normalizeImageUrl(row.image);
+const galleryImages = imageList(row.gallery_images);
+const finalGalleryImages =
+  galleryImages.length > 0 ? galleryImages : [image];
+
+console.log("CSV IMAGE =", row.image);
+console.log("FINAL IMAGE =", image);
+          
 
         if (!name || !sku || !price) {
           failed.push({

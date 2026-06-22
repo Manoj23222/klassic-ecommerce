@@ -105,7 +105,11 @@ const ProductSchema = new Schema(
     weight: { type: String, default: "" },
     quantityOptions: { type: [String], default: [] },
     quantityPrices: { type: [Schema.Types.Mixed], default: [] },
-    showQuantityPricing: { type: Boolean, default: true },
+    showQuantityPricing: {
+  type: Boolean,
+  default: true,
+},
+   
 quantities: { type: [String], default: [] },
 weightOptions: { type: [String], default: [] },
 

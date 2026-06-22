@@ -38,6 +38,7 @@ function CheckoutContent() {
   const sizeFromUrl = searchParams.get("size") || "";
   const quantityFromUrl = searchParams.get("quantity") || "";
 const priceFromUrl = searchParams.get("price") || "";
+const qtyFromUrl = Number(searchParams.get("qty") || 1);
   const couponFromUrl = searchParams.get("coupon") || "";
 
   const [name, setName] = useState("");
@@ -121,7 +122,8 @@ const priceFromUrl = searchParams.get("price") || "";
             price: finalPrice,
             basePrice,
             image: product.image,
-            quantity: 1,
+            quantity: qtyFromUrl,
+buyQty: qtyFromUrl,
             color: colorFromUrl,
             size: quantityFromUrl || sizeFromUrl,
 selectedQuantity: quantityFromUrl,
