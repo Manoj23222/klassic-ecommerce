@@ -36,6 +36,8 @@ function CheckoutContent() {
   const productId = searchParams.get("productId");
   const colorFromUrl = searchParams.get("color") || "";
   const sizeFromUrl = searchParams.get("size") || "";
+  const quantityFromUrl = searchParams.get("quantity") || "";
+const priceFromUrl = searchParams.get("price") || "";
   const couponFromUrl = searchParams.get("coupon") || "";
 
   const [name, setName] = useState("");
@@ -106,7 +108,10 @@ function CheckoutContent() {
         const basePrice = Number(
           product.sale_price || product.salePrice || product.price
         );
-        const finalPrice = getSizePrice(basePrice, sizeFromUrl);
+        const finalPrice =
+  Number(priceFromUrl || 0) > 0
+    ? Number(priceFromUrl)
+    : getSizePrice(basePrice, sizeFromUrl);
 
         setCart([
           {
@@ -118,7 +123,8 @@ function CheckoutContent() {
             image: product.image,
             quantity: 1,
             color: colorFromUrl,
-            size: sizeFromUrl,
+            size: quantityFromUrl || sizeFromUrl,
+selectedQuantity: quantityFromUrl,
           },
         ]);
       } else {

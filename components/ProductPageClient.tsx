@@ -303,11 +303,25 @@ const price =
     localStorage.setItem("buyNowItem", JSON.stringify(cartItem));
 
     if (!user) {
-      router.push(`/login?redirect=/checkout?buyNow=1`);
+     router.push(
+  `/login?redirect=${encodeURIComponent(
+    `/checkout?buyNow=1` +
+      `&productId=${productId}` +
+      `&color=${selectedColor || ""}` +
+      `&quantity=${selectedQuantity || ""}` +
+      `&price=${price}`
+  )}`
+);
       return;
     }
 
-    router.push("/checkout?buyNow=1");
+    router.push(
+  `/checkout?buyNow=1` +
+    `&productId=${productId}` +
+    `&color=${encodeURIComponent(selectedColor || "")}` +
+    `&quantity=${encodeURIComponent(selectedQuantity || "")}` +
+    `&price=${price}`
+);
   }
 
   const [reviews, setReviews] = useState<any[]>([]);
