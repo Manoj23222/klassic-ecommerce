@@ -14,6 +14,27 @@ function num(value: any) {
   return Number(value || 0);
 }
 
+function list(value: any) {
+  return clean(value)
+    .split("|")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function parseQuantityPrices(value: any) {
+  return clean(value)
+    .split("|")
+    .map((item) => {
+      const [label, price] = item.split(":");
+
+      return {
+        label: clean(label),
+        price: Number(price || 0),
+      };
+    })
+    .filter((x) => x.label && x.price > 0);
+}
+
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -21,7 +42,8 @@ export async function POST(req: Request) {
     const formData = await req.formData();
 
     const sellerId = clean(formData.get("seller_id"));
-    const sellerStoreName = clean(formData.get("seller_store_name")) || "Klassic Seller";
+    const sellerStoreName =
+      clean(formData.get("seller_store_name")) || "Klassic Seller";
     const file = formData.get("file") as File | null;
 
     if (!sellerId || !file) {
@@ -54,14 +76,18 @@ export async function POST(req: Request) {
       try {
         const name = clean(row.name);
         const sku = clean(row.sku).toUpperCase();
-        const image = clean(row.image);
         const price = num(row.price);
 
-        if (!name || !sku || !price || !image) {
+        const image = clean(row.image) || "/placeholder.png";
+        const galleryImages = list(row.gallery_images);
+        const finalGalleryImages =
+          galleryImages.length > 0 ? galleryImages : [image];
+
+        if (!name || !sku || !price) {
           failed.push({
             sku,
             name,
-            reason: "name, sku, price and image required",
+            reason: "name, sku and price required",
           });
           continue;
         }
@@ -76,6 +102,13 @@ export async function POST(req: Request) {
           });
           continue;
         }
+
+        const quantityOptions = list(row.quantityOptions);
+        const quantityPrices = parseQuantityPrices(row.quantityPrices);
+
+        const colors = list(row.colors);
+        const sizes = list(row.sizes);
+        const tags = list(row.tags);
 
         const product = await Product.create({
           seller_id: sellerId,
@@ -95,16 +128,24 @@ export async function POST(req: Request) {
           shortDescription: clean(row.short_description),
 
           price,
-          regularPrice: num(row.regularPrice || row.price),
-          sale_price: num(row.sale_price || row.price),
-          salePrice: num(row.sale_price || row.price),
+          regularPrice: num(row.regularPrice || row.mrp || row.price),
+          sale_price: num(row.sale_price || row.salePrice || row.price),
+          salePrice: num(row.salePrice || row.sale_price || row.price),
           stock: num(row.stock),
           stockStatus: num(row.stock) > 0 ? "In Stock" : "Out of Stock",
 
           image,
-          gallery_images: clean(row.gallery_images)
-            ? clean(row.gallery_images).split("|").map((x) => x.trim()).filter(Boolean)
-            : [],
+          gallery_images: finalGalleryImages,
+          images: finalGalleryImages,
+
+          colors,
+          sizes,
+          tags,
+
+          quantityOptions,
+          quantities: quantityOptions,
+          weightOptions: quantityOptions,
+          quantityPrices,
 
           hsnCode: clean(row.hsnCode),
           gst: num(row.gst),

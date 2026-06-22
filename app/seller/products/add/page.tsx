@@ -73,6 +73,12 @@ export default function AddSellerProductPage() {
   const [costPrice, setCostPrice] = useState("");
   const [stock, setStock] = useState("");
   const [lowStock, setLowStock] = useState("");
+  const [quantityOptions, setQuantityOptions] = useState([
+  { label: "100 g", price: "" },
+  { label: "500 g", price: "" },
+  { label: "1 kg", price: "" },
+  { label: "5 kg", price: "" },
+]);
 
   const [mainImage, setMainImage] = useState("");
   const [gallery, setGallery] = useState<string[]>([]);
@@ -434,6 +440,13 @@ const finalStep = isGroceryProduct ? 7 : 8;
       color_variants: finalVariants,
       colors: finalVariants.map((v) => v.colorName).filter(Boolean),
 
+      quantityOptions: quantityOptions.map((x) => x.label),
+
+quantityPrices: quantityOptions.map((x) => ({
+  label: x.label,
+  price: Number(x.price || 0),
+})),
+
       hsnCode,
       gst: Number(gst || 0),
       countryOfOrigin,
@@ -602,6 +615,44 @@ const finalStep = isGroceryProduct ? 7 : 8;
                 <Input label="Low Stock Alert" value={lowStock} setValue={setLowStock} type="number" />
               </div>
 
+{isGroceryProduct && (
+  <div className="mb-6 rounded-2xl border p-5">
+    <h3 className="mb-4 font-bold">
+      Quantity Wise Pricing
+    </h3>
+
+    <div className="space-y-3">
+      {quantityOptions.map((item, index) => (
+        <div
+          key={index}
+          className="grid grid-cols-2 gap-3"
+        >
+          <input
+            value={item.label}
+            onChange={(e) => {
+              const copy = [...quantityOptions];
+              copy[index].label = e.target.value;
+              setQuantityOptions(copy);
+            }}
+            className="border p-3 rounded-xl"
+          />
+
+          <input
+            type="number"
+            placeholder="Price"
+            value={item.price}
+            onChange={(e) => {
+              const copy = [...quantityOptions];
+              copy[index].price = e.target.value;
+              setQuantityOptions(copy);
+            }}
+            className="border p-3 rounded-xl"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
               <ColorVariantManager variants={variants} setVariants={setVariants} uploadImage={uploadFile} />
             </Step>
           )}

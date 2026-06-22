@@ -51,10 +51,22 @@ export default function EditProductForm({ product }: { product: any }) {
   const [galleryImages, setGalleryImages] = useState(normalizeArray(product.gallery_images));
   const [colors, setColors] = useState(normalizeArray(product.colors));
   const [sizes, setSizes] = useState(normalizeArray(product.sizes));
-  const [quantityOptions, setQuantityOptions] = useState(
-    normalizeArray(product.quantityOptions || product.quantities || product.weightOptions)
-  );
-
+  const [showQuantityPricing, setShowQuantityPricing] = useState(
+  product.showQuantityPricing !== false
+);
+const [quantityPrices, setQuantityPrices] = useState(
+  Array.isArray(product.quantityPrices) && product.quantityPrices.length > 0
+    ? product.quantityPrices.map((x: any) => ({
+        label: x.label || "",
+        price: String(x.price || ""),
+      }))
+    : [
+        { label: "100 g", price: "" },
+        { label: "500 g", price: "" },
+        { label: "1 kg", price: "" },
+        { label: "5 kg", price: "" },
+      ]
+);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -123,7 +135,9 @@ export default function EditProductForm({ product }: { product: any }) {
     e.preventDefault();
 
     const galleryArray = galleryImages.split(",").map((x) => x.trim()).filter(Boolean);
-    const quantityArray = quantityOptions.split(",").map((x) => x.trim()).filter(Boolean);
+    const quantityArray = quantityPrices
+  .map((x: any) => x.label.trim())
+  .filter(Boolean);
     const colorsArray = colors.split(",").map((x) => x.trim()).filter(Boolean);
     const sizesArray = sizes.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -149,14 +163,22 @@ export default function EditProductForm({ product }: { product: any }) {
           category,
           status,
           featured,
-          image,
+showQuantityPricing,
+image,
           gallery_images: galleryArray,
           images: galleryArray,
           colors: colorsArray,
           sizes: sizesArray,
-          quantityOptions: quantityArray,
-          quantities: quantityArray,
-          weightOptions: quantityArray,
+         quantityOptions: quantityArray,
+quantities: quantityArray,
+weightOptions: quantityArray,
+
+quantityPrices: quantityPrices
+  .filter((x: any) => x.label.trim())
+  .map((x: any) => ({
+    label: x.label.trim(),
+    price: Number(x.price || 0),
+  })),
         }),
       });
 
@@ -200,13 +222,59 @@ export default function EditProductForm({ product }: { product: any }) {
   return (
     <form onSubmit={updateProduct} className="grid gap-5">
       <div className="rounded-3xl bg-gradient-to-r from-slate-950 to-indigo-700 p-5 text-white">
+        <input
+  className="rounded-xl border p-3"
+  placeholder="Product Name"
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+/>
+
+
         <h2 className="text-2xl font-black">Luxury Product Control</h2>
         <p className="mt-1 text-sm text-blue-100">
           Edit product, price, stock, status, quantity, images and variants.
         </p>
       </div>
+<label className="flex items-center gap-3 rounded-xl border bg-slate-50 p-4 font-bold">
+  <input
+    type="checkbox"
+    checked={showQuantityPricing}
+    onChange={(e) => setShowQuantityPricing(e.target.checked)}
+  />
+  Show Quantity Pricing on Product Page
+</label>
+      <div className="rounded-2xl border bg-slate-50 p-4">
+  <p className="mb-3 text-sm font-black">Quantity Wise Pricing</p>
 
-      <input className="rounded-xl border p-3" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} />
+  <div className="space-y-3">
+    {quantityPrices.map((item: any, index: number) => (
+      <div key={index} className="grid grid-cols-2 gap-3">
+        <input
+          className="rounded-xl border bg-white p-3 text-sm font-semibold"
+          placeholder="100 g / 500 g / 1 kg"
+          value={item.label}
+          onChange={(e) => {
+            const copy = [...quantityPrices];
+            copy[index].label = e.target.value;
+            setQuantityPrices(copy);
+          }}
+        />
+
+        <input
+          className="rounded-xl border bg-white p-3 text-sm font-semibold"
+          type="number"
+          placeholder="Price"
+          value={item.price}
+          onChange={(e) => {
+            const copy = [...quantityPrices];
+            copy[index].price = e.target.value;
+            setQuantityPrices(copy);
+          }}
+        />
+      </div>
+    ))}
+  </div>
+</div>
 
       <textarea className="rounded-xl border p-3" placeholder="Description" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} />
 
@@ -223,12 +291,7 @@ export default function EditProductForm({ product }: { product: any }) {
         {categories.map((cat) => <option key={cat}>{cat}</option>)}
       </select>
 
-      <input
-        className="rounded-xl border p-3"
-        placeholder="Quantity options: 44 g, 100 g, 500 g, 1 kg"
-        value={quantityOptions}
-        onChange={(e) => setQuantityOptions(e.target.value)}
-      />
+  
 
       <div className="grid gap-4 md:grid-cols-2">
         <input className="rounded-xl border p-3" placeholder="Colors comma separated" value={colors} onChange={(e) => setColors(e.target.value)} />

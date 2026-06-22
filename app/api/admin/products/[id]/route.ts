@@ -71,6 +71,14 @@ export async function PUT(
       quantityOptions: arr(body.quantityOptions),
       quantities: arr(body.quantities),
       weightOptions: arr(body.weightOptions),
+      quantityPrices: Array.isArray(body.quantityPrices)
+  ? body.quantityPrices
+  
+  : [],
+  showQuantityPricing:
+  body.showQuantityPricing !== undefined
+    ? Boolean(body.showQuantityPricing)
+    : undefined,
     };
 
     Object.keys(updateData).forEach((key) => {

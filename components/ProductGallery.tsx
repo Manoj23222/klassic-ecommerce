@@ -65,14 +65,24 @@ export default function ProductGallery({
                     : "border-gray-200"
                 }`}
               >
-                <img src={img} alt="" className="h-full w-full object-contain" />
+                <img
+  src={img}
+  alt=""
+  onError={(e) => {
+    e.currentTarget.src = "/placeholder.png";
+  }}
+  className="h-full w-full object-contain"
+/>
               </button>
             ))}
           </div>
 
           <div className="flex min-h-[260px] flex-1 items-center justify-center rounded-2xl bg-[#f7f8fb] p-3 md:min-h-[500px] md:p-6">
             <img
-              src={selectedImage || "/placeholder.png"}
+  src={selectedImage || "/placeholder.png"}
+  onError={(e) => {
+    e.currentTarget.src = "/placeholder.png";
+  }}
               alt="Product"
               className="max-h-[260px] w-full object-contain transition duration-300 md:max-h-[500px]"
             />

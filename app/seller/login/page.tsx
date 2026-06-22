@@ -40,7 +40,7 @@ export default function SellerLoginPage() {
         toast.success(`Welcome ${data.seller.store_name || data.seller.name}`);
 
         setTimeout(() => {
-          router.push("/seller");
+          router.push("/seller/dashboard");
         }, 800);
       } else {
         toast.error(data.message || "Login failed");

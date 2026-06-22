@@ -3,8 +3,8 @@
 import toast from "react-hot-toast";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
-import AddToCartButton from "@/components/AddToCartButton";
 import ProductSpecifications from "@/components/ProductSpecifications";
 
 type Variant = {
@@ -30,12 +30,15 @@ export default function ProductPageClient({
   product: any;
   relatedProducts: any[];
 }) {
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState("specifications");
   const [selectedQuantity, setSelectedQuantity] = useState("");
+  const [buyQty, setBuyQty] = useState(1);
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>("delivery");
   const [pincode, setPincode] = useState("");
-const [pincodeMessage, setPincodeMessage] = useState("");
+  const [pincodeMessage, setPincodeMessage] = useState("");
 
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
@@ -98,8 +101,7 @@ const [pincodeMessage, setPincodeMessage] = useState("");
     ];
   }, [product]);
 
-  const defaultVariant =
-    variants.find((v) => v.isDefault) || variants[0] || null;
+  const defaultVariant = variants.find((v) => v.isDefault) || variants[0] || null;
 
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     defaultVariant
@@ -136,7 +138,22 @@ const [pincodeMessage, setPincodeMessage] = useState("");
     setSelectedImage(images[0] || product.image || "/placeholder.png");
   }, [images, product.image]);
 
-  const price = Number(
+  const quantityPriceMap = useMemo(() => {
+    
+    if (!Array.isArray(product.quantityPrices)) return {};
+
+    return product.quantityPrices.reduce(
+      (acc: Record<string, number>, item: any) => {
+        if (item?.label) {
+          acc[String(item.label).trim()] = Number(item.price || 0);
+        }
+        return acc;
+      },
+      {}
+    );
+  }, [product.quantityPrices]);
+
+  const basePrice = Number(
     selectedVariant?.sale_price ||
       selectedVariant?.salePrice ||
       selectedVariant?.price ||
@@ -146,15 +163,36 @@ const [pincodeMessage, setPincodeMessage] = useState("");
       0
   );
 
-  const mrp = Number(
-    selectedVariant?.regularPrice ||
-      product.regularPrice ||
-      selectedVariant?.price ||
-      product.price ||
-      price
-  );
+  const isGroceryProduct =
+  String(product.category || "").toLowerCase().includes("grocery") ||
+  String(product.sub_category || "").toLowerCase().includes("grocery") ||
+  String(product.subcategory || "").toLowerCase().includes("grocery");
+
+const selectedQtyPrice =
+  selectedQuantity && quantityPriceMap[String(selectedQuantity)] !== undefined
+    ? Number(quantityPriceMap[String(selectedQuantity)])
+    : null;
+
+const price =
+  selectedQtyPrice !== null && selectedQtyPrice > 0
+    ? selectedQtyPrice
+    : basePrice;
+
+  const mrp =
+    isGroceryProduct &&
+    selectedQuantity &&
+    quantityPriceMap[String(selectedQuantity)]
+      ? Math.round(price * 1.15)
+      : Number(
+          selectedVariant?.regularPrice ||
+            product.regularPrice ||
+            selectedVariant?.price ||
+            product.price ||
+            price
+        );
 
   const finalMrp = mrp > price ? mrp : Math.round(price * 1.25);
+
   const discount =
     finalMrp > price ? Math.round(((finalMrp - price) / finalMrp) * 100) : 0;
 
@@ -162,43 +200,115 @@ const [pincodeMessage, setPincodeMessage] = useState("");
   const selectedColor =
     selectedVariant?.colorName || selectedVariant?.color || "Default";
   const selectedSku = selectedVariant?.sku || product.sku || "N/A";
+
   const nameQuantityMatch = String(product.name || "").match(
-  /\((\d+\s*(g|gm|kg|ml|l|ltr))\)/i
-);
+    /\((\d+\s*(g|gm|kg|ml|l|ltr))\)/i
+  );
 
-const singleProductQuantity = nameQuantityMatch
-  ? [nameQuantityMatch[1].replace(/\s+/g, " ")]
-  : [];
+  const singleProductQuantity = nameQuantityMatch
+    ? [nameQuantityMatch[1].replace(/\s+/g, " ")]
+    : [];
 
-const quantityOptions =
+  const quantityOptions =
+    Array.isArray(product.quantityOptions) && product.quantityOptions.length > 0
+      ? product.quantityOptions
+      : Array.isArray(product.quantities) && product.quantities.length > 0
+      ? product.quantities
+      : Array.isArray(product.weightOptions) && product.weightOptions.length > 0
+      ? product.weightOptions
+      : singleProductQuantity;
 
-  Array.isArray(product.quantityOptions) && product.quantityOptions.length > 0
-    ? product.quantityOptions
-    : Array.isArray(product.quantities) && product.quantities.length > 0
-    ? product.quantities
-    : Array.isArray(product.weightOptions) && product.weightOptions.length > 0
-    ? product.weightOptions
-    : singleProductQuantity;
+  const showQuantitySelector =
+  product.showQuantityPricing !== false && quantityOptions.length > 0;
 
-const isGroceryProduct =
-  String(product.category || "").toLowerCase().includes("grocery") ||
-  String(product.category_path || "").toLowerCase().includes("grocery");
+  useEffect(() => {
+    if (showQuantitySelector && !selectedQuantity) {
+      setSelectedQuantity(String(quantityOptions[0]));
+    }
+  }, [showQuantitySelector, quantityOptions, selectedQuantity]);
 
-const showQuantitySelector = quantityOptions.length > 0;
+  const hasRealColor =
+    variants.length > 0 &&
+    selectedColor &&
+    selectedColor !== "Default" &&
+    selectedColor !== "Color";
 
-useEffect(() => {
-  if (showQuantitySelector && !selectedQuantity) {
-    setSelectedQuantity(String(quantityOptions[0]));
+  const isTextVariant = product.variationTheme === "Size" || product.variationTheme === "Weight";
+
+  const totalPrice = price * buyQty;
+
+  const cartItem = {
+    _id: productId,
+    id: productId,
+    name: product.name,
+    price: totalPrice,
+    unitPrice: price,
+    selectedPrice: price,
+    buyQty,
+    quantity: buyQty,
+    selectedQuantity: selectedQuantity || "",
+    packQuantity: selectedQuantity || "",
+    image: selectedImage || product.image || "/placeholder.png",
+    sku: selectedSku,
+    color: selectedColor,
+    stock,
+  };
+
+  function addToCart() {
+    if (stock <= 0) {
+      toast.error("Product out of stock");
+      return;
+    }
+
+    const oldCart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    const existingIndex = oldCart.findIndex(
+      (item: any) =>
+        String(item.id || item._id) === productId &&
+        String(item.sku || "") === String(selectedSku || "") &&
+        String(item.selectedQuantity || item.packQuantity || "") ===
+          String(selectedQuantity || "")
+    );
+
+    let newCart = [...oldCart];
+
+    if (existingIndex >= 0) {
+      const oldQty = Number(newCart[existingIndex].buyQty || newCart[existingIndex].quantity || 1);
+      const newQty = oldQty + buyQty;
+
+      newCart[existingIndex] = {
+        ...newCart[existingIndex],
+        ...cartItem,
+        buyQty: newQty,
+        quantity: newQty,
+        price: price * newQty,
+      };
+    } else {
+      newCart.push(cartItem);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event("cartUpdated"));
+    toast.success("Added to cart");
   }
-}, [showQuantitySelector, quantityOptions, selectedQuantity]);
 
-const hasRealColor =
+  function buyNow() {
+    if (stock <= 0) {
+      toast.error("Product out of stock");
+      return;
+    }
 
+    const user = localStorage.getItem("user");
 
-  variants.length > 0 &&
-  selectedColor &&
-  selectedColor !== "Default" &&
-  selectedColor !== "Color";
+    localStorage.setItem("buyNowItem", JSON.stringify(cartItem));
+
+    if (!user) {
+      router.push(`/login?redirect=/checkout?buyNow=1`);
+      return;
+    }
+
+    router.push("/checkout?buyNow=1");
+  }
 
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewName, setReviewName] = useState("");
@@ -210,16 +320,17 @@ const hasRealColor =
   const [questionName, setQuestionName] = useState("");
   const [questionText, setQuestionText] = useState("");
   const [questionLoading, setQuestionLoading] = useState(false);
+
   function checkPincode() {
-  const clean = pincode.trim();
+    const clean = pincode.trim();
 
-  if (!/^[1-9][0-9]{5}$/.test(clean)) {
-    setPincodeMessage("❌ Enter valid 6 digit Indian pincode");
-    return;
+    if (!/^[1-9][0-9]{5}$/.test(clean)) {
+      setPincodeMessage("❌ Enter valid 6 digit Indian pincode");
+      return;
+    }
+
+    setPincodeMessage("✅ Delivery available • COD available • Easy returns");
   }
-
-  setPincodeMessage("✅ Delivery available • COD available • Easy returns");
-}
 
   useEffect(() => {
     async function loadReviews() {
@@ -347,6 +458,7 @@ const hasRealColor =
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[55%_45%]">
+          {/* LEFT SECTION (IMAGES & BUTTONS) */}
           <section className="rounded-[2rem] bg-white p-3 shadow-[0_10px_40px_rgba(0,0,0,0.05)] sm:p-4 lg:sticky lg:top-24 lg:self-start">
             <div className="grid gap-2 sm:grid-cols-[72px_1fr]">
               <div className="flex gap-2 overflow-x-auto sm:max-h-[430px] sm:flex-col">
@@ -361,11 +473,7 @@ const hasRealColor =
                         : "border-gray-100 opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img
-                      src={img}
-                      alt=""
-                      className="h-full w-full object-contain"
-                    />
+                    <img src={img} alt="" className="h-full w-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -379,91 +487,39 @@ const hasRealColor =
               </div>
             </div>
 
-            {hasRealColor && (
-              
-              <div className="mt-3 rounded-xl border bg-white p-3">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold">
-                    Select Color:{" "}
-                    <span className="text-gray-700">{selectedColor}</span>
-                  </p>
-                  <p className="text-xs font-semibold text-gray-500">
-                    SKU: {selectedSku}
-                  </p>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {variants.map((v, i) => {
-                    const active =
-                      selectedVariant?.sku === v.sku || selectedVariant === v;
-
-                    const img =
-                      v.image ||
-                      (Array.isArray(v.images) && v.images.length > 0
-                        ? v.images[0]
-                        : "") ||
-                      product.image ||
-                      "/placeholder.png";
-
-                    return (
-                      <button
-                        key={v.sku || `${v.colorName}-${i}`}
-                        type="button"
-                        onClick={() => {
-                          setSelectedVariant(v);
-                          setSelectedImage(img);
-                        }}
-                        className={`h-14 w-14 shrink-0 rounded-lg border-2 bg-white p-1 transition ${
-                          active
-                            ? "border-black ring-1 ring-black ring-offset-2"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        <img
-                          src={img}
-                          alt={v.colorName || v.color || "Color"}
-                          className="h-full w-full rounded-md object-contain"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             <div className="mt-3 hidden grid-cols-2 gap-2 sm:grid">
-              <AddToCartButton
-                product={{
-                  _id: productId,
-                  name: product.name,
-                  price,
-                  image: selectedImage || product.image,
-                  sku: selectedSku,
-                  color: selectedColor,
-                  stock,
-                }}
-              />
-
-              <Link
-                href={stock > 0 ? `/checkout?productId=${productId}` : "#"}
+              <button
+                type="button"
+                onClick={addToCart}
+                disabled={stock <= 0}
                 className={`rounded-full py-3 text-center text-sm font-black ${
-                  stock > 0
-                    ? "border border-gray-300 bg-white text-black"
-                    : "bg-gray-300 text-gray-500"
+                  stock > 0 ? "bg-black text-white hover:bg-neutral-800 transition" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Add To Cart
+              </button>
+
+              <button
+                type="button"
+                onClick={buyNow}
+                disabled={stock <= 0}
+                className={`rounded-full py-3 text-center text-sm font-black ${
+                  stock > 0 ? "bg-yellow-400 text-black hover:bg-yellow-500 transition" : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
                 Buy Now
-              </Link>
+              </button>
             </div>
           </section>
 
+          {/* RIGHT SECTION (DETAILS) */}
           <section className="max-h-none space-y-3 lg:max-h-[calc(135vh-180px)] lg:overflow-y-auto lg:pr-2">
             <Card>
-              <p className="text-xs font-bold text-gray-500">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                 {product.brand || product.category}
               </p>
 
-              <h1 className="mt-1 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl">
+              <h1 className="mt-1 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl text-gray-900">
                 {product.name}
               </h1>
 
@@ -471,72 +527,183 @@ const hasRealColor =
                 <span className="rounded bg-green-600 px-2 py-1 text-[11px] font-black text-white">
                   {avgRating ? avgRating.toFixed(1) : "0.0"} ★
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs font-semibold text-gray-500">
                   {approvedReviews.length > 0
-                    ? `${approvedReviews.length} ratings`
+                    ? `${approvedReviews.length} Ratings`
                     : "No ratings yet"}
                 </span>
               </div>
 
-              
-
-              <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div className="mt-4 flex flex-wrap items-end gap-3 border-b border-gray-100 pb-4">
                 <p className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
                   ₹{price.toFixed(2)}
                 </p>
-                <p className="text-sm text-gray-400 line-through sm:text-lg">
+                <p className="text-sm font-semibold text-gray-400 line-through sm:text-lg mb-1">
                   ₹{finalMrp.toFixed(2)}
                 </p>
-                <p className="text-sm font-black text-green-600">
-                  {discount}% off
-                </p>
-              </div>
-{showQuantitySelector && (
-  <div className="mt-4">
-    <p className="mb-2 text-sm font-bold">
-      Selected Quantity:
-      <span className="ml-2 text-gray-700">{selectedQuantity}</span>
-    </p>
-
-    <div className="flex gap-2 overflow-x-auto">
-      {quantityOptions.map((qty: string) => (
-        <button
-          key={qty}
-          type="button"
-          onClick={() => setSelectedQuantity(qty)}
-          className={`shrink-0 rounded-lg border px-4 py-2 text-sm font-bold ${
-            selectedQuantity === qty
-              ? "border-black bg-black text-white"
-              : "border-gray-300 bg-white text-black"
-          }`}
-        >
-          {qty}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-              <div className="mt-2 text-xs text-gray-600 sm:text-sm">
-                <p>
-                  SKU: <b>{selectedSku}</b>
-                </p>
-                {hasRealColor && (
-                  
-  <p>
-    Color: <b>{selectedColor}</b>
-  </p>
-)}
+                <p className="text-sm font-black text-green-600 mb-1">{discount}% off</p>
               </div>
 
-              <p
-                className={
-                  stock > 0
-                    ? "mt-2 text-sm font-black text-green-600"
-                    : "mt-2 text-sm font-black text-red-600"
-                }
-              >
-                {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
-              </p>
+              {/* ========================================= */}
+              {/* 🌟 1. SIZE / WEIGHT SELECTOR (Text Pills)  */}
+              {/* ========================================= */}
+              {showQuantitySelector && (
+                <div className="mt-5">
+                  <p className="mb-3 text-sm font-bold text-gray-700">
+                    Selected Size / Weight:
+                    <span className="ml-2 text-black">{selectedQuantity}</span>
+                  </p>
+
+                  <div className="flex flex-wrap gap-3">
+                    {quantityOptions.map((qty: string) => (
+                      <button
+                        key={qty}
+                        type="button"
+                        onClick={() => setSelectedQuantity(String(qty).trim())}
+                        className={`shrink-0 rounded-lg border px-5 py-2.5 text-sm font-bold transition-all ${
+                          selectedQuantity === String(qty)
+                            ? "border-black bg-black text-white shadow-md"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                        }`}
+                      >
+                        {qty}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================= */}
+              {/* 🌟 2. COLOR SELECTOR (Image Thumbnails)    */}
+              {/* ========================================= */}
+              {hasRealColor && (
+                <div className="mt-5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-gray-700">
+                      Select {product.variationTheme || "Color"}: 
+                      <span className="ml-2 text-black">{selectedColor}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 pb-1">
+                    {variants.map((v, i) => {
+                      const active = selectedVariant?.sku === v.sku || selectedVariant === v;
+                      const isOutOfStock = Number(v.stock) <= 0;
+
+                      const img =
+                        v.image ||
+                        (Array.isArray(v.images) && v.images.length > 0
+                          ? v.images[0]
+                          : "") ||
+                        product.image ||
+                        "/placeholder.png";
+
+                      // Agar variation theme Size/Weight hai toh isko bhi Text Pill banayenge (Fallback)
+                      if (isTextVariant) {
+                        return (
+                          <button
+                            key={v.sku || `${v.size}-${i}`}
+                            disabled={isOutOfStock}
+                            onClick={() => { setSelectedVariant(v); setSelectedImage(img); }}
+                            className={`relative rounded-lg px-5 py-2.5 text-sm font-bold transition-all ${
+                              active
+                                ? "border-2 border-black bg-black text-white shadow-md"
+                                : "border border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                            } ${isOutOfStock ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}`}
+                          >
+                            {v.size || v.colorName}
+                          </button>
+                        );
+                      }
+
+                      // Normal Color Thumbnails
+                      return (
+                        <button
+                          key={v.sku || `${v.colorName}-${i}`}
+                          disabled={isOutOfStock}
+                          onClick={() => {
+                            setSelectedVariant(v);
+                            setSelectedImage(img);
+                          }}
+                          className={`relative h-16 w-16 shrink-0 rounded-lg border-2 p-1 transition-all bg-white ${
+                            active
+                              ? "border-blue-600 ring-1 ring-blue-600 shadow-sm"
+                              : "border-gray-200 hover:border-gray-400"
+                          } ${isOutOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <img
+                            src={img}
+                            alt={v.colorName || "Color"}
+                            className="h-full w-full rounded-md object-contain"
+                          />
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md">
+                              <span className="bg-white px-1 text-[9px] font-black uppercase text-red-600 border border-red-200">Out</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================= */}
+              {/* 📦 3. QUANTITY MANIPULATOR (- 1 +)         */}
+              {/* ========================================= */}
+              <div className="mt-6 flex flex-wrap items-center gap-6 rounded-2xl bg-gray-50 p-4 border border-gray-100">
+                <div className="flex items-center">
+                  <span className="mr-4 text-sm font-bold text-gray-700">Qty:</span>
+                  <div className="flex h-11 items-center overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setBuyQty((p) => Math.max(1, p - 1))}
+                      className="flex h-full w-11 items-center justify-center text-xl font-black text-gray-600 transition hover:bg-gray-100 hover:text-black"
+                    >
+                      −
+                    </button>
+
+                    <span className="flex h-full min-w-[3rem] items-center justify-center border-x border-gray-200 text-sm font-black text-black">
+                      {buyQty}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setBuyQty((p) => Math.min(stock || 99, p + 1))}
+                      className={`flex h-full w-11 items-center justify-center text-xl font-black transition ${
+                        buyQty >= stock ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100 hover:text-black"
+                      }`}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Price</span>
+                  <span className="text-xl font-black text-green-700">
+                    ₹{totalPrice.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* PRODUCT META */}
+              <div className="mt-4 flex items-center justify-between text-xs text-gray-600 sm:text-sm">
+                <div>
+                  <p className="mb-1">
+                    SKU: <b className="text-gray-900">{selectedSku}</b>
+                  </p>
+                  <p
+                    className={
+                      stock > 0
+                        ? "font-black text-green-600"
+                        : "font-black text-red-600"
+                    }
+                  >
+                    {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
+                  </p>
+                </div>
+              </div>
             </Card>
 
             <Card>
@@ -551,38 +718,40 @@ const hasRealColor =
                 <>
                   <div className="flex gap-2">
                     <input
-  type="text"
-  inputMode="numeric"
-  maxLength={6}
-  placeholder="Enter Pincode"
-  value={pincode}
-  onChange={(e) => {
-    setPincode(e.target.value.replace(/\D/g, ""));
-    setPincodeMessage("");
-  }}
-  className="flex-1 rounded-xl border p-3 text-sm font-bold outline-none focus:border-black"
-/>
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="Enter Pincode"
+                      value={pincode}
+                      onChange={(e) => {
+                        setPincode(e.target.value.replace(/\D/g, ""));
+                        setPincodeMessage("");
+                      }}
+                      className="flex-1 rounded-xl border p-3 text-sm font-bold outline-none focus:border-black"
+                    />
 
-<button
-  type="button"
-  onClick={checkPincode}
-  className="rounded-xl bg-black px-5 text-sm font-black text-white"
->
-  Check
-</button>
+                    <button
+                      type="button"
+                      onClick={checkPincode}
+                      className="rounded-xl bg-black px-5 text-sm font-black text-white"
+                    >
+                      Check
+                    </button>
                   </div>
-{pincodeMessage && (
-  <p
-    className={`mt-2 text-sm font-bold ${
-      pincodeMessage.includes("✅")
-        ? "text-green-600"
-        : "text-red-600"
-    }`}
-  >
-    {pincodeMessage}
-  </p>
-)}
-                  <div className="mt-3 space-y-1 text-sm">
+
+                  {pincodeMessage && (
+                    <p
+                      className={`mt-2 text-sm font-bold ${
+                        pincodeMessage.includes("✅")
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {pincodeMessage}
+                    </p>
+                  )}
+
+                  <div className="mt-3 space-y-1 text-sm font-medium text-gray-700">
                     <p>✓ Free Delivery Available</p>
                     <p>✓ Cash On Delivery</p>
                     <p>✓ Easy Returns</p>
@@ -601,24 +770,21 @@ const hasRealColor =
 
               {openSection === "trust" && (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-green-50 p-4">
+                  <div className="rounded-2xl bg-green-50 p-4 border border-green-100">
                     <p className="text-2xl">✔</p>
-                    <p className="mt-2 font-black">Genuine Product</p>
+                    <p className="mt-2 font-black text-green-900">Genuine Product</p>
                   </div>
-
-                  <div className="rounded-2xl bg-blue-50 p-4">
+                  <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
                     <p className="text-2xl">🚚</p>
-                    <p className="mt-2 font-black">Fast Delivery</p>
+                    <p className="mt-2 font-black text-blue-900">Fast Delivery</p>
                   </div>
-
-                  <div className="rounded-2xl bg-yellow-50 p-4">
+                  <div className="rounded-2xl bg-yellow-50 p-4 border border-yellow-100">
                     <p className="text-2xl">↩</p>
-                    <p className="mt-2 font-black">Easy Returns</p>
+                    <p className="mt-2 font-black text-yellow-900">Easy Returns</p>
                   </div>
-
-                  <div className="rounded-2xl bg-purple-50 p-4">
+                  <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
                     <p className="text-2xl">🔒</p>
-                    <p className="mt-2 font-black">Secure Payment</p>
+                    <p className="mt-2 font-black text-purple-900">Secure Payment</p>
                   </div>
                 </div>
               )}
@@ -634,11 +800,10 @@ const hasRealColor =
 
               {openSection === "highlights" && (
                 <>
-                  {Array.isArray(product.features) &&
-                  product.features.length > 0 ? (
-                    <ul className="space-y-2 text-sm">
+                  {Array.isArray(product.features) && product.features.length > 0 ? (
+                    <ul className="space-y-2 text-sm font-medium text-gray-700">
                       {product.features.map((f: string, i: number) => (
-                        <li key={i}>✓ {f}</li>
+                        <li key={i} className="flex gap-2"><span className="text-green-600 font-bold">✓</span> {f}</li>
                       ))}
                     </ul>
                   ) : (
@@ -653,24 +818,6 @@ const hasRealColor =
 
             <Card>
               <SectionButton
-                title="Secure Shopping"
-                section="secure"
-                openSection={openSection}
-                toggleSection={toggleSection}
-              />
-
-              {openSection === "secure" && (
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>🔒 Secure Payments</div>
-                  <div>↩ Easy Returns</div>
-                  <div>🚚 Fast Delivery</div>
-                  <div>✔ Genuine Product</div>
-                </div>
-              )}
-            </Card>
-
-            <Card>
-              <SectionButton
                 title="All Details"
                 section="details"
                 openSection={openSection}
@@ -680,7 +827,7 @@ const hasRealColor =
               {openSection === "details" && (
                 <>
                   <div className="overflow-x-auto border-b border-gray-300">
-                    <div className="flex min-w-max gap-8 text-sm font-semibold tracking-tight">
+                    <div className="flex min-w-max gap-8 text-sm font-bold tracking-tight">
                       {[
                         "showcase",
                         "specifications",
@@ -700,19 +847,17 @@ const hasRealColor =
                           className={`pb-2 text-sm capitalize transition ${
                             activeTab === tab
                               ? "border-b-2 border-black text-black"
-                              : "text-gray-500"
+                              : "text-gray-500 hover:text-black"
                           }`}
                         >
-                          {tab === "manufacturer"
-                            ? "Manufacturer Info"
-                            : tab}
+                          {tab === "manufacturer" ? "Manufacturer Info" : tab}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {activeTab === "description" && (
-                    <div className="mt-3 text-sm leading-7">
+                    <div className="mt-4 text-sm leading-7 text-gray-800">
                       {product.description || "No description available"}
                     </div>
                   )}
@@ -733,18 +878,18 @@ const hasRealColor =
                   )}
 
                   {activeTab === "manufacturer" && (
-                    <div className="mt-3 space-y-3 text-sm">
+                    <div className="mt-4 space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
                       <p>
-                        <strong>Brand:</strong> {product.brand || "-"}
+                        <strong className="text-black">Brand:</strong> {product.brand || "-"}
                       </p>
                       <p>
-                        <strong>Country:</strong>{" "}
+                        <strong className="text-black">Country:</strong>{" "}
                         {product.countryOfOrigin ||
                           product.returnPolicy?.countryOfOrigin ||
                           "India"}
                       </p>
                       <p>
-                        <strong>Manufacturer:</strong>{" "}
+                        <strong className="text-black">Manufacturer:</strong>{" "}
                         {product.returnPolicy?.importerNameAddress ||
                           product.brand ||
                           "Klassic"}
@@ -765,9 +910,9 @@ const hasRealColor =
 
               {openSection === "reviews" && (
                 <>
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
                     <div>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm font-medium text-gray-500">
                         Real customer feedback for this product
                       </p>
                     </div>
@@ -776,13 +921,13 @@ const hasRealColor =
                       <p className="text-3xl font-black">
                         {avgRating ? avgRating.toFixed(1) : "0.0"}★
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs font-bold text-gray-500 mt-1">
                         {approvedReviews.length} Reviews
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+                  <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
                     {[5, 4, 3, 2, 1].map((star) => {
                       const count = approvedReviews.filter(
                         (r) => Number(r.rating) === star
@@ -794,17 +939,17 @@ const hasRealColor =
                           : 0;
 
                       return (
-                        <div key={star} className="rounded-2xl border p-3">
-                          <p className="font-black">{star} ★</p>
+                        <div key={star} className="rounded-2xl border p-3 flex flex-col items-center justify-center text-center">
+                          <p className="font-black text-sm">{star} ★</p>
 
-                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
                             <div
-                              className="h-full bg-green-600"
+                              className="h-full bg-green-500"
                               style={{ width: `${percent}%` }}
                             />
                           </div>
 
-                          <p className="mt-2 text-xs text-gray-500">
+                          <p className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                             {count} reviews
                           </p>
                         </div>
@@ -812,45 +957,40 @@ const hasRealColor =
                     })}
                   </div>
 
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
-                    <form
-                      onSubmit={submitReview}
-                      className="rounded-2xl border p-4"
-                    >
-                      <h3 className="mb-3 font-black">Write a Review</h3>
+                  <div className="mt-5 grid gap-4 lg:grid-cols-[40%_60%]">
+                    <form onSubmit={submitReview} className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                      <h3 className="mb-4 font-black">Write a Review</h3>
 
                       <input
                         value={reviewName}
                         onChange={(e) => setReviewName(e.target.value)}
                         placeholder="Your name"
-                        className="mb-2 w-full rounded-xl border p-3 text-sm"
+                        className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                       />
 
                       <select
                         value={reviewRating}
-                        onChange={(e) =>
-                          setReviewRating(Number(e.target.value))
-                        }
-                        className="mb-2 w-full rounded-xl border p-3 text-sm"
+                        onChange={(e) => setReviewRating(Number(e.target.value))}
+                        className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                       >
-                        <option value={5}>5 Star</option>
-                        <option value={4}>4 Star</option>
-                        <option value={3}>3 Star</option>
-                        <option value={2}>2 Star</option>
-                        <option value={1}>1 Star</option>
+                        <option value={5}>5 Star Rating</option>
+                        <option value={4}>4 Star Rating</option>
+                        <option value={3}>3 Star Rating</option>
+                        <option value={2}>2 Star Rating</option>
+                        <option value={1}>1 Star Rating</option>
                       </select>
 
                       <textarea
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
-                        placeholder="Write your review"
+                        placeholder="Write your experience..."
                         rows={4}
-                        className="mb-3 w-full rounded-xl border p-3 text-sm"
+                        className="mb-4 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                       />
 
                       <button
                         disabled={reviewLoading}
-                        className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
+                        className="w-full rounded-full bg-black py-3 text-sm font-black text-white transition hover:bg-neutral-800 disabled:bg-gray-400"
                       >
                         {reviewLoading ? "Submitting..." : "Submit Review"}
                       </button>
@@ -858,18 +998,16 @@ const hasRealColor =
 
                     <div className="space-y-3">
                       {approvedReviews.length === 0 ? (
-                        <div className="rounded-2xl border p-5 text-sm text-gray-500">
-                          No reviews yet. Be the first to review this product.
+                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500">
+                          <span className="text-3xl mb-2">⭐</span>
+                          No reviews yet. Be the first to review!
                         </div>
                       ) : (
                         approvedReviews.slice(0, 6).map((r, i) => (
-                          <div
-                            key={r._id || i}
-                            className="rounded-2xl border p-4"
-                          >
+                          <div key={r._id || i} className="rounded-2xl border border-gray-100 p-4 shadow-sm">
                             <div className="flex items-center justify-between">
-                              <p className="font-black">{r.customer_name}</p>
-                              <span className="rounded bg-green-600 px-2 py-1 text-xs font-black text-white">
+                              <p className="font-black text-gray-900">{r.customer_name}</p>
+                              <span className="rounded bg-green-600 px-2 py-1 text-[10px] font-black text-white">
                                 {r.rating} ★
                               </span>
                             </div>
@@ -887,31 +1025,28 @@ const hasRealColor =
             </Card>
 
             <Card>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
-                  <h2 className="text-xl font-black">Questions & Answers</h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h2 className="text-xl font-black text-gray-900">Questions & Answers</h2>
+                  <p className="mt-1 text-sm font-medium text-gray-500">
                     Ask product-related questions before buying
                   </p>
                 </div>
 
-                <div className="rounded-full bg-black px-4 py-2 text-xs font-black text-white">
+                <div className="rounded-full bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
                   {questions.length} Q&A
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-4 lg:grid-cols-[40%_60%]">
-                <form
-                  onSubmit={submitQuestion}
-                  className="rounded-2xl border p-4"
-                >
-                  <h3 className="mb-3 font-black">Ask a Question</h3>
+              <div className="mt-5 grid gap-4 lg:grid-cols-[40%_60%]">
+                <form onSubmit={submitQuestion} className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <h3 className="mb-4 font-black">Ask a Question</h3>
 
                   <input
                     value={questionName}
                     onChange={(e) => setQuestionName(e.target.value)}
                     placeholder="Your name"
-                    className="mb-2 w-full rounded-xl border p-3 text-sm"
+                    className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                   />
 
                   <textarea
@@ -919,12 +1054,12 @@ const hasRealColor =
                     onChange={(e) => setQuestionText(e.target.value)}
                     placeholder="Ask about size, material, delivery, warranty..."
                     rows={4}
-                    className="mb-3 w-full rounded-xl border p-3 text-sm"
+                    className="mb-4 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                   />
 
                   <button
                     disabled={questionLoading}
-                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white disabled:bg-gray-400"
+                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white transition hover:bg-neutral-800 disabled:bg-gray-400"
                   >
                     {questionLoading ? "Submitting..." : "Submit Question"}
                   </button>
@@ -932,25 +1067,26 @@ const hasRealColor =
 
                 <div className="space-y-3">
                   {questions.length === 0 ? (
-                    <div className="rounded-2xl border p-5 text-sm text-gray-500">
+                    <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500">
+                      <span className="text-3xl mb-2">💬</span>
                       No questions yet. Ask the first question.
                     </div>
                   ) : (
                     questions.slice(0, 6).map((q, i) => (
-                      <div key={q._id || i} className="rounded-2xl border p-4">
-                        <p className="font-black">Q: {q.question}</p>
+                      <div key={q._id || i} className="rounded-2xl border border-gray-100 p-4 shadow-sm">
+                        <p className="font-black text-sm">Q: {q.question}</p>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                           Asked by {q.customer_name}
                         </p>
 
                         {q.answer ? (
-                          <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm">
-                            <b>A:</b> {q.answer}
+                          <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-800 border border-gray-200">
+                            <b className="text-black">A:</b> {q.answer}
                           </div>
                         ) : (
-                          <p className="mt-3 text-xs font-bold text-orange-600">
-                            Awaiting seller answer
+                          <p className="mt-3 text-xs font-bold text-orange-600 bg-orange-50 w-fit px-3 py-1 rounded-full">
+                            ⏳ Awaiting seller answer
                           </p>
                         )}
                       </div>
@@ -962,76 +1098,68 @@ const hasRealColor =
           </section>
         </div>
 
-        <Carousel
-          title="Frequently Bought Together"
-          products={relatedProducts.slice(0, 3)}
-        />
-
+        <Carousel title="Frequently Bought Together" products={relatedProducts.slice(0, 3)} />
         <Carousel title="Similar Products" products={relatedProducts} />
-
-        <Carousel
-          title={`More From ${product.category}`}
-          products={relatedProducts}
-        />
+        <Carousel title={`More From ${product.category}`} products={relatedProducts} />
       </section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-[999] grid grid-cols-2 gap-2 border-t bg-white p-2 sm:hidden">
-        <AddToCartButton
-          product={{
-            _id: productId,
-            name: product.name,
-            price,
-            image: selectedImage || product.image,
-            sku: selectedSku,
-            color: selectedColor,
-            stock,
-          }}
-        />
+      {/* MOBILE FIXED BOTTOM BAR */}
+      <div className="fixed bottom-0 left-0 right-0 z-[999] grid grid-cols-2 gap-2 border-t bg-white p-2 sm:hidden pb-safe">
+        <button
+          type="button"
+          onClick={addToCart}
+          disabled={stock <= 0}
+          className={`rounded-full py-3.5 text-center text-sm font-black shadow-md ${
+            stock > 0 ? "bg-black text-white" : "bg-gray-300 text-gray-500"
+          }`}
+        >
+          Add to Cart
+        </button>
 
-        <Link
-          href={stock > 0 ? `/checkout?productId=${productId}` : "#"}
-          className={`rounded-full py-3 text-center text-sm font-black ${
+        <button
+          type="button"
+          onClick={buyNow}
+          disabled={stock <= 0}
+          className={`rounded-full py-3.5 text-center text-sm font-black shadow-md ${
             stock > 0 ? "bg-yellow-400 text-black" : "bg-gray-300 text-gray-500"
           }`}
         >
-          Buy ₹{price.toFixed(0)}
-        </Link>
+          Buy ₹{totalPrice.toLocaleString('en-IN')}
+        </button>
       </div>
 
       {showcaseOpen && (
-        <div className="fixed inset-0 z-[9999] flex bg-black/60">
+        <div className="fixed inset-0 z-[9999] flex bg-black/70 backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setShowcaseOpen(false)}
-            className="hidden flex-1 md:block"
+            className="hidden flex-1 md:block cursor-default"
           />
 
           <div className="h-full w-full max-w-[520px] overflow-y-auto bg-white shadow-2xl md:ml-auto">
-            <div className="sticky top-0 z-10 flex items-center gap-4 bg-blue-600 px-4 py-4 text-white">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-black px-6 py-5 text-white">
+              <h2 className="text-lg font-black">Product Showcase</h2>
               <button
                 type="button"
                 onClick={() => setShowcaseOpen(false)}
-                className="text-3xl font-black leading-none"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xl font-bold hover:bg-white/30 transition"
               >
                 ×
               </button>
-
-              <h2 className="text-lg font-black">Product Details</h2>
             </div>
 
-            <div className="p-4">
-              <p className="mb-3 text-sm font-bold">Description</p>
-
+            <div className="p-6">
               {images.map((img, index) => (
                 <img
                   key={`${img}-${index}`}
                   src={img}
                   alt={product.name}
-                  className="mb-4 w-full rounded-xl object-contain"
+                  className="mb-4 w-full rounded-2xl object-contain border border-gray-100"
                 />
               ))}
 
-              <p className="text-sm leading-7 text-gray-700">
+              <h3 className="mt-6 mb-2 text-lg font-black">Product Description</h3>
+              <p className="text-sm leading-relaxed text-gray-700">
                 {product.description || "No description available."}
               </p>
             </div>
@@ -1057,17 +1185,17 @@ function SectionButton({
     <button
       type="button"
       onClick={() => toggleSection(section)}
-      className="flex w-full items-center justify-between text-left text-lg font-black"
+      className="flex w-full items-center justify-between text-left text-lg font-black py-1"
     >
-      <span>{title}</span>
-      <span className="text-xl">{openSection === section ? "⌃" : "⌄"}</span>
+      <span className="text-gray-900">{title}</span>
+      <span className={`text-xl transition-transform duration-300 ${openSection === section ? "rotate-180 text-black" : "text-gray-400"}`}>⌄</span>
     </button>
   );
 }
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:p-5">
+    <div className="rounded-3xl bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:p-6 border border-gray-50">
       {children}
     </div>
   );
@@ -1077,24 +1205,26 @@ function Carousel({ title, products }: { title: string; products: any[] }) {
   if (!products?.length) return null;
 
   return (
-    <section className="mt-5 rounded-xl bg-white p-3 shadow-sm sm:p-5">
-      <h2 className="mb-3 text-lg font-black sm:text-2xl">{title}</h2>
+    <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm sm:p-6 border border-gray-50">
+      <h2 className="mb-4 text-xl font-black sm:text-2xl text-gray-900">{title}</h2>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
         {products.map((p: any) => (
           <Link
             key={p._id}
             href={`/product/${p._id}`}
-            className="min-w-[130px] max-w-[150px] rounded-xl border p-2 sm:min-w-[190px]"
+            className="group min-w-[140px] max-w-[160px] rounded-2xl border border-gray-100 p-3 sm:min-w-[200px] transition hover:border-black hover:shadow-lg"
           >
-            <img
-              src={p.image || "/placeholder.png"}
-              alt={p.name}
-              className="h-28 w-full object-contain sm:h-36"
-            />
-            <p className="mt-2 line-clamp-2 text-xs font-bold">{p.name}</p>
-            <p className="text-sm font-black text-green-700">
-              ₹{Number(p.sale_price || p.salePrice || p.price || 0).toFixed(0)}
+            <div className="overflow-hidden rounded-xl bg-[#f8f9fa] p-2">
+              <img
+                src={p.image || "/placeholder.png"}
+                alt={p.name}
+                className="h-28 w-full object-contain sm:h-40 transition duration-300 group-hover:scale-105"
+              />
+            </div>
+            <p className="mt-3 line-clamp-2 text-sm font-bold leading-tight text-gray-800">{p.name}</p>
+            <p className="mt-1 text-lg font-black text-green-700">
+              ₹{Number(p.sale_price || p.salePrice || p.price || 0).toLocaleString('en-IN')}
             </p>
           </Link>
         ))}

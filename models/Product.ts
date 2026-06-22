@@ -104,6 +104,8 @@ const ProductSchema = new Schema(
     material: { type: String, default: "" },
     weight: { type: String, default: "" },
     quantityOptions: { type: [String], default: [] },
+    quantityPrices: { type: [Schema.Types.Mixed], default: [] },
+    showQuantityPricing: { type: Boolean, default: true },
 quantities: { type: [String], default: [] },
 weightOptions: { type: [String], default: [] },
 

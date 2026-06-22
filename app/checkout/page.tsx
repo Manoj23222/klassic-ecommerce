@@ -15,6 +15,22 @@ function getSizePrice(basePrice: number, size: string) {
 }
 
 function CheckoutContent() {
+  useEffect(() => {
+  async function checkLogin() {
+    const res = await fetch("/api/auth/me", {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      window.location.href =
+        `/login?redirect=${encodeURIComponent("/checkout")}`;
+    }
+  }
+
+  checkLogin();
+}, []);
   const searchParams = useSearchParams();
 
   const productId = searchParams.get("productId");

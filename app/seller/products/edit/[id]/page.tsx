@@ -51,6 +51,13 @@ export default function EditSellerProductPage() {
   const [saving, setSaving] = useState(false);
 
   const [variants, setVariants] = useState<ColorVariant[]>([emptyVariant]);
+const [quantityPrices, setQuantityPrices] = useState([
+  { label: "100 g", price: "" },
+  { label: "500 g", price: "" },
+  { label: "1 kg", price: "" },
+  { label: "5 kg", price: "" },
+]);
+
 
   const [form, setForm] = useState({
     name: "",
@@ -153,6 +160,24 @@ export default function EditSellerProductPage() {
           p.quantityOptions || p.quantities || p.weightOptions
         ),
       });
+      if (Array.isArray(p.quantityPrices) && p.quantityPrices.length > 0) {
+  setQuantityPrices(
+    p.quantityPrices.map((x: any) => ({
+      label: x.label || "",
+      price: String(x.price || ""),
+    }))
+  );
+} else if (
+  Array.isArray(p.quantityOptions) &&
+  p.quantityOptions.length > 0
+) {
+  setQuantityPrices(
+    p.quantityOptions.map((x: any) => ({
+      label: String(x),
+      price: "",
+    }))
+  );
+}
     } catch {
       toast.error("Product load failed");
     } finally {
@@ -166,6 +191,7 @@ export default function EditSellerProductPage() {
     >
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    
   };
 
   const uploadImage = async (file: File) => {
@@ -244,7 +270,9 @@ export default function EditSellerProductPage() {
     setSaving(true);
 
     try {
-      const quantityArray = toArray(form.quantityOptions);
+      const quantityArray = quantityPrices
+  .map((x) => x.label.trim())
+  .filter(Boolean);
 
       const res = await fetch(`/api/seller/products/${id}`, {
         method: "PUT",
@@ -257,10 +285,18 @@ export default function EditSellerProductPage() {
           colors: toArray(form.colors),
           sizes: toArray(form.sizes),
           quantityOptions: quantityArray,
-          quantities: quantityArray,
-          weightOptions: quantityArray,
-          variants,
-          seller_id: sellerId,
+quantities: quantityArray,
+weightOptions: quantityArray,
+
+quantityPrices: quantityPrices
+  .filter((x) => x.label.trim())
+  .map((x) => ({
+    label: x.label.trim(),
+    price: Number(x.price || 0),
+  })),
+
+variants,
+seller_id: sellerId,
         }),
       });
 
@@ -367,14 +403,36 @@ export default function EditSellerProductPage() {
               <Input name="colors" value={form.colors} onChange={handleChange} placeholder="Colors comma separated" />
               <Input name="sizes" value={form.sizes} onChange={handleChange} placeholder="Sizes comma separated" />
 
-              <div className="md:col-span-2">
-                <Input
-                  name="quantityOptions"
-                  value={form.quantityOptions}
-                  onChange={handleChange}
-                  placeholder="Quantity Options e.g. 100 g, 500 g, 1 kg, 5 kg"
-                />
-              </div>
+              <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
+  <p className="mb-3 text-sm font-black">Quantity Wise Pricing</p>
+
+  <div className="space-y-3">
+    {quantityPrices.map((item, index) => (
+      <div key={index} className="grid grid-cols-2 gap-3">
+        <Input
+          value={item.label}
+          placeholder="100 g / 500 g / 1 kg"
+          onChange={(e) => {
+            const copy = [...quantityPrices];
+            copy[index].label = e.target.value;
+            setQuantityPrices(copy);
+          }}
+        />
+
+        <Input
+          type="number"
+          value={item.price}
+          placeholder="Price"
+          onChange={(e) => {
+            const copy = [...quantityPrices];
+            copy[index].price = e.target.value;
+            setQuantityPrices(copy);
+          }}
+        />
+      </div>
+    ))}
+  </div>
+</div>
 
               <textarea
                 name="short_description"

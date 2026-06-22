@@ -63,8 +63,11 @@ export default function AdminCustomersTable({
           </thead>
 
           <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id} className="border-b hover:bg-gray-50">
+            {filtered.map((c, index) => {
+  const customerId = String(c._id || c.id || c.email || index);
+
+  return (
+              <tr key={customerId} className="border-b hover:bg-gray-50">
                 <td className="p-3">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
@@ -113,12 +116,13 @@ export default function AdminCustomersTable({
 
                 <td className="p-3">
                   <AdminCustomerActions
-                    customerId={c.id}
+                    customerId={customerId}
                     status={c.status}
                   />
                 </td>
               </tr>
-            ))}
+              );
+})}
           </tbody>
         </table>
       </div>

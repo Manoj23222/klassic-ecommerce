@@ -200,9 +200,15 @@ attributeMeta: Array.isArray(body.attributeMeta)
       videoUrl: cleanText(body.videoUrl),
 
       colors: toArray(body.colors),
-      sizes: toArray(body.sizes),
-      material: cleanText(body.material),
-      weight: cleanText(body.weight),
+sizes: toArray(body.sizes),
+
+quantityOptions: toArray(body.quantityOptions),
+
+quantityPrices: Array.isArray(body.quantityPrices)
+  ? body.quantityPrices
+  : [],
+
+material: cleanText(body.material),
 
       variants,
       color_variants: variants,
@@ -498,6 +504,15 @@ product.attributeMeta =
 
     product.sizes =
       body.sizes !== undefined ? toArray(body.sizes) : product.sizes;
+      product.quantityOptions =
+  body.quantityOptions !== undefined
+    ? toArray(body.quantityOptions)
+    : product.quantityOptions;
+
+product.quantityPrices =
+  body.quantityPrices !== undefined && Array.isArray(body.quantityPrices)
+    ? body.quantityPrices
+    : product.quantityPrices;
 
     product.material =
       body.material !== undefined ? cleanText(body.material) : product.material;
