@@ -477,14 +477,14 @@ const price =
         <div className="grid gap-5 lg:grid-cols-[55%_45%]">
           {/* LEFT SECTION (IMAGES & BUTTONS) */}
           <section className="rounded-[2rem] bg-white p-3 shadow-[0_10px_40px_rgba(0,0,0,0.05)] sm:p-4 lg:sticky lg:top-24 lg:self-start">
-            <div className="grid gap-2 sm:grid-cols-[72px_1fr]">
-              <div className="flex gap-2 overflow-x-auto sm:max-h-[430px] sm:flex-col">
+            <div className="grid gap-4 sm:grid-cols-[90px_1fr]">
+              <div className="flex gap-4 overflow-x-auto sm:max-h-[420px] sm:flex-col">
                 {images.map((img, i) => (
                   <button
                     key={`${img}-${i}`}
                     type="button"
                     onClick={() => setSelectedImage(img)}
-                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-white p-1 sm:h-20 sm:w-20 ${
+                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white p-1 sm:h-20 sm:w-20 ${
                       selectedImage === img
                         ? "border-black ring-1 ring-black ring-offset-2"
                         : "border-gray-100 opacity-70 hover:opacity-100"
@@ -1261,29 +1261,39 @@ function Carousel({ title, products }: { title: string; products: any[] }) {
 
   return (
     <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm sm:p-6 border border-gray-50">
-      <h2 className="mb-4 text-xl font-black sm:text-2xl text-gray-900">{title}</h2>
+      <h2 className="mb-4 text-xl font-black sm:text-2xl text-gray-900">
+        {title}
+      </h2>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-        {products.map((p: any) => (
-          <Link
-            key={p._id}
-            href={`/product/${p._id}`}
-            className="group min-w-[140px] max-w-[160px] rounded-2xl border border-gray-100 p-3 sm:min-w-[200px] transition hover:border-black hover:shadow-lg"
-          >
-            <div className="overflow-hidden rounded-xl bg-[#f8f9fa] p-2">
-              <img
-                src={p.image || "/placeholder.png"}
-                alt={p.name}
-                className="h-28 w-full object-contain sm:h-40 transition duration-300 group-hover:scale-105"
-              />
-            </div>
-            <p className="mt-3 line-clamp-2 text-sm font-bold leading-tight text-gray-800">{p.name}</p>
-            <p className="mt-1 text-lg font-black text-green-700">
-              ₹{Number(p.sale_price || p.salePrice || p.price || 0).toLocaleString('en-IN')}
-            </p>
-          </Link>
-        ))}
+      <div className="flex gap-3 overflow-x-auto pb-3 no-scrollbar">
+  {products.map((p: any) => (
+    <Link
+      key={p._id || p.id}
+      href={`/product/${p._id || p.id}`}
+      className="group flex h-[340px] min-w-[220px] max-w-[220px] flex-col rounded-2xl border border-gray-100 bg-white p-3 transition hover:border-black hover:shadow-lg"
+    >
+      <div className="flex h-[190px] w-full items-center justify-center overflow-hidden rounded-xl bg-[#f8f9fa] p-2">
+        <img
+          src={p.image || "/placeholder.png"}
+          alt={p.name}
+          className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+        />
       </div>
+
+      <div className="mt-3 flex flex-1 flex-col">
+        <p className="line-clamp-2 min-h-[44px] text-sm font-bold leading-5 text-gray-800">
+          {p.name}
+        </p>
+
+        <p className="mt-auto text-xl font-black text-green-700">
+          ₹{Number(
+            p.sale_price || p.salePrice || p.price || 0
+          ).toLocaleString("en-IN")}
+        </p>
+      </div>
+    </Link>
+  ))}
+</div>
     </section>
   );
 }

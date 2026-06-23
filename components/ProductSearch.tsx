@@ -30,19 +30,12 @@ function getMrp(item: Product) {
   return Math.round(price * 1.18);
 }
 
-export default function ProductSearch({
-  products,
-}: {
-  products: Product[];
-}) {
-  const filteredProducts = products;
-
+export default function ProductSearch({ products }: { products: Product[] }) {
   function addToCart(item: Product) {
     const productId = String(item._id || item.id || "");
     if (!productId) return;
 
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
     const existsIndex = cart.findIndex(
       (x: any) => String(x.id || x._id) === productId
     );
@@ -70,10 +63,7 @@ export default function ProductSearch({
     if (!productId) return;
 
     const saved = JSON.parse(localStorage.getItem("wishlist") || "[]");
-
-    const exists = saved.some(
-      (x: any) => String(x.id || x._id) === productId
-    );
+    const exists = saved.some((x: any) => String(x.id || x._id) === productId);
 
     if (exists) {
       toast("Already saved");
@@ -94,14 +84,14 @@ export default function ProductSearch({
   }
 
   return (
-   <section className="mx-auto max-w-7xl py-3">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <section className="mx-auto max-w-7xl py-3">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400">
             Klassic Collection
           </p>
-          <h2 className="mt-1 text-2xl font-black">
-            Showing {filteredProducts.length} products
+          <h2 className="mt-1 text-lg font-black">
+            Showing {products.length} products
           </h2>
         </div>
 
@@ -110,7 +100,7 @@ export default function ProductSearch({
         </span>
       </div>
 
-      {filteredProducts.length === 0 ? (
+      {products.length === 0 ? (
         <div className="rounded-[2rem] bg-white p-10 text-center shadow-sm">
           <h3 className="text-2xl font-black">No Products Found</h3>
           <p className="mt-2 text-sm text-gray-500">
@@ -118,8 +108,8 @@ export default function ProductSearch({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredProducts.map((item) => {
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5">
+          {products.map((item) => {
             const productId = String(item._id || item.id || "");
             if (!productId) return null;
 
@@ -132,108 +122,95 @@ export default function ProductSearch({
             return (
               <div
                 key={productId}
-                className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-xl"
-              >
+className="group flex h-[285px] flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-lg sm:h-[330px]"              >
                 <Link href={`/product/${productId}`} className="block">
-                  <div className="relative aspect-square bg-[#f7f5f1] p-2">
+                  <div className="relative flex h-[125px] items-center justify-center overflow-hidden bg-[#f7f5f1] p-2 sm:h-[145px]">
                     <img
                       src={item.image || "/placeholder.png"}
                       alt={item.name}
-                      className="h-full w-full object-contain transition duration-500 group-hover:scale-105"
+                      className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
                     />
 
-                    {item.featured && (
-                      <span className="absolute left-3 top-3 rounded-full bg-black px-3 py-1 text-[10px] font-black text-white">
-                        FEATURED
-                      </span>
-                    )}
-
                     {off > 0 && (
-                      <span className="absolute left-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-[10px] font-black text-white">
+                      <span className="absolute left-2 top-2 rounded-full bg-orange-500 px-2 py-0.5 text-[8px] font-black text-white">
                         {off}% OFF
                       </span>
                     )}
                   </div>
                 </Link>
 
-                <div className="p-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-black text-gray-600">
+                <div className="flex flex-1 flex-col p-2">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="max-w-[90px] truncate rounded-full bg-gray-100 px-2 py-0.5 text-[8px] font-black text-gray-600">
                       {item.category || "General"}
                     </span>
 
                     <button
                       type="button"
                       onClick={() => saveProduct(item)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-gray-500 transition hover:text-black"
-                      aria-label="Save product"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-white text-gray-500"
                     >
-                      <Bookmark size={15} />
+                      <Bookmark size={12} />
                     </button>
                   </div>
 
                   <Link href={`/product/${productId}`}>
-                    <h4 className="mt-2 line-clamp-2 min-h-[34px] text-xs font-black leading-4 md:text-base">
+                    <h4 className="mt-1.5 line-clamp-2 h-8 text-[10px] font-black leading-4 text-gray-950 sm:text-xs">
                       {item.name}
                     </h4>
                   </Link>
 
-                  <div className="mt-2 flex items-center gap-1 text-xs font-bold text-amber-500">
+                  <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-amber-500">
                     ★★★★★
                     <span className="text-gray-500">(4.5)</span>
                   </div>
 
-                  <p className="mt-2 line-clamp-2 text-xs text-gray-500">
-                    {item.description ||
-                      "Premium product from Klassic marketplace"}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap items-end gap-2">
-                    <p className="text-lg font-black text-black">
+                  <div className="mt-1.5 flex items-end gap-1">
+                    <p className="text-sm font-black text-black sm:text-base">
                       ₹{price.toLocaleString("en-IN")}
                     </p>
 
                     {mrp > price && (
-                      <p className="text-xs font-bold text-gray-400 line-through">
+                      <p className="text-[9px] font-bold text-gray-400 line-through">
                         ₹{mrp.toLocaleString("en-IN")}
                       </p>
                     )}
                   </div>
 
-                  <div className="mt-2 flex items-center justify-between">
+                  <div className="mt-1.5 flex items-center justify-between">
                     <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-black ${
+                      className={`rounded-full px-1.5 py-0.5 text-[8px] font-black ${
                         stock > 0
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {stock > 0 ? "In Stock" : "Out of Stock"}
+                      {stock > 0 ? "In Stock" : "Out"}
                     </span>
 
                     {stock > 0 && (
-                      <span className="text-[10px] font-black text-gray-400">
+                      <span className="text-[8px] font-black text-gray-400">
                         {stock} left
                       </span>
                     )}
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-auto grid grid-cols-2 gap-1.5 pt-2">
                     <button
                       type="button"
                       disabled={stock <= 0}
                       onClick={() => addToCart(item)}
-                      className="flex items-center justify-center gap-2 rounded-xl bg-black py-2 text-xs font-black text-white disabled:bg-gray-300"
+                      className="flex items-center justify-center gap-1 rounded-lg bg-black py-1.5 text-[9px] font-black text-white disabled:bg-gray-300"
                     >
-                      <ShoppingBag size={14} />
+                      <ShoppingBag size={11} />
                       Add
                     </button>
 
                     <Link
                       href={`/product/${productId}`}
-                      className="flex items-center justify-center gap-2 rounded-xl border py-2 text-xs font-black"
+                      className="flex items-center justify-center gap-1 rounded-lg border py-1.5 text-[9px] font-black"
                     >
-                      <Eye size={14} />
+                      <Eye size={11} />
                       View
                     </Link>
                   </div>

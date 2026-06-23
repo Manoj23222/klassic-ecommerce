@@ -61,7 +61,7 @@ const categories = [
   { name: "Fashion", href: "/category/fashion", icon: "🧥" },
   { name: "Electronics", href: "/category/electronics", icon: "🎧" },
   { name: "Home & Decor", href: "/category/home", icon: "🛋️" },
-  { name: "Groceries", href: "/category/grocery", icon: "🥦" },
+  { name: "Groceries", href: "/grocery", icon: "🥦" },
   { name: "Beauty", href: "/category/beauty", icon: "✨" },
   { name: "Lifestyle", href: "/category/lifestyle", icon: "👜" },
 ];
@@ -70,6 +70,13 @@ const brandCards = ["Klassic", "Urban Luxe", "Prime Craft", "Elite Home"];
 
 function getPrice(product: ProductType) {
   return Number(product.sale_price || product.salePrice || product.price || 0);
+}
+
+function getMrp(product: ProductType) {
+  const price = getPrice(product);
+  const base = Number(product.price || 0);
+  if (base > price) return base;
+  return Math.round(price * 1.18);
 }
 
 export default async function Home() {
@@ -85,40 +92,40 @@ export default async function Home() {
     <main className="min-h-screen bg-[#f1f3f6] pb-20 text-[#111]">
       <Header />
 
-      <section className="bg-black px-4 py-2 text-center text-xs font-black uppercase tracking-[0.25em] text-white">
+      <section className="bg-black px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.25em] text-white sm:text-xs">
         Luxury deals • Fast delivery • Trusted sellers • Secure checkout
       </section>
 
-      <section className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-8">
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-black text-white shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
+      <section className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-6">
+        <div className="relative overflow-hidden rounded-[2rem] bg-black text-white shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_32%),linear-gradient(120deg,rgba(0,0,0,0.98),rgba(0,0,0,0.55))]" />
 
-          <div className="relative grid min-h-[190px] items-center gap-4 px-4 py-5 md:min-h-[360px] md:px-10 md:py-10 lg:grid-cols-[1fr_360px]">
+          <div className="relative grid min-h-[190px] items-center gap-4 px-4 py-5 md:min-h-[330px] md:px-10 md:py-10 lg:grid-cols-[1fr_340px]">
             <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.35em] text-white/60">
+              <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/60 sm:text-xs">
                 Klassic Luxury Marketplace
               </p>
 
-              <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight md:text-6xl">
+              <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight md:text-5xl">
                 Premium shopping, redesigned.
               </h1>
 
-              <p className="mt-6 max-w-xl text-base font-medium leading-7 text-white/70 md:text-lg">
+              <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-white/70 md:text-base">
                 Shop curated products, trusted sellers, luxury collections,
                 fast delivery and secure payments in one Klassic experience.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href="#products"
-                  className="rounded-full bg-white px-8 py-3 text-sm font-black text-black transition hover:bg-[#e8ded0]"
+                  className="rounded-full bg-white px-6 py-2.5 text-xs font-black text-black"
                 >
                   Explore Products
                 </a>
 
                 <a
                   href="#flash-sale"
-                  className="rounded-full border border-white/25 px-8 py-3 text-sm font-black text-white transition hover:bg-white/10"
+                  className="rounded-full border border-white/25 px-6 py-2.5 text-xs font-black text-white"
                 >
                   Flash Sale
                 </a>
@@ -133,27 +140,18 @@ export default async function Home() {
                       <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
                         Today Special
                       </p>
-                      <h2 className="mt-3 text-3xl font-black">
+                      <h2 className="mt-3 text-2xl font-black">
                         Up to 60% Off
                       </h2>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-2xl bg-white/10 p-3 text-center">
-                        <p className="text-xl font-black">12</p>
-                        <p className="text-[10px] text-white/50">Hours</p>
-                      </div>
-                      <div className="rounded-2xl bg-white/10 p-3 text-center">
-                        <p className="text-xl font-black">45</p>
-                        <p className="text-[10px] text-white/50">Minutes</p>
-                      </div>
-                      <div className="rounded-2xl bg-white/10 p-3 text-center">
-                        <p className="text-xl font-black">30</p>
-                        <p className="text-[10px] text-white/50">Seconds</p>
-                      </div>
+                      <MiniDarkStat value="12" label="Hours" />
+                      <MiniDarkStat value="45" label="Minutes" />
+                      <MiniDarkStat value="30" label="Seconds" />
                     </div>
 
-                    <div className="rounded-full bg-white px-5 py-3 text-center text-sm font-black text-black">
+                    <div className="rounded-full bg-white px-5 py-3 text-center text-xs font-black text-black">
                       Shop Now
                     </div>
                   </div>
@@ -166,7 +164,7 @@ export default async function Home() {
 
       <TrustBadges />
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
+      <section className="mx-auto max-w-7xl px-4 py-5">
         <SectionTitle label="Curated For You" title="Shop by Category" />
 
         <div className="grid grid-cols-3 gap-2 md:grid-cols-3 lg:grid-cols-6">
@@ -174,15 +172,15 @@ export default async function Home() {
             <a
               key={category.name}
               href={category.href}
-              className="group rounded-2xl border border-black/5 bg-white p-3shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+              className="group rounded-2xl border border-black/5 bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3eee7] text-3xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3eee7] text-2xl">
                 {category.icon}
               </div>
 
-              <h3 className="mt-5 text-base font-black">{category.name}</h3>
+              <h3 className="mt-3 text-sm font-black">{category.name}</h3>
 
-              <p className="mt-1 text-xs font-semibold text-gray-500">
+              <p className="mt-1 text-[10px] font-semibold text-gray-500">
                 Premium picks
               </p>
             </a>
@@ -190,59 +188,55 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="flash-sale" className="mx-auto max-w-7xl px-4 py-8">
-        <div className="rounded-[2rem] bg-black p-5 text-white shadow-xl">
+      <section id="flash-sale" className="mx-auto max-w-7xl px-4 py-5">
+        <div className="rounded-[2rem] bg-black p-4 text-white shadow-xl sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-white/50">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50 sm:text-xs">
                 Limited Time
               </p>
-              <h2 className="mt-2 text-3xl font-black">Flash Sale</h2>
+              <h2 className="mt-1 text-2xl font-black sm:text-3xl">
+                Flash Sale
+              </h2>
             </div>
 
-            <div className="rounded-full bg-white px-5 py-3 text-sm font-black text-black">
+            <div className="rounded-full bg-white px-4 py-2 text-xs font-black text-black">
               Ending Soon
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(flashProducts.length ? flashProducts : latestProducts)
-              .slice(0, 6)
-              .map((product) => (
-                <ProductCard key={product.id} product={product} dark />
-              ))}
-          </div>
+          <ProductRail
+            products={(flashProducts.length ? flashProducts : latestProducts).slice(0, 6)}
+            dark
+          />
         </div>
       </section>
 
       {latestProducts.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-8">
+        <section className="mx-auto max-w-7xl px-4 py-5">
           <SectionTitle label="Trending Exclusives" title="Latest Arrivals" />
-          <ProductGrid products={latestProducts} />
+          <ProductRail products={latestProducts} />
         </section>
       )}
 
       {bestSellers.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-8">
+        <section className="mx-auto max-w-7xl px-4 py-5">
           <SectionTitle label="Popular Now" title="Best Sellers" />
-          <ProductGrid products={bestSellers} />
+          <ProductRail products={bestSellers} />
         </section>
       )}
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
+      <section className="mx-auto max-w-7xl px-4 py-5">
         <SectionTitle label="Premium Brands" title="Top Brands Showcase" />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {brandCards.map((brand) => (
-            <div
-              key={brand}
-              className="rounded-[2rem] bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-xl font-black text-white">
+            <div key={brand} className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-base font-black text-white">
                 {brand.slice(0, 1)}
               </div>
-              <h3 className="mt-5 text-xl font-black">{brand}</h3>
-              <p className="mt-2 text-sm text-gray-500">
+              <h3 className="mt-3 text-base font-black">{brand}</h3>
+              <p className="mt-1 text-xs text-gray-500">
                 Premium quality collection
               </p>
             </div>
@@ -250,17 +244,17 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="rounded-[2.5rem] bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:p-8">
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <section className="mx-auto max-w-7xl px-4 py-5">
+        <div className="rounded-[2rem] bg-white p-5 shadow-sm md:p-6">
+          <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
                 Seller Spotlight
               </p>
-              <h2 className="mt-2 text-3xl font-black">
+              <h2 className="mt-2 text-2xl font-black">
                 Trusted sellers, premium service.
               </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-500">
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-500">
                 Klassic supports seller trust score, payouts, returns, Q&A,
                 reviews and product moderation for safer shopping.
               </p>
@@ -275,7 +269,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="products" className="mx-auto max-w-7xl px-4 py-8">
+      <section id="products" className="mx-auto max-w-7xl px-4 py-5">
         <SectionTitle label="Complete Collection" title="Explore Products" />
 
         {products.length > 0 ? (
@@ -290,12 +284,12 @@ export default async function Home() {
         )}
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-12 pt-8">
-        <div className="rounded-[2.5rem] bg-black p-8 text-center text-white">
+      <section className="mx-auto max-w-7xl px-4 pb-12 pt-5">
+        <div className="rounded-[2rem] bg-black p-6 text-center text-white">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-white/50">
             Klassic Newsletter
           </p>
-          <h2 className="mt-3 text-3xl font-black">
+          <h2 className="mt-3 text-2xl font-black">
             Get luxury deals first.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-white/60">
@@ -303,7 +297,7 @@ export default async function Home() {
             Klassic rewards.
           </p>
 
-          <div className="mx-auto mt-6 flex max-w-md gap-2 rounded-full bg-white p-2">
+          <div className="mx-auto mt-5 flex max-w-md gap-2 rounded-full bg-white p-2">
             <input
               placeholder="Enter email"
               className="flex-1 rounded-full px-4 text-sm text-black outline-none"
@@ -318,22 +312,17 @@ export default async function Home() {
   );
 }
 
-function SectionTitle({ label, title }: { label: string; title: string }) {
+function ProductRail({
+  products,
+  dark = false,
+}: {
+  products: ProductType[];
+  dark?: boolean;
+}) {
   return (
-    <div className="mb-5">
-      <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
-        {label}
-      </p>
-      <h2 className="mt-2 text-3xl font-black">{title}</h2>
-    </div>
-  );
-}
-
-function ProductGrid({ products }: { products: ProductType[] }) {
-  return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mt-4 flex gap-3 overflow-x-auto pb-3 sm:grid sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:overflow-visible">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} dark={dark} />
       ))}
     </div>
   );
@@ -346,46 +335,49 @@ function ProductCard({
   product: ProductType;
   dark?: boolean;
 }) {
+  const price = getPrice(product);
+  const mrp = getMrp(product);
+
   return (
     <a
       href={`/product/${product.id}`}
-      className={`group rounded-[2rem] p-4 transition hover:-translate-y-1 ${
+      className={`group flex min-w-[220px] min-h-[250px] flex-col rounded-[1.1rem] p-2 transition hover:-translate-y-1 sm:min-w-0 sm:min-h-[300px] ${
         dark
           ? "bg-white/10 text-white hover:bg-white/15"
-          : "bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+          : "bg-white shadow-sm hover:shadow-md"
       }`}
     >
       <div
-        className={`aspect-square overflow-hidden rounded-[1.5rem] ${
+        className={`flex h-[110px] items-center justify-center overflow-hidden rounded-xl p-2 sm:h-[185px] ${
           dark ? "bg-white/10" : "bg-[#f4f1ec]"
         }`}
       >
         <img
           src={product.image || "/placeholder.png"}
           alt={product.name}
-          className="h-full w-full object-contain p-6 transition duration-500 group-hover:scale-105"
+          className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
         />
       </div>
 
       <p
-        className={`mt-4 text-xs font-black uppercase tracking-widest ${
+        className={`mt-2 text-[8px] font-black uppercase tracking-widest sm:text-[10px] ${
           dark ? "text-white/50" : "text-gray-400"
         }`}
       >
         {product.brand || product.category || "Klassic"}
       </p>
 
-      <h3 className="mt-2 line-clamp-2 text-base font-black">
+      <h3 className="mt-1 line-clamp-2 min-h-[30px] text-[10px] font-black leading-4 sm:text-sm">
         {product.name}
       </h3>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-lg font-black">
-          ₹{getPrice(product).toLocaleString("en-IN")}
+      <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+        <p className="text-xs font-black sm:text-base">
+          ₹{price.toLocaleString("en-IN")}
         </p>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-black ${
+          className={`rounded-full px-2 py-0.5 text-[8px] font-black sm:text-[10px] ${
             product.stock > 0
               ? dark
                 ? "bg-green-400 text-black"
@@ -396,14 +388,31 @@ function ProductCard({
           {product.stock > 0 ? "In Stock" : "Out"}
         </span>
       </div>
+
+      {mrp > price && (
+        <p className={`mt-0.5 text-[9px] line-through ${dark ? "text-white/40" : "text-gray-400"}`}>
+          ₹{mrp.toLocaleString("en-IN")}
+        </p>
+      )}
     </a>
+  );
+}
+
+function SectionTitle({ label, title }: { label: string; title: string }) {
+  return (
+    <div className="mb-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-400 sm:text-xs">
+        {label}
+      </p>
+      <h2 className="mt-1 text-2xl font-black sm:text-3xl">{title}</h2>
+    </div>
   );
 }
 
 function TrustBadges() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-4">
-      <div className="grid gap-3 rounded-[2rem] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+    <section className="mx-auto max-w-7xl px-4 py-3">
+      <div className="grid grid-cols-2 gap-2 rounded-[2rem] bg-white p-3 shadow-sm lg:grid-cols-4">
         <MiniBadge icon="🔒" title="Secure Payments" text="Safe checkout" />
         <MiniBadge icon="🚚" title="Fast Delivery" text="Quick shipping" />
         <MiniBadge icon="↩" title="Easy Returns" text="Simple return flow" />
@@ -423,11 +432,11 @@ function MiniBadge({
   text: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-[#f7f5f1] p-4">
-      <div className="text-2xl">{icon}</div>
+    <div className="flex items-center gap-3 rounded-2xl bg-[#f7f5f1] p-3">
+      <div className="text-xl">{icon}</div>
       <div>
-        <p className="font-black">{title}</p>
-        <p className="text-xs text-gray-500">{text}</p>
+        <p className="text-sm font-black">{title}</p>
+        <p className="text-[10px] text-gray-500">{text}</p>
       </div>
     </div>
   );
@@ -436,8 +445,17 @@ function MiniBadge({
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-2xl bg-[#f7f5f1] p-4">
-      <p className="text-2xl font-black">{value}</p>
+      <p className="text-xl font-black">{value}</p>
       <p className="text-xs font-bold text-gray-500">{label}</p>
+    </div>
+  );
+}
+
+function MiniDarkStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-2xl bg-white/10 p-3 text-center">
+      <p className="text-lg font-black">{value}</p>
+      <p className="text-[10px] text-white/50">{label}</p>
     </div>
   );
 }
