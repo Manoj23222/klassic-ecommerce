@@ -35,14 +35,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const sale = await FlashSale.create({
-      title: body.title,
-      product_ids: Array.isArray(body.product_ids) ? body.product_ids : [],
-      discount_percent: Number(body.discount_percent || 0),
-      start_date: body.start_date,
-      end_date: body.end_date,
-      active: Boolean(body.active ?? true),
-    });
+   const sale = await FlashSale.create({
+  title: body.title,
+  product_ids: Array.isArray(body.product_ids) ? body.product_ids : [],
+  discount_percent: Number(body.discount_percent || 0),
+  start_date: new Date(body.start_date),
+  end_date: new Date(body.end_date),
+  active: body.active !== false,
+});
 
     return NextResponse.json({
       success: true,

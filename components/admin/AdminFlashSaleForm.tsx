@@ -34,33 +34,38 @@ export default function AdminFlashSaleForm({
   };
 
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const res = await fetch("/api/admin/flash-sales", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
+  console.log("FLASH FORM =", form);
+
+  const res = await fetch("/api/admin/flash-sales", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(form),
+  });
+
+  const data = await res.json();
+
+  console.log("FLASH API STATUS =", res.status);
+  console.log("FLASH API RESPONSE =", data);
+
+  if (data.success) {
+    toast.success("Flash sale created");
+    setForm({
+      title: "",
+      product_ids: [],
+      discount_percent: "",
+      start_date: "",
+      end_date: "",
+      active: true,
     });
-
-    const data = await res.json();
-
-    if (data.success) {
-      toast.success("Flash sale created");
-      setForm({
-        title: "",
-        product_ids: [],
-        discount_percent: "",
-        start_date: "",
-        end_date: "",
-        active: true,
-      });
-      router.refresh();
-    } else {
-      toast.error(data.message || "Create failed");
-    }
-  };
+    router.refresh();
+  } else {
+    toast.error(data.message || "Create failed");
+  }
+};
 
   return (
     <form onSubmit={submit} className="space-y-4">

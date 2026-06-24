@@ -2,7 +2,8 @@ import Header from "@/components/Header";
 import ProductSearch from "@/components/ProductSearch";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
-
+import FlashSale from "@/models/FlashSale";
+import FlashSaleCountdown from "@/components/FlashSaleCountdown";
 export const dynamic = "force-dynamic";
 
 type ProductType = {
@@ -81,9 +82,25 @@ function getMrp(product: ProductType) {
 
 export default async function Home() {
   const products = await getProducts();
+  await connectDB();
 
+const activeFlashSale = await FlashSale.findOne({
+  active: true,
+})
+  .sort({ end_date: 1 })
+  .lean();
+const allFlashSales = await FlashSale.find().lean();
+console.log("ALL FLASH SALES =", JSON.parse(JSON.stringify(allFlashSales)));
+const flashSaleData = activeFlashSale
+  ? JSON.parse(JSON.stringify(activeFlashSale))
+  : null;
+console.log("FLASH SALE =", flashSaleData);
   const latestProducts = products.slice(0, 6);
-  const flashProducts = products.filter((p) => p.flashSale).slice(0, 6);
+  const flashProducts = flashSaleData
+  ? products
+      .filter((p) => flashSaleData.product_ids?.includes(String(p.id)))
+      .slice(0, 6)
+  : products.filter((p) => p.flashSale).slice(0, 6);
   const bestSellers = [...products]
     .sort((a, b) => Number(b.sales_count || 0) - Number(a.sales_count || 0))
     .slice(0, 6);
@@ -145,11 +162,15 @@ export default async function Home() {
                       </h2>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <MiniDarkStat value="12" label="Hours" />
-                      <MiniDarkStat value="45" label="Minutes" />
-                      <MiniDarkStat value="30" label="Seconds" />
-                    </div>
+                    {flashSaleData ? (
+  <FlashSaleCountdown endDate={flashSaleData.end_date} />
+) : (
+  <div className="grid grid-cols-3 gap-2">
+    <MiniDarkStat value="00" label="Hours" />
+    <MiniDarkStat value="00" label="Minutes" />
+    <MiniDarkStat value="00" label="Seconds" />
+  </div>
+)}
 
                     <div className="rounded-full bg-white px-5 py-3 text-center text-xs font-black text-black">
                       Shop Now
