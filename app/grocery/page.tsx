@@ -149,13 +149,6 @@ export default async function GroceryPage() {
       <section id="categories" className="mx-auto max-w-7xl px-4 py-6">
         <div className="rounded-[2rem] bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex items-end justify-between gap-3">
-            <SectionTitle label="Grocery Store" title="Shop by Category" />
-
-            <select className="hidden rounded-full border px-5 py-2 text-sm font-black outline-none sm:block">
-              <option>Newest</option>
-              <option>Popular</option>
-              <option>Price Low to High</option>
-            </select>
           </div>
 
           <GroceryProductSection products={products} />
