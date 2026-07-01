@@ -15,30 +15,14 @@ function getSizePrice(basePrice: number, size: string) {
 }
 
 function CheckoutContent() {
-  useEffect(() => {
-  async function checkLogin() {
-    const res = await fetch("/api/auth/me", {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (!data.success) {
-      window.location.href =
-        `/login?redirect=${encodeURIComponent("/checkout")}`;
-    }
-  }
-
-  checkLogin();
-}, []);
   const searchParams = useSearchParams();
 
   const productId = searchParams.get("productId");
   const colorFromUrl = searchParams.get("color") || "";
   const sizeFromUrl = searchParams.get("size") || "";
   const quantityFromUrl = searchParams.get("quantity") || "";
-const priceFromUrl = searchParams.get("price") || "";
-const qtyFromUrl = Number(searchParams.get("qty") || 1);
+  const priceFromUrl = searchParams.get("price") || "";
+  const qtyFromUrl = Number(searchParams.get("qty") || 1);
   const couponFromUrl = searchParams.get("coupon") || "";
 
   const [name, setName] = useState("");
@@ -58,15 +42,33 @@ const qtyFromUrl = Number(searchParams.get("qty") || 1);
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [openContact, setOpenContact] = useState(true);
-  const [openShipping, setOpenShipping] = useState(true);
-  const [openPayment, setOpenPayment] = useState(true);
   const [showAddressForm, setShowAddressForm] = useState(true);
+  const [openPayment, setOpenPayment] = useState(true);
 
   const [upiId, setUpiId] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+
+  useEffect(() => {
+    async function checkLogin() {
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const data = await res.json();
+
+      if (!data.success) {
+        window.location.href = `/login?redirect=${encodeURIComponent(
+          "/checkout"
+        )}`;
+        return;
+      }
+
+      if (data.user?.email) setEmail(data.user.email);
+      if (data.user?.name) setName(data.user.name);
+      if (data.user?.phone) setPhone(data.user.phone);
+    }
+
+    checkLogin();
+  }, []);
 
   useEffect(() => {
     async function loadAddress() {
@@ -84,6 +86,18 @@ const qtyFromUrl = Number(searchParams.get("qty") || 1);
           setState(saved.state || "");
           setPincode(saved.pincode || "");
           setLandmark(saved.landmark || "");
+          setAddressType(saved.addressType || saved.address_type || "Home");
+
+          if (
+            saved.name &&
+            saved.phone &&
+            saved.address &&
+            saved.city &&
+            saved.state &&
+            saved.pincode
+          ) {
+            setShowAddressForm(false);
+          }
         }
       } catch {}
     }
@@ -109,10 +123,11 @@ const qtyFromUrl = Number(searchParams.get("qty") || 1);
         const basePrice = Number(
           product.sale_price || product.salePrice || product.price
         );
+
         const finalPrice =
-  Number(priceFromUrl || 0) > 0
-    ? Number(priceFromUrl)
-    : getSizePrice(basePrice, sizeFromUrl);
+          Number(priceFromUrl || 0) > 0
+            ? Number(priceFromUrl)
+            : getSizePrice(basePrice, sizeFromUrl);
 
         setCart([
           {
@@ -123,10 +138,10 @@ const qtyFromUrl = Number(searchParams.get("qty") || 1);
             basePrice,
             image: product.image,
             quantity: qtyFromUrl,
-buyQty: qtyFromUrl,
+            buyQty: qtyFromUrl,
             color: colorFromUrl,
             size: quantityFromUrl || sizeFromUrl,
-selectedQuantity: quantityFromUrl,
+            selectedQuantity: quantityFromUrl,
           },
         ]);
       } else {
@@ -135,7 +150,7 @@ selectedQuantity: quantityFromUrl,
     }
 
     loadCheckout();
-  }, [productId, colorFromUrl, sizeFromUrl]);
+  }, [productId, colorFromUrl, sizeFromUrl, quantityFromUrl, priceFromUrl, qtyFromUrl]);
 
   useEffect(() => {
     if (couponFromUrl) setCoupon(couponFromUrl);
@@ -154,6 +169,9 @@ selectedQuantity: quantityFromUrl,
   const deliveryCharge = subtotal > 0 ? 0 : 0;
   const gstAmount = 0;
   const total = Math.max(subtotal - discount + deliveryCharge + gstAmount, 0);
+
+  const hasSavedAddress =
+    name && phone && address && city && state && pincode;
 
   async function applyCouponCode(code: string) {
     if (!code.trim()) {
@@ -181,9 +199,8 @@ selectedQuantity: quantityFromUrl,
 
   function validateCheckout() {
     if (!name || !phone || !address || !city || !state || !pincode) {
-      toast.error("Please complete shipping details");
-      setOpenContact(true);
-      setOpenShipping(true);
+      toast.error("Please complete delivery address");
+      setShowAddressForm(true);
       return false;
     }
 
@@ -220,6 +237,7 @@ selectedQuantity: quantityFromUrl,
         JSON.stringify({
           customer_name: name,
           phone,
+          email,
           address,
           pincode,
           city,
@@ -266,6 +284,7 @@ selectedQuantity: quantityFromUrl,
       body: JSON.stringify({
         customer_name: name,
         phone,
+        email,
         address,
         pincode,
         city,
@@ -321,148 +340,94 @@ selectedQuantity: quantityFromUrl,
               Checkout
             </h1>
             <p className="mt-1 text-xs font-semibold text-gray-500 md:text-sm">
-              Secure, simple and distraction-free checkout.
+              Secure, simple and fast checkout.
             </p>
           </div>
 
-          <LuxuryCard title="Express Checkout">
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <ExpressButton
-                text="GPay"
-                onClick={() => {
-                  setPaymentMethod("UPI");
-                  startPaytmPayment("UPI");
-                }}
-              />
-              <ExpressButton
-                text="UPI"
-                onClick={() => {
-                  setPaymentMethod("UPI");
-                  startPaytmPayment("UPI");
-                }}
-              />
-              <ExpressButton
-                text="Wallet"
-                onClick={() => {
-                  setPaymentMethod("Paytm");
-                  startPaytmPayment("Paytm");
-                }}
-              />
-            </div>
-          </LuxuryCard>
+          <LuxuryCard title="1. Delivery Address">
+            {!showAddressForm && hasSavedAddress ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 md:rounded-2xl md:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black text-gray-500 md:text-sm">
+                      Deliver to:
+                    </p>
 
-          <LuxuryCard
-            title="1. Contact Information"
-            action={
-              <ToggleSectionButton
-                open={openContact}
-                onClick={() => setOpenContact(!openContact)}
-              />
-            }
-          >
-            {openContact && (
-              <>
-                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
-                  <FloatingInput label="Full Name" value={name} setValue={setName} />
-                  <FloatingInput label="Mobile Number" value={phone} setValue={setPhone} />
-                  <FloatingInput label="Email Address" value={email} setValue={setEmail} type="email" />
-                </div>
-
-                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-gray-600 md:text-sm">
-                  <input type="checkbox" defaultChecked className="h-4 w-4 accent-black" />
-                  Email me with updates and offers
-                </label>
-              </>
-            )}
-          </LuxuryCard>
-
-          <LuxuryCard
-            title="2. Shipping Address"
-            action={
-              <ToggleSectionButton
-                open={openShipping}
-                onClick={() => setOpenShipping(!openShipping)}
-              />
-            }
-          >
-            {openShipping && (
-              <>
-                {address && city && state && pincode && !showAddressForm ? (
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 md:rounded-3xl md:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-black md:text-lg">{name}</p>
-                        <p className="mt-1 text-xs font-bold text-gray-600 md:text-sm">
-                          {phone}
-                        </p>
-                        <p className="mt-2 text-xs font-semibold text-gray-600 md:text-sm">
-                          {address}, {city}, {state} - {pincode}
-                        </p>
-                        {landmark && (
-                          <p className="mt-1 text-xs text-gray-500 md:text-sm">
-                            Landmark: {landmark}
-                          </p>
-                        )}
-                        <span className="mt-2 inline-block rounded-full bg-white px-3 py-1.5 text-[10px] font-black md:text-xs">
-                          {addressType}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowAddressForm(true)}
-                        className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-black hover:border-black md:px-5 md:py-2 md:text-sm"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 md:gap-4">
-                    <FloatingInput label="Complete Address" value={address} setValue={setAddress} />
-                    <FloatingInput label="Pincode" value={pincode} setValue={setPincode} />
-                    <FloatingInput label="City" value={city} setValue={setCity} />
-                    <StateSelect value={state} setValue={setState} />
-                    <FloatingInput label="Landmark" value={landmark} setValue={setLandmark} />
-
-                    <label className="block">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 md:text-xs">
-                        Address Type
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-black md:text-lg">
+                        {name}
+                      </h3>
+                      <span className="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-black uppercase text-gray-600">
+                        {addressType}
                       </span>
-                      <select
-                        value={addressType}
-                        onChange={(e) => setAddressType(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
-                      >
-                        <option>Home</option>
-                        <option>Work</option>
-                        <option>Other</option>
-                      </select>
-                    </label>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!address || !city || !state || !pincode) {
-                          toast.error("Please complete address");
-                          return;
-                        }
-                        setShowAddressForm(false);
-                        setOpenShipping(false);
-                        setOpenPayment(true);
-                      }}
-                      className="rounded-xl bg-black py-3 text-sm font-black text-white md:col-span-2 md:rounded-full md:py-4"
-                    >
-                      Save Address
-                    </button>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-gray-700">
+                      {address}
+                      {landmark ? `, ${landmark}` : ""}, {city}, {state}{" "}
+                      {pincode}
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-gray-800">
+                      {phone}
+                    </p>
                   </div>
-                )}
-              </>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressForm(true)}
+                    className="shrink-0 rounded-md border border-gray-300 px-4 py-2 text-xs font-black text-blue-600 hover:border-blue-600 md:text-sm"
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                <FloatingInput label="Full Name" value={name} setValue={setName} />
+                <FloatingInput label="Mobile Number" value={phone} setValue={setPhone} />
+                <FloatingInput label="Complete Address" value={address} setValue={setAddress} />
+                <FloatingInput label="Pincode" value={pincode} setValue={setPincode} />
+                <FloatingInput label="City" value={city} setValue={setCity} />
+                <StateSelect value={state} setValue={setState} />
+                <FloatingInput label="Landmark" value={landmark} setValue={setLandmark} />
+
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 md:text-xs">
+                    Address Type
+                  </span>
+                  <select
+                    value={addressType}
+                    onChange={(e) => setAddressType(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
+                  >
+                    <option>Home</option>
+                    <option>Work</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!name || !phone || !address || !city || !state || !pincode) {
+                      toast.error("Please complete delivery address");
+                      return;
+                    }
+
+                    setShowAddressForm(false);
+                    setOpenPayment(true);
+                  }}
+                  className="rounded-xl bg-black py-3 text-sm font-black text-white md:col-span-2 md:rounded-full md:py-4"
+                >
+                  Save & Deliver Here
+                </button>
+              </div>
             )}
           </LuxuryCard>
 
           <LuxuryCard
-            title="3. Payment"
+            title="2. Payment Method"
             action={
               <ToggleSectionButton
                 open={openPayment}
@@ -477,7 +442,13 @@ selectedQuantity: quantityFromUrl,
                 </p>
 
                 <div className="space-y-2 md:space-y-3">
-                  <PaymentOption value="Card" selected={paymentMethod} setSelected={setPaymentMethod} title="Credit / Debit Card" text="Visa, Mastercard, RuPay" />
+                  <PaymentOption
+                    value="Card"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Credit / Debit Card"
+                    text="Visa, Mastercard, RuPay"
+                  />
 
                   {paymentMethod === "Card" && (
                     <div className="grid gap-3 rounded-2xl bg-gray-50 p-3 md:grid-cols-3 md:rounded-3xl md:p-4">
@@ -487,7 +458,13 @@ selectedQuantity: quantityFromUrl,
                     </div>
                   )}
 
-                  <PaymentOption value="UPI" selected={paymentMethod} setSelected={setPaymentMethod} title="UPI" text="PhonePe, Google Pay, Paytm" />
+                  <PaymentOption
+                    value="UPI"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="UPI"
+                    text="PhonePe, Google Pay, Paytm"
+                  />
 
                   {paymentMethod === "UPI" && (
                     <div className="rounded-2xl bg-gray-50 p-3 md:rounded-3xl md:p-4">
@@ -495,8 +472,21 @@ selectedQuantity: quantityFromUrl,
                     </div>
                   )}
 
-                  <PaymentOption value="Paytm" selected={paymentMethod} setSelected={setPaymentMethod} title="Paytm Wallet" text="Pay using Paytm Wallet / Paytm App" />
-                  <PaymentOption value="COD" selected={paymentMethod} setSelected={setPaymentMethod} title="Cash on Delivery" text="Pay when delivered" />
+                  <PaymentOption
+                    value="Paytm"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Paytm Wallet"
+                    text="Pay using Paytm Wallet / Paytm App"
+                  />
+
+                  <PaymentOption
+                    value="COD"
+                    selected={paymentMethod}
+                    setSelected={setPaymentMethod}
+                    title="Cash on Delivery"
+                    text="Pay when delivered"
+                  />
                 </div>
 
                 <button
@@ -679,6 +669,7 @@ function FloatingInput({
     </label>
   );
 }
+
 function StateSelect({
   value,
   setValue,
@@ -737,7 +728,6 @@ function StateSelect({
         className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-bold outline-none transition focus:border-black md:rounded-2xl md:px-4 md:py-4 md:text-sm"
       >
         <option value="">Select State</option>
-
         {states.map((item) => (
           <option key={item} value={item}>
             {item}
@@ -745,23 +735,6 @@ function StateSelect({
         ))}
       </select>
     </label>
-  );
-}
-function ExpressButton({
-  text,
-  onClick,
-}: {
-  text: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-black transition hover:border-black md:rounded-full md:px-5 md:py-3 md:text-sm"
-    >
-      {text}
-    </button>
   );
 }
 
