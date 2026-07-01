@@ -22,7 +22,14 @@ import {
   LayoutDashboard,
   Menu,
   MapPin,
-  PlayCircle,
+  Globe2,
+  Languages,
+  Trophy,
+  Gift,
+  Wallet,
+  PackageCheck,
+  TicketPercent,
+  Sparkles,
 } from "lucide-react";
 
 type UserType = {
@@ -40,11 +47,16 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
   const [user, setUser] = useState<UserType | null>(null);
   const [seller, setSeller] = useState<any>(null);
+  const [country, setCountry] = useState("India");
+  const [language, setLanguage] = useState("EN");
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     const savedSeller = localStorage.getItem("seller");
     const savedCart = localStorage.getItem("cart");
+    const savedLang = localStorage.getItem("klassic_language");
+
+    if (savedLang) setLanguage(savedLang);
 
     if (savedUser) {
       try {
@@ -77,7 +89,17 @@ export default function Header() {
         setCartCount(0);
       }
     }
+
+    if (navigator.geolocation) {
+      setCountry("India");
+    }
   }, []);
+
+  function changeLanguage(value: string) {
+    setLanguage(value);
+    localStorage.setItem("klassic_language", value);
+    toast.success(`Language changed to ${value}`);
+  }
 
   async function logout() {
     try {
@@ -100,9 +122,9 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#0b5c45] text-white shadow-md md:bg-slate-950">
-        <div className="mx-auto max-w-7xl px-3 py-2 md:px-4 md:py-3">
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-50 bg-white text-[#111] shadow-sm">
+        <div className="bg-gradient-to-r from-[#061f1a] via-[#0b5c45] to-[#101010] text-white">
+          <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 md:px-4">
             <button
               onClick={() => setOpen(!open)}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 md:hidden"
@@ -111,7 +133,7 @@ export default function Header() {
               <Menu size={22} />
             </button>
 
-            <Link href="/" className="text-xl font-black md:text-4xl">
+            <Link href="/" className="text-xl font-black tracking-tight md:text-3xl">
               Klassic
             </Link>
 
@@ -119,7 +141,18 @@ export default function Header() {
               <HeaderSearch />
             </div>
 
-            <div className="ml-auto hidden font-bold md:block">🇮🇳 EN</div>
+            <div className="ml-auto hidden items-center gap-3 md:flex">
+              <TopMiniButton icon={<MapPin size={15} />} text={country} />
+              <LanguageSelect language={language} changeLanguage={changeLanguage} />
+              <Link href="/become-seller" className="flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-black text-black">
+                <Store size={15} />
+                Seller
+              </Link>
+              <Link href="/help-center" className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-xs font-black text-white">
+                <HelpCircle size={15} />
+                Help
+              </Link>
+            </div>
 
             <DesktopAccount
               accountOpen={accountOpen}
@@ -131,14 +164,9 @@ export default function Header() {
               logout={logout}
             />
 
-            <Link href="/my-orders" className="hidden text-sm md:block">
-              <p className="text-gray-300">Returns</p>
-              <p className="font-bold">& Orders</p>
-            </Link>
-
             <Link
               href="/cart"
-              className="relative flex items-center gap-1 rounded-xl bg-white/10 px-2 py-2 text-sm font-black md:bg-transparent md:text-lg"
+              className="relative flex items-center gap-1 rounded-xl bg-white/10 px-2 py-2 text-sm font-black md:text-base"
             >
               <ShoppingCart size={21} />
               <span className="hidden sm:inline">Cart</span>
@@ -151,36 +179,63 @@ export default function Header() {
             </Link>
           </div>
 
-          <div className="mt-2 md:hidden">
+          <div className="px-3 pb-2 md:hidden">
             <HeaderSearch />
           </div>
+        </div>
 
-          <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1 text-xs font-black md:hidden">
-            <MobileTopPill href="/" text="🏠 Home" />
-            <MobileTopPill href="/grocery" text="🛍 Grocery" />
-            <MobileTopPill href="/category/Fashion" text="👕 Fashion" />
-            <MobileTopPill href="/category/Electronics" text="📱 Mobiles" />
-            <MobileTopPill href="/become-seller" text="🏪 Seller" />
+        <div className="border-b bg-white">
+          <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-3 py-2 text-xs font-black text-gray-700 md:px-4">
+            <MiniNav href="/#products" text="☰ All" />
+            <MiniNav href="/grocery" text="Grocery" />
+            <MiniNav href="/category/Fashion" text="Fashion" />
+            <MiniNav href="/category/Electronics" text="Electronics" />
+            <MiniNav href="/category/Home%20%26%20Kitchen" text="Home" />
+            <MiniNav href="/category/Sports" text="Sports" />
+            <MiniNav href="/#flash-sale" text="Deals" />
+            <MiniNav href="/become-seller" text="Seller" />
+            <MiniNav href="/help-center" text="Help" />
           </div>
         </div>
 
         {open && (
-          <div className="border-t border-white/10 bg-white px-4 py-4 text-black md:hidden">
-            <div className="mb-3 rounded-2xl bg-slate-100 p-3">
+          <div className="border-t bg-white px-4 py-4 text-black md:hidden">
+            <div className="mb-3 rounded-2xl bg-[#eef8ff] p-3">
               <p className="text-xs text-gray-500">Welcome</p>
               <p className="font-black">{displayName || "Guest User"}</p>
+            </div>
+
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <button className="flex items-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black">
+                <MapPin size={15} /> {country}
+              </button>
+
+              <select
+                value={language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black outline-none"
+              >
+                <option value="EN">English</option>
+                <option value="HI">Hindi</option>
+              </select>
             </div>
 
             <div className="grid gap-1">
               <MobileLink href="/account" icon={<User size={18} />} text="My Account" />
               <MobileLink href="/my-orders" icon={<Box size={18} />} text="My Orders" />
+              <MobileLink href="/coupons" icon={<TicketPercent size={18} />} text="Coupons" />
               <MobileLink href="/wishlist" icon={<Heart size={18} />} text="Wishlist" />
               <MobileLink href="/notifications" icon={<Bell size={18} />} text="Notifications" />
-              <MobileLink href="/help-center" icon={<HelpCircle size={18} />} text="Help Center" />
-              <MobileLink href="/seller/dashboard" icon={<Store size={18} />} text="Seller Hub" />
+              <MobileLink href="/help-center" icon={<HelpCircle size={18} />} text="Help & Support" />
+              <MobileLink href="/become-seller" icon={<Store size={18} />} text="Become Seller" />
+              <MobileLink href="/category/Sports" icon={<Trophy size={18} />} text="Sports" />
 
               {isAdmin && (
                 <MobileLink href="/admin" icon={<ShieldCheck size={18} />} text="Admin Panel" />
+              )}
+
+              {isSeller && (
+                <MobileLink href="/seller/dashboard" icon={<Store size={18} />} text="Seller Dashboard" />
               )}
 
               {displayName ? (
@@ -200,28 +255,13 @@ export default function Header() {
             </div>
           </div>
         )}
-
-        <div className="hidden bg-slate-800 text-white md:block">
-          <div className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto whitespace-nowrap px-4 py-2 text-sm font-semibold">
-            <Link href="/#products" className="hover:text-yellow-300">☰ All</Link>
-            <Link href="/grocery" className="hover:text-yellow-300">Grocery</Link>
-            <Link href="/become-seller" className="hover:text-yellow-300">Become a Seller</Link>
-            <Link href="/#products" className="hover:text-yellow-300">Bestsellers</Link>
-            <Link href="/#products" className="hover:text-yellow-300">Today&apos;s Deals</Link>
-            <Link href="/category/Electronics" className="hover:text-yellow-300">Electronics</Link>
-            <Link href="/category/Fashion" className="hover:text-yellow-300">Fashion</Link>
-            <Link href="/category/Home%20%26%20Kitchen" className="hover:text-yellow-300">Home & Kitchen</Link>
-            <Link href="/category/Sports" className="hover:text-yellow-300">Sports</Link>
-            <Link href="/help-center" className="hover:text-yellow-300">Customer Service</Link>
-          </div>
-        </div>
       </header>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white px-2 py-1 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] md:hidden">
         <div className="grid grid-cols-5 text-[11px] font-bold text-gray-600">
           <BottomLink href="/" icon={<Home size={22} />} text="Home" />
-          <BottomLink href="/#products" icon={<PlayCircle size={22} />} text="Play" />
-          <BottomLink href="/grocery" icon={<Grid3X3 size={22} />} text="Categories" />
+          <BottomLink href="/#products" icon={<Grid3X3 size={22} />} text="Products" />
+          <BottomLink href="/become-seller" icon={<Store size={22} />} text="Seller" />
           <BottomLink href="/account" icon={<User size={22} />} text="Account" />
           <BottomLink
             href="/cart"
@@ -256,54 +296,46 @@ function DesktopAccount({
     <div className="relative hidden md:block">
       <button
         onClick={() => setAccountOpen(!accountOpen)}
-        className="rounded-2xl border border-transparent px-4 py-2 text-left text-sm transition hover:border-blue-400 hover:bg-slate-900"
+        className="rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-white/10"
       >
-        <p className="text-gray-300">
+        <p className="text-xs text-white/70">
           {displayName ? `Hello, ${displayName}` : "Hello, Sign in"}
         </p>
-        <p className="font-black">Account & Lists {accountOpen ? "▲" : "▼"}</p>
+        <p className="font-black text-white">Account {accountOpen ? "▲" : "▼"}</p>
       </button>
 
       {accountOpen && (
-        <div className="absolute right-0 mt-2 w-[330px] overflow-hidden rounded-[1.6rem] bg-[#f8f9fa] text-black shadow-2xl ring-1 ring-gray-200">
-          <div className="bg-slate-900 px-5 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-lg font-black">
-                {(displayName || "K").charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-slate-400">Welcome to Klassic</p>
-                <h2 className="truncate text-lg font-black">
-                  {displayName || "Guest User"}
-                </h2>
-              </div>
-            </div>
+        <div className="absolute right-0 mt-2 w-[330px] overflow-hidden rounded-[1.5rem] bg-white text-black shadow-2xl ring-1 ring-gray-200">
+          <div className="bg-[#eef8ff] px-5 py-4">
+            <p className="text-xs font-bold text-gray-500">Your Account</p>
+            <h2 className="truncate text-lg font-black">
+              {displayName || "Guest User"}
+            </h2>
           </div>
 
           {(isAdmin || isSeller) && (
             <div className="mx-3 mt-3 flex gap-2">
               {isAdmin && (
                 <Link href="/admin" className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-black px-3 py-2.5 text-xs font-black text-white">
-                  <LayoutDashboard size={15} />
-                  Admin
+                  <LayoutDashboard size={15} /> Admin
                 </Link>
               )}
               {isSeller && (
-                <Link href="/seller/dashboard" className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-black text-black shadow-sm ring-1 ring-gray-200">
-                  <Store size={15} />
-                  Seller
+                <Link href="/seller/dashboard" className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#0b5c45] px-3 py-2.5 text-xs font-black text-white">
+                  <Store size={15} /> Seller
                 </Link>
               )}
             </div>
           )}
 
-          <div className="mx-3 mt-3 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-gray-100">
+          <div className="m-3 rounded-2xl bg-white p-2 ring-1 ring-gray-100">
             <CompactDropLink href="/account" icon={<User size={17} />} text="My Profile" />
-            <CompactDropLink href="/my-orders" icon={<Box size={17} />} text="My Orders" />
+            <CompactDropLink href="/my-orders" icon={<PackageCheck size={17} />} text="Orders" />
+            <CompactDropLink href="/coupons" icon={<TicketPercent size={17} />} text="Coupons" />
+            <CompactDropLink href="/wallet" icon={<Wallet size={17} />} text="Saved Cards & Wallet" />
             <CompactDropLink href="/wishlist" icon={<Heart size={17} />} text="Wishlist" />
             <CompactDropLink href="/notifications" icon={<Bell size={17} />} text="Notifications" />
-            <CompactDropLink href="/help-center" icon={<HelpCircle size={17} />} text="Help Center" />
-            <div className="my-1 border-t border-gray-100" />
+            <CompactDropLink href="/help-center" icon={<HelpCircle size={17} />} text="Help & Support" />
             <CompactDropLink href="/cart" icon={<ShoppingCart size={17} />} text={`Cart (${cartCount})`} />
             <CompactDropLink href="/checkout" icon={<CreditCard size={17} />} text="Checkout" />
           </div>
@@ -315,7 +347,7 @@ function DesktopAccount({
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-black text-red-500 hover:bg-red-50"
               >
                 <LogOut size={16} />
-                Logout Securely
+                Logout
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -334,9 +366,40 @@ function DesktopAccount({
   );
 }
 
-function MobileTopPill({ href, text }: { href: string; text: string }) {
+function LanguageSelect({
+  language,
+  changeLanguage,
+}: {
+  language: string;
+  changeLanguage: (value: string) => void;
+}) {
   return (
-    <Link href={href} className="shrink-0 rounded-full bg-white px-3 py-1.5 text-black">
+    <div className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-2">
+      <Languages size={15} />
+      <select
+        value={language}
+        onChange={(e) => changeLanguage(e.target.value)}
+        className="bg-transparent text-xs font-black text-white outline-none"
+      >
+        <option className="text-black" value="EN">EN</option>
+        <option className="text-black" value="HI">HI</option>
+      </select>
+    </div>
+  );
+}
+
+function TopMiniButton({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <button className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-xs font-black">
+      {icon}
+      {text}
+    </button>
+  );
+}
+
+function MiniNav({ href, text }: { href: string; text: string }) {
+  return (
+    <Link href={href} className="shrink-0 rounded-full px-3 py-1.5 hover:bg-[#eef8ff] hover:text-[#0b5c45]">
       {text}
     </Link>
   );
@@ -353,7 +416,7 @@ function BottomLink({
 }) {
   return (
     <Link href={href} className="flex flex-col items-center justify-center gap-0.5 py-1">
-      <span className="text-blue-600">{icon}</span>
+      <span className="text-[#0b5c45]">{icon}</span>
       <span>{text}</span>
     </Link>
   );
@@ -369,9 +432,9 @@ function CompactDropLink({
   text: string;
 }) {
   return (
-    <Link href={href} className="group flex w-full items-center justify-between rounded-xl px-3 py-2 hover:bg-gray-50">
+    <Link href={href} className="group flex w-full items-center justify-between rounded-xl px-3 py-2 hover:bg-[#eef8ff]">
       <div className="flex items-center gap-3">
-        <span className="text-gray-400 group-hover:text-black">{icon}</span>
+        <span className="text-gray-500 group-hover:text-[#0b5c45]">{icon}</span>
         <span className="text-sm font-semibold text-gray-700 group-hover:text-black">
           {text}
         </span>
@@ -392,7 +455,7 @@ function MobileLink({
 }) {
   return (
     <Link href={href} className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold hover:bg-gray-100">
-      <span className="text-blue-700">{icon}</span>
+      <span className="text-[#0b5c45]">{icon}</span>
       {text}
     </Link>
   );

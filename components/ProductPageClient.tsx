@@ -102,7 +102,6 @@ export default function ProductPageClient({
   }, [product]);
 
   const defaultVariant = variants.find((v) => v.isDefault) || variants[0] || null;
-
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     defaultVariant
   );
@@ -139,14 +138,11 @@ export default function ProductPageClient({
   }, [images, product.image]);
 
   const quantityPriceMap = useMemo(() => {
-    
     if (!Array.isArray(product.quantityPrices)) return {};
 
     return product.quantityPrices.reduce(
       (acc: Record<string, number>, item: any) => {
-        if (item?.label) {
-          acc[String(item.label).trim()] = Number(item.price || 0);
-        }
+        if (item?.label) acc[String(item.label).trim()] = Number(item.price || 0);
         return acc;
       },
       {}
@@ -164,20 +160,19 @@ export default function ProductPageClient({
   );
 
   const isGroceryProduct =
-  String(product.category || "").toLowerCase().includes("grocery") ||
-  String(product.sub_category || "").toLowerCase().includes("grocery") ||
-  String(product.subcategory || "").toLowerCase().includes("grocery");
+    String(product.category || "").toLowerCase().includes("grocery") ||
+    String(product.sub_category || "").toLowerCase().includes("grocery") ||
+    String(product.subcategory || "").toLowerCase().includes("grocery");
 
-const selectedQtyPrice =
-  selectedQuantity && quantityPriceMap[String(selectedQuantity)] !== undefined
-    ? Number(quantityPriceMap[String(selectedQuantity)])
-    : null;
+  const selectedQtyPrice =
+    selectedQuantity && quantityPriceMap[String(selectedQuantity)] !== undefined
+      ? Number(quantityPriceMap[String(selectedQuantity)])
+      : null;
 
-const price =
-  selectedQtyPrice !== null && selectedQtyPrice > 0
-  
-    ? selectedQtyPrice
-    : basePrice;
+  const price =
+    selectedQtyPrice !== null && selectedQtyPrice > 0
+      ? selectedQtyPrice
+      : basePrice;
 
   const mrp =
     isGroceryProduct &&
@@ -193,7 +188,6 @@ const price =
         );
 
   const finalMrp = mrp > price ? mrp : Math.round(price * 1.25);
-
   const discount =
     finalMrp > price ? Math.round(((finalMrp - price) / finalMrp) * 100) : 0;
 
@@ -219,8 +213,7 @@ const price =
       ? product.weightOptions
       : singleProductQuantity;
 
-  const showQuantitySelector =
-  product.showQuantityPricing !== false && quantityOptions.length > 0;
+  const showQuantitySelector = false;
 
   useEffect(() => {
     if (showQuantitySelector && !selectedQuantity) {
@@ -234,19 +227,18 @@ const price =
     selectedColor !== "Default" &&
     selectedColor !== "Color";
 
-  const isTextVariant = product.variationTheme === "Size" || product.variationTheme === "Weight";
-
-  const totalPrice = price * buyQty;
+  const isTextVariant =
+    product.variationTheme === "Size" || product.variationTheme === "Weight";
 
   const cartItem = {
     _id: productId,
     id: productId,
     name: product.name,
-    price: totalPrice,
+    price,
     unitPrice: price,
     selectedPrice: price,
-    buyQty,
-    quantity: buyQty,
+    buyQty: 1,
+    quantity: 1,
     selectedQuantity: selectedQuantity || "",
     packQuantity: selectedQuantity || "",
     image: selectedImage || product.image || "/placeholder.png",
@@ -274,7 +266,9 @@ const price =
     let newCart = [...oldCart];
 
     if (existingIndex >= 0) {
-      const oldQty = Number(newCart[existingIndex].buyQty || newCart[existingIndex].quantity || 1);
+      const oldQty = Number(
+        newCart[existingIndex].buyQty || newCart[existingIndex].quantity || 1
+      );
       const newQty = oldQty + buyQty;
 
       newCart[existingIndex] = {
@@ -300,31 +294,24 @@ const price =
     }
 
     const user = localStorage.getItem("user");
-
     localStorage.setItem("buyNowItem", JSON.stringify(cartItem));
 
     if (!user) {
-   router.push(
-  `/login?redirect=${encodeURIComponent(
-    `/checkout?buyNow=1` +
-      `&productId=${productId}` +
-      `&color=${selectedColor || ""}` +
-      `&quantity=${selectedQuantity || ""}` +
-      `&price=${price}` +
-      `&qty=${buyQty}`
-  )}`
-);
+      router.push(
+        `/login?redirect=${encodeURIComponent(
+          `/checkout?buyNow=1&productId=${productId}&color=${
+            selectedColor || ""
+          }&quantity=${selectedQuantity || ""}&price=${price}&qty=1`
+        )}`
+      );
       return;
     }
 
     router.push(
-  `/checkout?buyNow=1` +
-    `&productId=${productId}` +
-    `&color=${encodeURIComponent(selectedColor || "")}` +
-    `&quantity=${encodeURIComponent(selectedQuantity || "")}` +
-    `&price=${price}` +
-    `&qty=${buyQty}`
-);
+      `/checkout?buyNow=1&productId=${productId}&color=${encodeURIComponent(
+        selectedColor || ""
+      )}&quantity=${encodeURIComponent(selectedQuantity || "")}&price=${price}&qty=1`
+    );
   }
 
   const [reviews, setReviews] = useState<any[]>([]);
@@ -397,9 +384,7 @@ const price =
 
     const res = await fetch("/api/reviews", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         productId,
         name: reviewName,
@@ -438,9 +423,7 @@ const price =
 
     const res = await fetch("/api/questions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         productId,
         name: questionName,
@@ -466,40 +449,43 @@ const price =
   }
 
   return (
-    <main className="min-h-screen bg-[#fafafa] pb-20">
+    <main className="min-h-screen bg-[#f1f3f6] pb-20 text-[#111]">
       <Header />
 
-      <section className="mx-auto max-w-[1450px] px-2 py-3 sm:px-4">
-        <div className="mb-2 text-[11px] font-bold text-blue-600 sm:text-sm">
+      <section className="mx-auto max-w-7xl px-2 py-2 sm:px-4">
+        <div className="mb-2 text-[10px] font-bold text-blue-600 sm:text-xs">
           Home / {product.category} / {product.name}
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[55%_45%]">
-          {/* LEFT SECTION (IMAGES & BUTTONS) */}
-          <section className="rounded-[2rem] bg-white p-3 shadow-[0_10px_40px_rgba(0,0,0,0.05)] sm:p-4 lg:sticky lg:top-24 lg:self-start">
-            <div className="grid gap-4 sm:grid-cols-[90px_1fr]">
-              <div className="flex gap-4 overflow-x-auto sm:max-h-[420px] sm:flex-col">
+        <div className="grid gap-3 lg:grid-cols-[52%_48%]">
+          <section className="rounded-[1.4rem] bg-white p-2 shadow-sm sm:p-3 lg:sticky lg:top-20 lg:self-start">
+            <div className="grid gap-3 sm:grid-cols-[74px_1fr]">
+              <div className="flex gap-2 overflow-x-auto sm:max-h-[380px] sm:flex-col">
                 {images.map((img, i) => (
                   <button
                     key={`${img}-${i}`}
                     type="button"
                     onClick={() => setSelectedImage(img)}
-                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white p-1 sm:h-20 sm:w-20 ${
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-white p-1 sm:h-16 sm:w-16 ${
                       selectedImage === img
-                        ? "border-black ring-1 ring-black ring-offset-2"
+                        ? "border-black ring-1 ring-black ring-offset-1"
                         : "border-gray-100 opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full rounded-md object-contain" />
+                    <img
+                      src={img}
+                      alt=""
+                      className="h-full w-full rounded-md object-contain"
+                    />
                   </button>
                 ))}
               </div>
 
-              <div className="flex min-h-[260px] items-center justify-center overflow-hidden rounded-3xl bg-[#f8f9fa] p-4 sm:min-h-[520px]">
+              <div className="flex min-h-[245px] items-center justify-center overflow-hidden rounded-[1.2rem] bg-[#f4f1ec] p-3 sm:min-h-[465px]">
                 <img
                   src={selectedImage || product.image || "/placeholder.png"}
                   alt={product.name}
-                  className="max-h-[260px] w-full object-contain transition duration-500 hover:scale-105 sm:max-h-[500px]"
+                  className="max-h-[240px] w-full object-contain transition duration-500 hover:scale-105 sm:max-h-[450px]"
                 />
               </div>
             </div>
@@ -509,8 +495,10 @@ const price =
                 type="button"
                 onClick={addToCart}
                 disabled={stock <= 0}
-                className={`rounded-full py-3 text-center text-sm font-black ${
-                  stock > 0 ? "bg-black text-white hover:bg-neutral-800 transition" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                className={`rounded-full py-2.5 text-center text-xs font-black ${
+                  stock > 0
+                    ? "bg-black text-white hover:bg-neutral-800"
+                    : "cursor-not-allowed bg-gray-300 text-gray-500"
                 }`}
               >
                 Add To Cart
@@ -520,8 +508,10 @@ const price =
                 type="button"
                 onClick={buyNow}
                 disabled={stock <= 0}
-                className={`rounded-full py-3 text-center text-sm font-black ${
-                  stock > 0 ? "bg-yellow-400 text-black hover:bg-yellow-500 transition" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                className={`rounded-full py-2.5 text-center text-xs font-black ${
+                  stock > 0
+                    ? "bg-yellow-400 text-black hover:bg-yellow-500"
+                    : "cursor-not-allowed bg-gray-300 text-gray-500"
                 }`}
               >
                 Buy Now
@@ -529,82 +519,50 @@ const price =
             </div>
           </section>
 
-          {/* RIGHT SECTION (DETAILS) */}
-          <section className="max-h-none space-y-3 lg:max-h-[calc(135vh-180px)] lg:overflow-y-auto lg:pr-2">
+          <section className="max-h-none space-y-2 lg:max-h-[calc(100vh-90px)] lg:overflow-y-auto lg:pr-1">
             <Card>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                {product.brand || product.category}
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                {product.brand || product.category || "Klassic"}
               </p>
 
-              <h1 className="mt-1 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl text-gray-900">
+              <h1 className="mt-1 text-base font-black leading-tight tracking-tight text-gray-900 sm:text-xl">
                 {product.name}
               </h1>
 
               <div className="mt-2 flex items-center gap-2">
-                <span className="rounded bg-green-600 px-2 py-1 text-[11px] font-black text-white">
+                <span className="rounded bg-green-600 px-2 py-0.5 text-[10px] font-black text-white">
                   {avgRating ? avgRating.toFixed(1) : "0.0"} ★
                 </span>
-                <span className="text-xs font-semibold text-gray-500">
+                <span className="text-[11px] font-semibold text-gray-500">
                   {approvedReviews.length > 0
                     ? `${approvedReviews.length} Ratings`
                     : "No ratings yet"}
                 </span>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-end gap-3 border-b border-gray-100 pb-4">
-                <p className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
+              <div className="mt-3 flex flex-wrap items-end gap-2 border-b border-gray-100 pb-3">
+                <p className="text-2xl font-black tracking-tight text-black sm:text-3xl">
                   ₹{price.toFixed(2)}
                 </p>
-                <p className="text-sm font-semibold text-gray-400 line-through sm:text-lg mb-1">
+                <p className="mb-1 text-xs font-semibold text-gray-400 line-through sm:text-sm">
                   ₹{finalMrp.toFixed(2)}
                 </p>
-                <p className="text-sm font-black text-green-600 mb-1">{discount}% off</p>
+                <p className="mb-1 text-xs font-black text-green-600">
+                  {discount}% off
+                </p>
               </div>
 
-              {/* ========================================= */}
-              {/* 🌟 1. SIZE / WEIGHT SELECTOR (Text Pills)  */}
-              {/* ========================================= */}
-              {showQuantitySelector && (
-                <div className="mt-5">
-                  <p className="mb-3 text-sm font-bold text-gray-700">
-                    Selected Size / Weight:
-                    <span className="ml-2 text-black">{selectedQuantity}</span>
+              {hasRealColor && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs font-bold text-gray-700">
+                    Select {product.variationTheme || "Color"}:
+                    <span className="ml-2 text-black">{selectedColor}</span>
                   </p>
 
-                  <div className="flex flex-wrap gap-3">
-                    {quantityOptions.map((qty: string) => (
-                      <button
-                        key={qty}
-                        type="button"
-                        onClick={() => setSelectedQuantity(String(qty).trim())}
-                        className={`shrink-0 rounded-lg border px-5 py-2.5 text-sm font-bold transition-all ${
-                          selectedQuantity === String(qty)
-                            ? "border-black bg-black text-white shadow-md"
-                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-500"
-                        }`}
-                      >
-                        {qty}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ========================================= */}
-              {/* 🌟 2. COLOR SELECTOR (Image Thumbnails)    */}
-              {/* ========================================= */}
-              {hasRealColor && (
-                <div className="mt-5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-bold text-gray-700">
-                      Select {product.variationTheme || "Color"}: 
-                      <span className="ml-2 text-black">{selectedColor}</span>
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 pb-1">
+                  <div className="flex flex-wrap gap-2 pb-1">
                     {variants.map((v, i) => {
-                      const active = selectedVariant?.sku === v.sku || selectedVariant === v;
+                      const active =
+                        selectedVariant?.sku === v.sku || selectedVariant === v;
                       const isOutOfStock = Number(v.stock) <= 0;
 
                       const img =
@@ -615,25 +573,30 @@ const price =
                         product.image ||
                         "/placeholder.png";
 
-                      // Agar variation theme Size/Weight hai toh isko bhi Text Pill banayenge (Fallback)
                       if (isTextVariant) {
                         return (
                           <button
                             key={v.sku || `${v.size}-${i}`}
                             disabled={isOutOfStock}
-                            onClick={() => { setSelectedVariant(v); setSelectedImage(img); }}
-                            className={`relative rounded-lg px-5 py-2.5 text-sm font-bold transition-all ${
+                            onClick={() => {
+                              setSelectedVariant(v);
+                              setSelectedImage(img);
+                            }}
+                            className={`relative rounded-lg px-3 py-2 text-xs font-black transition ${
                               active
-                                ? "border-2 border-black bg-black text-white shadow-md"
-                                : "border border-gray-300 bg-white text-gray-700 hover:border-gray-500"
-                            } ${isOutOfStock ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}`}
+                                ? "border border-black bg-black text-white"
+                                : "border border-gray-300 bg-white text-gray-700"
+                            } ${
+                              isOutOfStock
+                                ? "cursor-not-allowed bg-gray-50 opacity-50"
+                                : ""
+                            }`}
                           >
                             {v.size || v.colorName}
                           </button>
                         );
                       }
 
-                      // Normal Color Thumbnails
                       return (
                         <button
                           key={v.sku || `${v.colorName}-${i}`}
@@ -642,22 +605,21 @@ const price =
                             setSelectedVariant(v);
                             setSelectedImage(img);
                           }}
-                          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-white p-1 transition-all ${
+                          className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-white p-1 transition ${
                             active
-                              ? "border-blue-600 ring-1 ring-blue-600 shadow-sm"
+                              ? "border-black ring-1 ring-black"
                               : "border-gray-200 hover:border-gray-400"
-                          } ${isOutOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
+                          } ${
+                            isOutOfStock
+                              ? "cursor-not-allowed opacity-50"
+                              : ""
+                          }`}
                         >
                           <img
                             src={img}
                             alt={v.colorName || "Color"}
                             className="h-full w-full rounded-md object-contain"
                           />
-                          {isOutOfStock && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md">
-                              <span className="bg-white px-1 text-[9px] font-black uppercase text-red-600 border border-red-200">Out</span>
-                            </div>
-                          )}
                         </button>
                       );
                     })}
@@ -665,56 +627,16 @@ const price =
                 </div>
               )}
 
-              {/* ========================================= */}
-              {/* 📦 3. QUANTITY MANIPULATOR (- 1 +)         */}
-              {/* ========================================= */}
-              <div className="mt-6 flex flex-wrap items-center gap-6 rounded-2xl bg-gray-50 p-4 border border-gray-100">
-                <div className="flex items-center">
-                  <span className="mr-4 text-sm font-bold text-gray-700">Qty:</span>
-                  <div className="flex h-11 items-center overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm">
-                    <button
-                      type="button"
-                      onClick={() => setBuyQty((p) => Math.max(1, p - 1))}
-                      className="flex h-full w-11 items-center justify-center text-xl font-black text-gray-600 transition hover:bg-gray-100 hover:text-black"
-                    >
-                      −
-                    </button>
-
-                    <span className="flex h-full min-w-[3rem] items-center justify-center border-x border-gray-200 text-sm font-black text-black">
-                      {buyQty}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setBuyQty((p) => Math.min(stock || 99, p + 1))}
-                      className={`flex h-full w-11 items-center justify-center text-xl font-black transition ${
-                        buyQty >= stock ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100 hover:text-black"
-                      }`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Price</span>
-                  <span className="text-xl font-black text-green-700">
-                    ₹{totalPrice.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-
-              {/* PRODUCT META */}
-              <div className="mt-4 flex items-center justify-between text-xs text-gray-600 sm:text-sm">
+              <div className="mt-3 flex items-center justify-between text-[11px] text-gray-600 sm:text-xs">
                 <div>
-                  <p className="mb-1">
+                  <p>
                     SKU: <b className="text-gray-900">{selectedSku}</b>
                   </p>
                   <p
                     className={
                       stock > 0
-                        ? "font-black text-green-600"
-                        : "font-black text-red-600"
+                        ? "mt-1 font-black text-green-600"
+                        : "mt-1 font-black text-red-600"
                     }
                   >
                     {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
@@ -725,12 +647,12 @@ const price =
 
             <Card>
               <SectionButton
-  title="Delivery Information"
-  subtitle="Delivery options, COD and returns"
-  section="delivery"
-  openSection={openSection}
-  toggleSection={toggleSection}
-/>
+                title="Delivery Information"
+                subtitle="Delivery options, COD and returns"
+                section="delivery"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
               {openSection === "delivery" && (
                 <>
@@ -745,13 +667,13 @@ const price =
                         setPincode(e.target.value.replace(/\D/g, ""));
                         setPincodeMessage("");
                       }}
-                      className="flex-1 rounded-xl border p-3 text-sm font-bold outline-none focus:border-black"
+                      className="flex-1 rounded-xl border p-2.5 text-xs font-bold outline-none focus:border-black"
                     />
 
                     <button
                       type="button"
                       onClick={checkPincode}
-                      className="rounded-xl bg-black px-5 text-sm font-black text-white"
+                      className="rounded-xl bg-black px-4 text-xs font-black text-white"
                     >
                       Check
                     </button>
@@ -759,7 +681,7 @@ const price =
 
                   {pincodeMessage && (
                     <p
-                      className={`mt-2 text-sm font-bold ${
+                      className={`mt-2 text-xs font-bold ${
                         pincodeMessage.includes("✅")
                           ? "text-green-600"
                           : "text-red-600"
@@ -769,7 +691,7 @@ const price =
                     </p>
                   )}
 
-                  <div className="mt-3 space-y-1 text-sm font-medium text-gray-700">
+                  <div className="mt-2 space-y-1 text-xs font-medium text-gray-700">
                     <p>✓ Free Delivery Available</p>
                     <p>✓ Cash On Delivery</p>
                     <p>✓ Easy Returns</p>
@@ -780,54 +702,46 @@ const price =
 
             <Card>
               <SectionButton
-  title="Trust & Assurance"
-  subtitle="Secure shopping and buyer protection"
-  section="trust"
-  openSection={openSection}
-  toggleSection={toggleSection}
-/>
+                title="Trust & Assurance"
+                subtitle="Secure shopping and buyer protection"
+                section="trust"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
               {openSection === "trust" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-green-50 p-4 border border-green-100">
-                    <p className="text-2xl">✔</p>
-                    <p className="mt-2 font-black text-green-900">Genuine Product</p>
-                  </div>
-                  <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
-                    <p className="text-2xl">🚚</p>
-                    <p className="mt-2 font-black text-blue-900">Fast Delivery</p>
-                  </div>
-                  <div className="rounded-2xl bg-yellow-50 p-4 border border-yellow-100">
-                    <p className="text-2xl">↩</p>
-                    <p className="mt-2 font-black text-yellow-900">Easy Returns</p>
-                  </div>
-                  <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
-                    <p className="text-2xl">🔒</p>
-                    <p className="mt-2 font-black text-purple-900">Secure Payment</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <MiniTrust icon="✔" text="Genuine Product" />
+                  <MiniTrust icon="🚚" text="Fast Delivery" />
+                  <MiniTrust icon="↩" text="Easy Returns" />
+                  <MiniTrust icon="🔒" text="Secure Payment" />
                 </div>
               )}
             </Card>
 
             <Card>
               <SectionButton
-  title="Product Highlights"
-  subtitle="Key features, specifications and more"
-  section="highlights"
-  openSection={openSection}
-  toggleSection={toggleSection}
-/>
+                title="Product Highlights"
+                subtitle="Key features and specifications"
+                section="highlights"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
               {openSection === "highlights" && (
                 <>
-                  {Array.isArray(product.features) && product.features.length > 0 ? (
-                    <ul className="space-y-2 text-sm font-medium text-gray-700">
+                  {Array.isArray(product.features) &&
+                  product.features.length > 0 ? (
+                    <ul className="space-y-1 text-xs font-medium text-gray-700">
                       {product.features.map((f: string, i: number) => (
-                        <li key={i} className="flex gap-2"><span className="text-green-600 font-bold">✓</span> {f}</li>
+                        <li key={i} className="flex gap-2">
+                          <span className="font-bold text-green-600">✓</span>
+                          {f}
+                        </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-gray-500">
                       Premium quality product with trusted Klassic marketplace
                       assurance.
                     </p>
@@ -838,17 +752,17 @@ const price =
 
             <Card>
               <SectionButton
-  title="All Details"
-  subtitle="Features, description and more"
-  section="details"
-  openSection={openSection}
-  toggleSection={toggleSection}
-/>
+                title="All Details"
+                subtitle="Features, description and more"
+                section="details"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
               {openSection === "details" && (
                 <>
-                  <div className="overflow-x-auto border-b border-gray-300">
-                    <div className="flex min-w-max gap-8 text-sm font-bold tracking-tight">
+                  <div className="overflow-x-auto border-b border-gray-200">
+                    <div className="flex min-w-max gap-5 text-xs font-black">
                       {[
                         "showcase",
                         "specifications",
@@ -862,29 +776,28 @@ const price =
                               setShowcaseOpen(true);
                               return;
                             }
-
                             setActiveTab(tab);
                           }}
-                          className={`pb-2 text-sm capitalize transition ${
+                          className={`pb-2 capitalize transition ${
                             activeTab === tab
                               ? "border-b-2 border-black text-black"
                               : "text-gray-500 hover:text-black"
                           }`}
                         >
-                          {tab === "manufacturer" ? "Manufacturer Info" : tab}
+                          {tab === "manufacturer" ? "Manufacturer" : tab}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {activeTab === "description" && (
-                    <div className="mt-4 text-sm leading-7 text-gray-800">
+                    <div className="mt-3 text-xs leading-6 text-gray-800">
                       {product.description || "No description available"}
                     </div>
                   )}
 
                   {activeTab === "specifications" && (
-                    <div className="mt-4">
+                    <div className="mt-3 text-xs">
                       <ProductSpecifications
                         product={{
                           ...product,
@@ -899,9 +812,10 @@ const price =
                   )}
 
                   {activeTab === "manufacturer" && (
-                    <div className="mt-4 space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="mt-3 space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs text-gray-700">
                       <p>
-                        <strong className="text-black">Brand:</strong> {product.brand || "-"}
+                        <strong className="text-black">Brand:</strong>{" "}
+                        {product.brand || "-"}
                       </p>
                       <p>
                         <strong className="text-black">Country:</strong>{" "}
@@ -923,33 +837,31 @@ const price =
 
             <Card>
               <SectionButton
-  title="Ratings & Reviews"
-  subtitle={`${approvedReviews.length} customer reviews`}
-  section="reviews"
-  openSection={openSection}
-  toggleSection={toggleSection}
-/>
+                title="Ratings & Reviews"
+                subtitle={`${approvedReviews.length} customer reviews`}
+                section="reviews"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
               {openSection === "reviews" && (
                 <>
-                  <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
-                    <div>
-                      <p className="mt-1 text-sm font-medium text-gray-500">
-                        Real customer feedback for this product
-                      </p>
-                    </div>
+                  <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
+                    <p className="text-xs font-medium text-gray-500">
+                      Real customer feedback for this product
+                    </p>
 
                     <div className="text-right">
-                      <p className="text-3xl font-black">
+                      <p className="text-2xl font-black">
                         {avgRating ? avgRating.toFixed(1) : "0.0"}★
                       </p>
-                      <p className="text-xs font-bold text-gray-500 mt-1">
+                      <p className="text-[10px] font-bold text-gray-500">
                         {approvedReviews.length} Reviews
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+                  <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
                     {[5, 4, 3, 2, 1].map((star) => {
                       const count = approvedReviews.filter(
                         (r) => Number(r.rating) === star
@@ -961,39 +873,45 @@ const price =
                           : 0;
 
                       return (
-                        <div key={star} className="rounded-2xl border p-3 flex flex-col items-center justify-center text-center">
-                          <p className="font-black text-sm">{star} ★</p>
-
-                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          key={star}
+                          className="flex flex-col items-center justify-center rounded-xl border p-2 text-center"
+                        >
+                          <p className="text-xs font-black">{star} ★</p>
+                          <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
                             <div
                               className="h-full bg-green-500"
                               style={{ width: `${percent}%` }}
                             />
                           </div>
-
-                          <p className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                            {count} reviews
+                          <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                            {count}
                           </p>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="mt-5 grid gap-4 lg:grid-cols-[40%_60%]">
-                    <form onSubmit={submitReview} className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                      <h3 className="mb-4 font-black">Write a Review</h3>
+                  <div className="mt-3 grid gap-3 lg:grid-cols-[40%_60%]">
+                    <form
+                      onSubmit={submitReview}
+                      className="rounded-xl border border-gray-200 bg-gray-50 p-3"
+                    >
+                      <h3 className="mb-3 text-sm font-black">Write a Review</h3>
 
                       <input
                         value={reviewName}
                         onChange={(e) => setReviewName(e.target.value)}
                         placeholder="Your name"
-                        className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                        className="mb-2 w-full rounded-xl border p-2 text-xs outline-none focus:border-black"
                       />
 
                       <select
                         value={reviewRating}
-                        onChange={(e) => setReviewRating(Number(e.target.value))}
-                        className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                        onChange={(e) =>
+                          setReviewRating(Number(e.target.value))
+                        }
+                        className="mb-2 w-full rounded-xl border p-2 text-xs outline-none focus:border-black"
                       >
                         <option value={5}>5 Star Rating</option>
                         <option value={4}>4 Star Rating</option>
@@ -1006,35 +924,40 @@ const price =
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
                         placeholder="Write your experience..."
-                        rows={4}
-                        className="mb-4 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                        rows={3}
+                        className="mb-3 w-full rounded-xl border p-2 text-xs outline-none focus:border-black"
                       />
 
                       <button
                         disabled={reviewLoading}
-                        className="w-full rounded-full bg-black py-3 text-sm font-black text-white transition hover:bg-neutral-800 disabled:bg-gray-400"
+                        className="w-full rounded-full bg-black py-2.5 text-xs font-black text-white disabled:bg-gray-400"
                       >
                         {reviewLoading ? "Submitting..." : "Submit Review"}
                       </button>
                     </form>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {approvedReviews.length === 0 ? (
-                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500">
-                          <span className="text-3xl mb-2">⭐</span>
-                          No reviews yet. Be the first to review!
+                        <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500">
+                          <span className="mb-1 text-2xl">⭐</span>
+                          No reviews yet.
                         </div>
                       ) : (
                         approvedReviews.slice(0, 6).map((r, i) => (
-                          <div key={r._id || i} className="rounded-2xl border border-gray-100 p-4 shadow-sm">
+                          <div
+                            key={r._id || i}
+                            className="rounded-xl border border-gray-100 p-3 shadow-sm"
+                          >
                             <div className="flex items-center justify-between">
-                              <p className="font-black text-gray-900">{r.customer_name}</p>
-                              <span className="rounded bg-green-600 px-2 py-1 text-[10px] font-black text-white">
+                              <p className="text-xs font-black text-gray-900">
+                                {r.customer_name}
+                              </p>
+                              <span className="rounded bg-green-600 px-2 py-0.5 text-[9px] font-black text-white">
                                 {r.rating} ★
                               </span>
                             </div>
 
-                            <p className="mt-2 text-sm leading-6 text-gray-700">
+                            <p className="mt-1 text-xs leading-5 text-gray-700">
                               {r.comment}
                             </p>
                           </div>
@@ -1047,103 +970,96 @@ const price =
             </Card>
 
             <Card>
-              <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
-                <div>
-                  <div className="flex items-center justify-between">
-  <div>
-    <h2 className="text-2xl font-black">
-      Questions & Answers
-    </h2>
+              <SectionButton
+                title="Questions & Answers"
+                subtitle="Ask product-related questions before buying"
+                section="qa"
+                openSection={openSection}
+                toggleSection={toggleSection}
+              />
 
-    <p className="mt-1 text-sm text-gray-500">
-      Ask product-related questions before buying
-    </p>
-  </div>
-
-
-</div>
-                  <p className="mt-1 text-sm font-medium text-gray-500">
-                    Ask product-related questions before buying
-                  </p>
-                </div>
-
-                <div className="rounded-full bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
-                  {questions.length} Q&A
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-4 lg:grid-cols-[40%_60%]">
-                <form onSubmit={submitQuestion} className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                  <h3 className="mb-4 font-black">Ask a Question</h3>
-
-                  <input
-                    value={questionName}
-                    onChange={(e) => setQuestionName(e.target.value)}
-                    placeholder="Your name"
-                    className="mb-3 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-                  />
-
-                  <textarea
-                    value={questionText}
-                    onChange={(e) => setQuestionText(e.target.value)}
-                    placeholder="Ask about size, material, delivery, warranty..."
-                    rows={4}
-                    className="mb-4 w-full rounded-xl border p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-                  />
-
-                  <button
-                    disabled={questionLoading}
-                    className="w-full rounded-full bg-black py-3 text-sm font-black text-white transition hover:bg-neutral-800 disabled:bg-gray-400"
+              {openSection === "qa" && (
+                <div className="mt-3 grid gap-3 lg:grid-cols-[40%_60%]">
+                  <form
+                    onSubmit={submitQuestion}
+                    className="rounded-xl border border-gray-200 bg-gray-50 p-3"
                   >
-                    {questionLoading ? "Submitting..." : "Submit Question"}
-                  </button>
-                </form>
+                    <h3 className="mb-3 text-sm font-black">Ask a Question</h3>
 
-                <div className="space-y-3">
-                  {questions.length === 0 ? (
-                    <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500">
-                      <span className="text-3xl mb-2">💬</span>
-                      No questions yet. Ask the first question.
-                    </div>
-                  ) : (
-                    questions.slice(0, 6).map((q, i) => (
-                      <div key={q._id || i} className="rounded-2xl border border-gray-100 p-4 shadow-sm">
-                        <p className="font-black text-sm">Q: {q.question}</p>
+                    <input
+                      value={questionName}
+                      onChange={(e) => setQuestionName(e.target.value)}
+                      placeholder="Your name"
+                      className="mb-2 w-full rounded-xl border p-2 text-xs outline-none focus:border-black"
+                    />
 
-                        <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                          Asked by {q.customer_name}
-                        </p>
+                    <textarea
+                      value={questionText}
+                      onChange={(e) => setQuestionText(e.target.value)}
+                      placeholder="Ask about size, material, delivery..."
+                      rows={3}
+                      className="mb-3 w-full rounded-xl border p-2 text-xs outline-none focus:border-black"
+                    />
 
-                        {q.answer ? (
-                          <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-800 border border-gray-200">
-                            <b className="text-black">A:</b> {q.answer}
-                          </div>
-                        ) : (
-                          <p className="mt-3 text-xs font-bold text-orange-600 bg-orange-50 w-fit px-3 py-1 rounded-full">
-                            ⏳ Awaiting seller answer
-                          </p>
-                        )}
+                    <button
+                      disabled={questionLoading}
+                      className="w-full rounded-full bg-black py-2.5 text-xs font-black text-white disabled:bg-gray-400"
+                    >
+                      {questionLoading ? "Submitting..." : "Submit Question"}
+                    </button>
+                  </form>
+
+                  <div className="space-y-2">
+                    {questions.length === 0 ? (
+                      <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500">
+                        <span className="mb-1 text-2xl">💬</span>
+                        No questions yet.
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      questions.slice(0, 6).map((q, i) => (
+                        <div
+                          key={q._id || i}
+                          className="rounded-xl border border-gray-100 p-3 shadow-sm"
+                        >
+                          <p className="text-xs font-black">Q: {q.question}</p>
+
+                          <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-400">
+                            Asked by {q.customer_name}
+                          </p>
+
+                          {q.answer ? (
+                            <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-2 text-xs text-gray-800">
+                              <b className="text-black">A:</b> {q.answer}
+                            </div>
+                          ) : (
+                            <p className="mt-2 w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-bold text-orange-600">
+                              Awaiting seller answer
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
           </section>
         </div>
 
-        <Carousel title="Frequently Bought Together" products={relatedProducts.slice(0, 3)} />
+        <Carousel
+          title="Frequently Bought Together"
+          products={relatedProducts.slice(0, 3)}
+        />
         <Carousel title="Similar Products" products={relatedProducts} />
         <Carousel title={`More From ${product.category}`} products={relatedProducts} />
       </section>
 
-      {/* MOBILE FIXED BOTTOM BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-[999] grid grid-cols-2 gap-2 border-t bg-white p-2 sm:hidden pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 z-[999] grid grid-cols-2 gap-2 border-t bg-white p-2 pb-safe sm:hidden">
         <button
           type="button"
           onClick={addToCart}
           disabled={stock <= 0}
-          className={`rounded-full py-3.5 text-center text-sm font-black shadow-md ${
+          className={`rounded-full py-3 text-center text-xs font-black shadow-md ${
             stock > 0 ? "bg-black text-white" : "bg-gray-300 text-gray-500"
           }`}
         >
@@ -1154,11 +1070,11 @@ const price =
           type="button"
           onClick={buyNow}
           disabled={stock <= 0}
-          className={`rounded-full py-3.5 text-center text-sm font-black shadow-md ${
+          className={`rounded-full py-3 text-center text-xs font-black shadow-md ${
             stock > 0 ? "bg-yellow-400 text-black" : "bg-gray-300 text-gray-500"
           }`}
         >
-          Buy ₹{totalPrice.toLocaleString('en-IN')}
+          Buy ₹{price.toLocaleString("en-IN")}
         </button>
       </div>
 
@@ -1167,33 +1083,35 @@ const price =
           <button
             type="button"
             onClick={() => setShowcaseOpen(false)}
-            className="hidden flex-1 md:block cursor-default"
+            className="hidden flex-1 cursor-default md:block"
           />
 
           <div className="h-full w-full max-w-[520px] overflow-y-auto bg-white shadow-2xl md:ml-auto">
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-black px-6 py-5 text-white">
-              <h2 className="text-lg font-black">Product Showcase</h2>
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-black px-5 py-4 text-white">
+              <h2 className="text-base font-black">Product Showcase</h2>
               <button
                 type="button"
                 onClick={() => setShowcaseOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xl font-bold hover:bg-white/30 transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xl font-bold"
               >
                 ×
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-4">
               {images.map((img, index) => (
                 <img
                   key={`${img}-${index}`}
                   src={img}
                   alt={product.name}
-                  className="mb-4 w-full rounded-2xl object-contain border border-gray-100"
+                  className="mb-3 w-full rounded-2xl border border-gray-100 object-contain"
                 />
               ))}
 
-              <h3 className="mt-6 mb-2 text-lg font-black">Product Description</h3>
-              <p className="text-sm leading-relaxed text-gray-700">
+              <h3 className="mb-2 mt-5 text-base font-black">
+                Product Description
+              </h3>
+              <p className="text-xs leading-6 text-gray-700">
                 {product.description || "No description available."}
               </p>
             </div>
@@ -1221,23 +1139,23 @@ function SectionButton({
     <button
       type="button"
       onClick={() => toggleSection(section)}
-      className="flex w-full items-center justify-between text-left py-2"
+      className="flex w-full items-center justify-between py-1.5 text-left"
     >
       <div>
-        <h3 className="text-2xl font-black text-gray-900">
+        <h3 className="text-sm font-black text-gray-900 sm:text-base">
           {title}
         </h3>
 
         {subtitle && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-0.5 text-[11px] text-gray-500 sm:text-xs">
             {subtitle}
           </p>
         )}
       </div>
 
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100">
+      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100">
         <span
-          className={`text-xl transition-transform ${
+          className={`text-base transition-transform ${
             openSection === section ? "rotate-180" : ""
           }`}
         >
@@ -1250,8 +1168,17 @@ function SectionButton({
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:p-6 border border-gray-50">
+    <div className="rounded-[1.1rem] border border-black/5 bg-white p-3 shadow-sm sm:p-4">
       {children}
+    </div>
+  );
+}
+
+function MiniTrust({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="rounded-xl border border-black/5 bg-[#f7f5f1] p-3">
+      <p className="text-lg">{icon}</p>
+      <p className="mt-1 text-xs font-black text-gray-900">{text}</p>
     </div>
   );
 }
@@ -1260,40 +1187,67 @@ function Carousel({ title, products }: { title: string; products: any[] }) {
   if (!products?.length) return null;
 
   return (
-    <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm sm:p-6 border border-gray-50">
-      <h2 className="mb-4 text-xl font-black sm:text-2xl text-gray-900">
+    <section className="mt-4 rounded-[1.4rem] bg-white p-3 shadow-sm sm:p-4">
+      <h2 className="mb-3 text-base font-black text-gray-900 sm:text-xl">
         {title}
       </h2>
 
-      <div className="flex gap-3 overflow-x-auto pb-3 no-scrollbar">
-  {products.map((p: any) => (
-    <Link
-      key={p._id || p.id}
-      href={`/product/${p._id || p.id}`}
-      className="group flex h-[340px] min-w-[220px] max-w-[220px] flex-col rounded-2xl border border-gray-100 bg-white p-3 transition hover:border-black hover:shadow-lg"
-    >
-      <div className="flex h-[190px] w-full items-center justify-center overflow-hidden rounded-xl bg-[#f8f9fa] p-2">
-        <img
-          src={p.image || "/placeholder.png"}
-          alt={p.name}
-          className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
-        />
-      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-4 xl:grid-cols-5">
+        {products.map((p: any) => {
+          const id = p._id || p.id;
+          const itemPrice = Number(p.sale_price || p.salePrice || p.price || 0);
+          const mrp =
+            Number(p.regularPrice || p.price || 0) > itemPrice
+              ? Number(p.regularPrice || p.price || 0)
+              : Math.round(itemPrice * 1.18);
 
-      <div className="mt-3 flex flex-1 flex-col">
-        <p className="line-clamp-2 min-h-[44px] text-sm font-bold leading-5 text-gray-800">
-          {p.name}
-        </p>
+          return (
+            <Link
+              key={id}
+              href={`/product/${id}`}
+              className="group flex min-h-[230px] min-w-[190px] flex-col rounded-[1.1rem] bg-white p-2 shadow-sm transition hover:-translate-y-1 hover:shadow-md sm:min-h-[270px] sm:min-w-0"
+            >
+              <div className="flex h-[105px] items-center justify-center overflow-hidden rounded-xl bg-[#f4f1ec] p-2 sm:h-[160px]">
+                <img
+                  src={p.image || "/placeholder.png"}
+                  alt={p.name || "Product"}
+                  className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
+                />
+              </div>
 
-        <p className="mt-auto text-xl font-black text-green-700">
-          ₹{Number(
-            p.sale_price || p.salePrice || p.price || 0
-          ).toLocaleString("en-IN")}
-        </p>
+              <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-400 sm:text-[10px]">
+                {p.brand || p.category || "Klassic"}
+              </p>
+
+              <h3 className="mt-1 line-clamp-2 min-h-[30px] text-[10px] font-black leading-4 text-gray-900 sm:text-sm">
+                {p.name}
+              </h3>
+
+              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                <p className="text-xs font-black sm:text-base">
+                  ₹{itemPrice.toLocaleString("en-IN")}
+                </p>
+
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[8px] font-black sm:text-[10px] ${
+                    Number(p.stock || 0) > 0
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {Number(p.stock || 0) > 0 ? "In Stock" : "Out"}
+                </span>
+              </div>
+
+              {mrp > itemPrice && (
+                <p className="mt-0.5 text-[9px] text-gray-400 line-through">
+                  ₹{mrp.toLocaleString("en-IN")}
+                </p>
+              )}
+            </Link>
+          );
+        })}
       </div>
-    </Link>
-  ))}
-</div>
     </section>
   );
 }
